@@ -24,9 +24,17 @@ endif
 requirements: test_environment
 	pip install -r requirements.txt
 
+## Make Dataset Table
+table:
+	$(PYTHON_INTERPRETER) make_table.py
+
 ## Make Dataset
-data: requirements
-	$(PYTHON_INTERPRETER) src/data/make_dataset.py
+data:
+	$(PYTHON_INTERPRETER) make_dataset.py
+
+## Make Processed
+processed:
+	$(PYTHON_INTERPRETER) make_processed.py
 
 ## Delete all compiled Python files
 clean:
