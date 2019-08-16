@@ -17,3 +17,9 @@ clean: 15
 soccer: 16
 rope_jump: 17
 other: 18
+walk_left: 19
+walk_right: 20
+jump: 21
+sleep: 22
+elevator_up: 23
+elevator_down: 24

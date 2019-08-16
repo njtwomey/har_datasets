@@ -1,10 +1,10 @@
-from src import load_datasets, dot_env_stuff, module_importer
+from src import load_datasets, dot_env_stuff, dataset_importer
 
 
 def main():
     for name, meta in load_datasets().items():
         print('Processing {}'.format(name))
-        proc = module_importer(name)
+        proc = dataset_importer(name)
         proc.evaluate_all()
 
 

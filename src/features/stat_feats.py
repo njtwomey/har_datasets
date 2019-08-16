@@ -1,7 +1,7 @@
-from src import BaseProcessor
+from src import BaseDataset
 
 
-class StatisticalFeatures(BaseProcessor):
+class StatisticalFeatures(BaseDataset):
     def __init__(self, name, parent):
         super(StatisticalFeatures, self).__init__(name)
         self.parent = parent

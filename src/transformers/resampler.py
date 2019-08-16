@@ -3,7 +3,7 @@ from os.path import join
 from numpy import ceil, arange
 from scipy.signal import resample
 
-from src import BaseProcessor
+from src import BaseDataset
 
 
 def resampler(df, fs, fs_new):
@@ -20,7 +20,7 @@ def resampler(df, fs, fs_new):
     return t_new, x_new
 
 
-class Resampler(BaseProcessor):
+class Resampler(BaseDataset):
     def __init__(self, name, parent, fs_new):
         super(Resampler, self).__init__(name)
         self.parent = parent,

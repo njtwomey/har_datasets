@@ -4,7 +4,7 @@ from tqdm import tqdm
 
 import requests
 
-from src import Dataset
+from src import DatasetMeta
 
 
 def download_and_save(url, path, force=False, chunk_size=2 ** 12):
@@ -23,7 +23,7 @@ def download_and_save(url, path, force=False, chunk_size=2 ** 12):
 
 
 def download_dataset(meta):
-    dataset = Dataset(meta)
+    dataset = DatasetMeta(meta)
     if not exists(dataset.zip_path):
         makedirs(dataset.zip_path)
     for ii, url in enumerate(dataset.meta['download_urls']):

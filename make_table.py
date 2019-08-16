@@ -2,7 +2,7 @@
 import os
 from collections import namedtuple
 
-from src import Dataset, load_datasets, dot_env_stuff
+from src import DatasetMeta, load_datasets, dot_env_stuff
 
 ColumnPair = namedtuple('ColumnPair', ('short', 'long'))
 
@@ -12,7 +12,7 @@ def main():
     
     lines = []
     for dataset in datasets:
-        dataset = Dataset(dataset)
+        dataset = DatasetMeta(dataset)
         head, space, line = dataset.make_row()
         lines.append(line)
     

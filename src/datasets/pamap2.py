@@ -4,7 +4,8 @@ import numpy as np
 from os.path import join
 from tqdm import tqdm
 
-from ..dataset_processor import DatasetProcessor
+from ..base import Dataset
+from ..utils import index_decorator, label_decorator, fold_decorator, data_decorator
 
 
 def iter_pamap2_subs(path, cols, desc, columns=None, callback=None, n_subjects=9):
@@ -24,26 +25,27 @@ def iter_pamap2_subs(path, cols, desc, columns=None, callback=None, n_subjects=9
     df = pd.DataFrame(data)
     if columns:
         df.columns = columns
-        return df
     return df
 
 
-class pamap2(DatasetProcessor):
+class pamap2(Dataset):
     def __init__(self):
         super(pamap2, self).__init__(
             name='pamap2',
             unzip_path=lambda p: join(p, 'Protocol')
         )
     
+    @label_decorator
     def build_labels(self, path, *args, **kwargs):
         df = pd.DataFrame(iter_pamap2_subs(
             path=path,
             cols=[1],
             desc='Labels'
-        )).astype('category')
+        ))
         
-        return df[0].apply(lambda ll: self.dataset.inv_lookup[ll])
+        return self.dataset.inv_lookup, df
     
+    @fold_decorator
     def build_folds(self, path, *args, **kwargs):
         df = iter_pamap2_subs(
             path=path,
@@ -54,6 +56,7 @@ class pamap2(DatasetProcessor):
         ).astype(int)
         return df
     
+    @index_decorator
     def build_index(self, path, *args, **kwargs):
         def indexer(sid, data):
             subject = np.zeros(data.shape[0])[:, None] + sid
@@ -75,7 +78,8 @@ class pamap2(DatasetProcessor):
         ))
         return df
     
-    def build_source(self, path, modality, location, *args, **kwargs):
+    @data_decorator
+    def build_data(self, path, modality, location, *args, **kwargs):
         offset = dict(
             wrist=3,
             chest=20,
@@ -83,7 +87,7 @@ class pamap2(DatasetProcessor):
         )[location] + dict(
             accel=1,
             gyro=7,
-            magnet=10
+            mag=10
         )[modality]
         
         df = iter_pamap2_subs(
