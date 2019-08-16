@@ -1,3 +1,4 @@
 [submodule "mldb"]
 	path = mldb
-	url = git@bitbucket.org:ntwomey/mldb.git
+	url = git@github.com:njtwomey/mldb.git
+

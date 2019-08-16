@@ -12,8 +12,6 @@ from ..utils import index_decorator, label_decorator, fold_decorator, data_decor
 
 
 def uschad_iterator(path, columns=None, cols=None, callback=None, desc=None):
-    print(path)
-    
     data_list = []
     
     ii = 0
@@ -36,7 +34,7 @@ def uschad_iterator(path, columns=None, cols=None, callback=None, desc=None):
                 
                 data_list.extend(data)
                 ii += 1
-                
+    
     df = pd.DataFrame(data_list)
     if columns:
         df.columns = columns
@@ -46,7 +44,7 @@ def uschad_iterator(path, columns=None, cols=None, callback=None, desc=None):
 class uschad(Dataset):
     def __init__(self):
         super(uschad, self).__init__(
-            name='uschad',
+            name=self.__class__.__name__,
         )
     
     @label_decorator
@@ -84,4 +82,4 @@ class uschad(Dataset):
         def callback(ii, sub_id, act_id, trial_id, data):
             return data[:, cols]
         
-        return uschad_iterator(path, callback=callback, desc='Data')
+        return uschad_iterator(path, callback=callback, desc=f'Data ({modality}-{location})')

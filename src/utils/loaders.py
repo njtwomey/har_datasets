@@ -1,22 +1,22 @@
 import os
 import pandas as pd
 
-import zipfile
 import yaml
 
 __all__ = [
     'load_activities', 'load_locations', 'load_modalities', 'load_datasets',
-    'load_data',
-    'dataset_importer', 'unzip_data',
+    'load_csv_data',
+    'dataset_importer'
 ]
 
 
-def load_data(fname, astype='list'):
+def load_csv_data(fname, astype='list'):
     df = pd.read_csv(
         fname,
         delim_whitespace=True,
         header=None
     )
+    
     if astype in {'dataframe', 'pandas', 'pd'}:
         return df
     if astype in {'values', 'np', 'numpy'}:
@@ -27,16 +27,14 @@ def load_data(fname, astype='list'):
     raise ValueError
 
 
-def load_datasets():
-    return yaml.load(open(os.path.join(
-        os.environ['PROJECT_ROOT'], 'datasets.yaml'
-    ), 'r'))
-
-
 def load_yaml(name):
     return yaml.load(open(os.path.join(
         os.environ['PROJECT_ROOT'], f'{name}.yaml'
     ), 'r'))
+
+
+def load_datasets():
+    return load_yaml('datasets')
 
 
 def load_activities():
@@ -55,10 +53,3 @@ def dataset_importer(class_name, *args, **kwargs):
     m = __import__('src.datasets', fromlist=[class_name])
     c = getattr(m, class_name)
     return c(*args, **kwargs)
-
-
-def unzip_data(zip_path, in_name, out_name):
-    if os.path.exists(os.path.join(zip_path, out_name)):
-        return
-    with zipfile.ZipFile(os.path.join(zip_path, in_name), 'r') as fil:
-        fil.extractall(zip_path)

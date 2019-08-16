@@ -1,11 +1,15 @@
 from ..base import Dataset
 from ..utils import index_decorator, label_decorator, fold_decorator, data_decorator
 
+__all__ = [
+    'NameOfTheDataset'
+]
 
-class dataset_name_goes_here(Dataset):
+
+class NameOfTheDataset(Dataset):
     def __init__(self):
-        super(dataset_name_goes_here, self).__init__(
-            name='dataset_name_goes_here',
+        super(NameOfTheDataset, self).__init__(
+            name=self.__class__.__name__,
         )
     
     @label_decorator

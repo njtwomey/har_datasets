@@ -1,9 +1,10 @@
 import os
 from dotenv import find_dotenv, load_dotenv
 import logging
+import zipfile
 
 __all__ = [
-    'dot_env_stuff'
+    'dot_env_stuff', 'unzip_data'
 ]
 
 
@@ -14,3 +15,10 @@ def dot_env_stuff(func):
     load_dotenv(find_dotenv())
     
     func()
+
+
+def unzip_data(zip_path, in_name, out_name):
+    if os.path.exists(os.path.join(zip_path, out_name)):
+        return
+    with zipfile.ZipFile(os.path.join(zip_path, in_name), 'r') as fil:
+        fil.extractall(zip_path)

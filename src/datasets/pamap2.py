@@ -31,7 +31,7 @@ def iter_pamap2_subs(path, cols, desc, columns=None, callback=None, n_subjects=9
 class pamap2(Dataset):
     def __init__(self):
         super(pamap2, self).__init__(
-            name='pamap2',
+            name=self.__class__.__name__,
             unzip_path=lambda p: join(p, 'Protocol')
         )
     

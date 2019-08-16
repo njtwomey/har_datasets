@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
 import os
-from collections import namedtuple
 
 from src import DatasetMeta, load_datasets, dot_env_stuff
 from src.utils.loaders import load_yaml
-
-ColumnPair = namedtuple('ColumnPair', ('short', 'long'))
 
 
 def main():
@@ -34,9 +31,11 @@ def main():
     for dim in ('modalities', 'activities', 'locations'):
         with open(os.path.join(root, f'{dim}.md'), 'w') as fil:
             data = load_yaml(dim)
+            
+            assert isinstance(data, dict)
+            
             fil.write(f'| Index | {dim[0].upper()}{dim[1:].lower()} | \n')
             fil.write('| ----- | ----- | \n')
-            assert isinstance(data, dict)
             for ki, kv in data.items():
                 fil.write(f'| {kv} | {ki} | \n')
 
