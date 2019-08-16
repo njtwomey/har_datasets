@@ -1,4 +1,4 @@
-- wrist
-- chest
-- ankle
-- waist
+wrist: 0
+chest: 1
+ankle: 2
+waist: 3

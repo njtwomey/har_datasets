@@ -36,11 +36,9 @@ class anguita2013(Dataset):
     
     @index_decorator
     def build_index(self, path, *args, **kwargs):
-        labels = []
         sub = []
         for fold in ('train', 'test'):
             sub.extend(load_data(join(path, fold, f'subject_{fold}.txt')))
-            labels.extend(load_data(join(path, fold, f'y_{fold}.txt')))
         index = pd.DataFrame(dict(
             sub=[si for si in sub for _ in range(self.win_len)],
             sub_seq=build_seq_list(subs=sub, win_len=self.win_len),
