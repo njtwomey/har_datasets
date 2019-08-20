@@ -30,6 +30,7 @@ anguita2013:
     sit: 4
     stand: 5
     lie: 6
+  missing: null
 
 pamap2:
   name: "pamap2"
@@ -86,6 +87,7 @@ pamap2:
     soccer: 20
     rope_jump: 24
     other: 0
+  missing: null
 
 uschad:
   name: "uschad"
@@ -123,4 +125,4 @@ uschad:
     sleep: 10
     elevator_up: 11
     elevator_down: 12
-
+  missing: null

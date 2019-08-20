@@ -1,29 +1,105 @@
-# HAR Datasets
+# Introduction
 
-This repository aims to provide a unified interface to datasets for the task of accelerometer-based Human Activity Recognition (HAR). The philosophy is to catalogue as many datasets as possible from a wide variety of recording conditions.
-
- terms of data format, feature extraction, label space, sampling frequency, device location/orientation, etc. for the purpose of understanding the efficacy of transfer learning, online learning, lifelong learning,  data representation, feature extraction across a large collection of datasets.
+This repository aims to provide a unified interface to wearable-based Human Activity Recognition (HAR) datasets. The philosophy is to acquire many datasets from a wide variety of recording conditions and to translate these into a consistent data format in order to more easily address open questions on feature extraction/representation learning, meta/transfer learning, active learning amongst other tasks. Ultimately, I am to create a home for the easier understanding of the stability, strengths and weaknesses of the state-of-the-art in HAR. 
 
 
-# Project Structure
 
-This project follows the [DataScience CookieCutter](https://drivendata.github.io/cookiecutter-data-science/) template with the aim of facilitating reproducible models and results. the majority of commands are executed with the `make` command, and we also provide a high-level data loading interface.
+# Data Format
 
-# Proposed Format
+The data from all datasets listed in this project are converted into one consistent format that consistes of four key elements: 
 
-All data will be translated to the following a simple CSV format with the following columns:
+1. the train/validation/test fold definition file; 
+2. the label file; 
+3. the data file; and
+4. an index file. 
+
+Note, the serialisation format used in this repository is that data are stored on a per-sample basis. This means that each of the files listed above will have the same number of rows. 
+
+## Index File
+
+The following columns are required for the index file:
 
 ```
-time, subject_id, sequence_id, activity_labels, fold_id, x, y, z
+subject, trail, time
 ```
 
-where `time` is in seconds and of the type double, `subject_id` is an integer identifier of the subjects, `sequence_id` identifiers of contiguous activities (one subject may therefore perform a task several times), `x`, `y`, `z` are the x, y, and z axis data (whether acceleration, magnetometer, or gyroscope), and `activity_labels` are the labels of the dataset. Finally, `fold_id` is an identifier that is used to specify the fold in which the data should appear (negative values will only be used in training, consistent with scikit-learn's [PredefinedSplit](https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.PredefinedSplit.html) module).
+`subject` defines a subject identifier, `trial` allows for different trials to be specified (eg it can distinguish data from subjects who perform a task several times), and `time` defines the time (absolute or relative). Subject and trial should be integers, but need not be contiguous. Although time can be considered unnecessary in many applications (especially if the recording was done in a controlled environment or following a script) it is added here to allow for the detection of missing data (missing time stamps) and time-of-day features (if `time` represents epoch time, for example).
 
-We have made the decision to keep our data formal relatively simple since we hope it will provide a language-agnostic interface to the data so that users of, for example, R, MATLAB, Python, C++, etc can use the data once it has been built. Datasets with several views into movement (eg with volunteers wearing several devices, or with IMUs providing not only acceleration data, but also gyroscope and magnetometer data) we have made the decision that each 'view' be contained in a separate file since in some cases the data are sampled at different rates. However, the data may be merged together using the `subject_id`, `time`, and `sequence_id` fields of the file above.
+This file must have three columns only. 
 
-# Current Datasets
+## Label File
 
-The following table enumerates the datasets accounted for in this repository, sorted by the surname of the first author of the paper.
+The following structure is required for the label files
+
+```
+track_1, track_2, 
+```
+
+Many datasets are single-track and multi-class, but this format allows for multiple label learning. 
+
+This file must have at least one column. 
+
+## Data File
+
+The data format is quite simple:
+
+```
+x, y, z
+```
+
+where `x`, `y` and `z` correspond to the axes of the wearable. By default different files are created for each modality (ie accelerometer, gyroscope and magnetomoter) and for each location (eg wrist, waist). For example, if one accelerometer is on the wrist a file called `accel-wrist` will be created for it. There is no restriction on the number of colums in this file, but we expect that more often than not 3 columns will be present for each axis of the device. 
+
+This file must have at least one column. 
+
+## Fold Definitions
+
+Train and test folds are defined by the columns of this file: 
+
+```python
+fold_1
+-1
+-1
+-1
+0
+0
+0
+1
+1
+1
+```
+
+The behaviour of these folds is based on scikit-learn's [PredefinedSplit](https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.PredefinedSplit.html) module. Additional folds can (if necessary) be defined by adding supplementary columns to this file. For example if doing 10 times 10-fold cross validation, 10 fold identifiers would be contained in each of the 10 columns. 
+
+This file must have at least one column. 
+
+# Contributing
+
+I hope to receive pull requests for new datasets, processing methods, features, and models to this repository. Requests are likely to be accepted once the exact data format, feature extraction, modelling and evaluation interfaces are relatively stable. 
+
+## Contributing Datasets
+
+1. Add a new entry to the file `datasets.yaml` and fill out the information as accurately as possible. Follow the styles and detail given in the entries named `anguita2013`, `pamap2` and `uschad`. The entry of accurate metadata will be heavily strictly moderated before a submission is accepted. Note:
+    - The dataset name must be lower case.
+    - If the dataset introduces a new activity label add it to the end of `activities.yaml`. 
+    - If the wearable has been placed on a new location add it to the end of `locations.yaml`. 
+    - If the dataset contains new modalities add it to the end of `modalities.yaml`. 
+    - Add new entries to the **end** of the `yaml` files since label indexes are immutabe across commits. 
+2. Run `make table`. This will update the dataset table in the `tables` directory. Ensure this command executes successully and verify that the entered information is accurate.
+3. Run `make data`. This will download the archive automatically based on the URLs provided in the `download_urls` field from step 1 above. 
+4. Copy the file `src/datasets/__new__.py` to `src/datasets/<dataset_name>.py` (`<dataset_name>` is specified in #1 above). The prupose of this file is to translate the data to the expected format described in the sections above. In particular, separate files with the wearable data, annotated labels, pre-defined folds, and index files are required. Use the existing examples of the aforementioned datasets (`anguita2013`, `pamap2` and `uschad`) that can be found in `src/datasets` as examples of how this has been achieved. 
+
+## Contributing Representations
+
+(Under construction.)
+
+## Contributing Models
+
+(Under construction.)
+
+
+# Datasets
+
+The following table enumerates the datasets that are under consideration for inclusion in this repository.
 
 | First Author | Dataset Name | Paper (URL) | Data Description (URL) | Data Download (URL) | Year | fs | Accel | Gyro | Mag | #Subjects | #Activities | Notes | 
 | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- | ----- |
@@ -51,107 +127,10 @@ The following table enumerates the datasets accounted for in this repository, so
 
 
 
-# Contributing
-
-We will gladly accept contributions to this repository in any form, but particularly we welcome additional datasets, new feature extraction processes, view representations, and bug fixes.
 
 
-## Adding new Datasets
 
-New datasets can be added by contacting me via email or by submitting a new issue (preferred). Simply provide me with information required to populate a new row in the table above. If you have a transformer that will convert the data to the preferred format please attach this too. If not I will then attempt to write a converter for the data but this may take some time.
+# Project Structure
 
-## Update via Pull Request
-
-Two steps must be performed for a Pull Request to be accepted: 1. update the table above; and 2. add the transformer to the repository. These steps are outlined in more detail below:
-
-### Update the Table
-
-The table above can be updated by adding a row with the following information:
-
-``` MarkDown
-| AuthorName | DatasetName | [PaperName](PaperURL) | [Description](DescriptionURL) | [Download](DownloadURL) | PublicationYear | SamplingFrequency | HasAccelerometer | HasGyroscope | HasMagnetometer | NumSubjects | NumActivities | Notes |
-```
-
-Please insert the new row alphabetically based on the first author's name and then by publication date if there is a tie. Note, the name of the dataset will be immutable and only in exceptional circumstances will the name be changed.
-
-### Add Transformer
-
-A new data transformer should be placed in `src/converters/<DatasetName>.py` where `<DatasetName>` matches the second element of the newly inserted row. This file must provide a function called `<DatasetName>` wich accepts as an argument the Contained within this file should be a function called `<DatasetName>` which returns pandas dataframes. Using the `spherechallenge` dataset as an example, a file in `src/data/spherechallenge.py` will contain the followign:
-
-``` Python
-def spherechallenge(input_path):
-    data = load_sphere_challenge_data(input_path)
-    return data
-```
-
-It is important that there is consistency between the name of the dataset in the table above, the name of the file in the `src` directory and the name of the function since the module importer reads the data information from this table and dynamically loads the transformation functions dynamically. In other words, the function must be importable as follows
-
-``` Python
-from spherechallenge import spherechallenge
-```
-
-## Adding New Feature Representations
-
-We have implemented several feature extraction processes in the `src/features` directory and interfaces to map these features to the above datasets also. These should be relatively straightforward to add since they will typically operate on a matrix of acceleration data and will return a vector. As a simple example one may extract the `mean`, `standard deviation`, `range`, `min` and `max` values as follows:
-
-``` Python
-import numpy as np
-
-stat_funcs = [np.mean, np.std, np.ptp, np.min, np.max]
-
-def extract_stat_features(data):
-	return np.concatenate([func(data, axis=0) for func in stat_funcs])
-```
-
-## Adding Transformers
-
-Several pre-processing techniques are often applied to accelerometer data. For example, it is common to separate the 'body' and 'gravity' components from each other, compute the magnitude of the data etc.
-
-
-# Project Organization
-
-```
-├── LICENSE
-├── Makefile           <- Makefile with commands like `make data` or `make train`
-├── README.md          <- The top-level README for developers using this project.
-├── data
-│   ├── features       <- The representation of the processed data.
-│   ├── processed      <- The intermediate data, transformed to the desired format.
-│   └── raw            <- The original, immutable data dump. All datasets have unique
-│
-├── docs               <- A default Sphinx project; see sphinx-doc.org for details
-│
-├── models             <- Trained and serialized models, model predictions, or model summaries
-│
-├── notebooks          <- Jupyter notebooks. Naming convention is a number (for ordering),
-│                         the creator's initials, and a short `-` delimited description, e.g.
-│                         `1.0-jqp-initial-data-exploration`.
-│
-├── references         <- Data dictionaries, manuals, and all other explanatory materials.
-│
-├── reports            <- Generated analysis as HTML, PDF, LaTeX, etc.
-│   └── figures        <- Generated graphics and figures to be used in reporting
-│
-├── requirements.txt   <- The requirements file for reproducing the analysis environment, e.g.
-│                         generated with `pip freeze > requirements.txt`
-│
-├── src                <- Source code for use in this project.
-│   ├── __init__.py    <- Makes src a Python module
-│   │
-│   ├── data           <- Scripts to download or generate data
-│   │   └── make_dataset.py
-│   │
-│   ├── features       <- Scripts to turn raw data into features for modeling
-│   │   └── build_features.py
-│   │
-│   ├── models         <- Scripts to train models and then use trained models to make
-│   │   │                 predictions
-│   │   ├── predict_model.py
-│   │   └── train_model.py
-│   │
-│   └── visualization  <- Scripts to create exploratory and results oriented visualizations
-│       └── visualize.py
-│
-└── tox.ini            <- tox file with settings for running tox; see tox.testrun.org
-```
+This project follows the [DataScience CookieCutter](https://drivendata.github.io/cookiecutter-data-science/) template with the aim of facilitating reproducible models and results. the majority of commands are executed with the `make` command, and we also provide a high-level data loading interface.
 

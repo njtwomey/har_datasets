@@ -3,7 +3,8 @@ import pandas as pd
 from functools import update_wrapper, partial
 
 __all__ = [
-    'index_decorator', 'fold_decorator', 'label_decorator', 'data_decorator'
+    'index_decorator', 'fold_decorator', 'label_decorator', 'data_decorator',
+    'feature_decorator', 'model_decorator'
 ]
 
 
@@ -57,10 +58,10 @@ class IndexDecorator(DecoratorBase):
     
     def __call__(self, *args, **kwargs):
         df = super(IndexDecorator, self).__call__(*args, **kwargs)
-        df.columns = ['sub', 'sub_seq', 'time']
+        df.columns = ['subject', 'trial', 'time']
         return df.astype(dict(
-            sub=int,
-            sub_seq=int,
+            subject=int,
+            trial=int,
             time=float
         ))
 
@@ -70,7 +71,19 @@ class DataDecorator(DecoratorBase):
         super(DataDecorator, self).__init__(func)
 
 
+class FeatureDecorator(DecoratorBase):
+    def __init__(self, func):
+        super(FeatureDecorator, self).__init__(func)
+
+
+class ModelDecorator(DecoratorBase):
+    def __init__(self, func):
+        super(ModelDecorator, self).__init__(func)
+
+
 label_decorator = LabelDecorator
 index_decorator = IndexDecorator
 fold_decorator = FoldDecorator
 data_decorator = DataDecorator
+feature_decorator = FeatureDecorator
+model_decorator = ModelDecorator

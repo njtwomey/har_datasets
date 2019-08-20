@@ -15,12 +15,12 @@ def check_yaml(name, values):
 
 
 def check_activities(values):
-    return check_yaml('activities', values)
+    return check_yaml('activities.yaml', values)
 
 
 def check_locations(values):
-    return check_yaml('locations', values)
+    return check_yaml('locations.yaml', values)
 
 
 def check_modalities(values):
-    return check_yaml('modalities', values)
+    return check_yaml('modalities.yaml', values)

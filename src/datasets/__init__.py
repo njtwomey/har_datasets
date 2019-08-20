@@ -1,8 +1,11 @@
 __all__ = [
+    'Dataset',
     'anguita2013',
     'pamap2',
-    'uschad'
+    'uschad',
 ]
+
+from .base import Dataset
 
 from .anguita2013 import anguita2013
 from .pamap2 import pamap2

@@ -9,6 +9,7 @@ BUCKET = [OPTIONAL] your-bucket-for-syncing-data (do not include 's3://')
 PROFILE = default
 PROJECT_NAME = har_datasets
 PYTHON_INTERPRETER = python3
+MAKE = /usr/bin/make
 
 ifeq (,$(shell which conda))
 HAS_CONDA=False
@@ -25,20 +26,24 @@ requirements: test_environment
 	pip install -r requirements.txt
 
 ## Make Dataset Table
-table:
-	$(PYTHON_INTERPRETER) make_table.py
+tables:
+	$(PYTHON_INTERPRETER) make_tables.py
 
 ## Make Dataset
-data:
-	$(PYTHON_INTERPRETER) make_dataset.py
+download:
+	$(PYTHON_INTERPRETER) make_download.py
 
 ## Make Processed
-processed:
-	$(PYTHON_INTERPRETER) make_processed.py
+raw:
+	$(PYTHON_INTERPRETER) make_raw.py
+
+## Make Features
+features:
+	$(PYTHON_INTERPRETER) make_features.py
 
 ## Delete all compiled Python files
 clean:
-	find . -name "*.pyc" -exec rm {} \;
+	find . -name "*.pyc" -delete
 
 ## Lint using flake8
 lint:

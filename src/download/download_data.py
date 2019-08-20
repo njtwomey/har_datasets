@@ -1,10 +1,10 @@
-from os.path import join, split, exists
+from os.path import basename, join, split, exists, splitext
 from os import makedirs
 from tqdm import tqdm
 
 import requests
 
-from src import DatasetMeta
+from src import DatasetMeta, unzip_data
 
 
 def download_and_save(url, path, force=False, chunk_size=2 ** 12):
@@ -15,7 +15,7 @@ def download_and_save(url, path, force=False, chunk_size=2 ** 12):
         if not force:
             return
     chunks = tqdm(
-        response.iter_content(chunk_size=chunk_size), desc=desc
+        response.iter_content(chunk_size=chunk_size), desc=basename(desc)
     )
     with open(fname, 'wb') as fil:
         for chunk in chunks:
@@ -29,3 +29,10 @@ def download_dataset(meta):
     for ii, url in enumerate(dataset.meta['download_urls']):
         print('\t{}/{} {}'.format(ii + 1, len(dataset.meta['download_urls']), url))
         download_and_save(url=url, path=dataset.zip_path)
+        zip_name = basename(dataset.meta['download_urls'][0])
+        unzip_path = join(dataset.zip_path, splitext(zip_name)[0])
+        unzip_data(
+            zip_path=dataset.zip_path,
+            in_name=zip_name,
+            out_name=unzip_path
+        )

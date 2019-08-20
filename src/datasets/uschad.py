@@ -7,8 +7,9 @@ from scipy.io import loadmat
 
 from tqdm import trange
 
-from ..base import Dataset
 from ..utils import index_decorator, label_decorator, fold_decorator, data_decorator
+
+from .base import Dataset
 
 
 def uschad_iterator(path, columns=None, cols=None, callback=None, desc=None):
@@ -44,18 +45,18 @@ def uschad_iterator(path, columns=None, cols=None, callback=None, desc=None):
 class uschad(Dataset):
     def __init__(self):
         super(uschad, self).__init__(
-            name=self.__class__.__name__,
+            dataset=self.__class__.__name__,
         )
     
     @label_decorator
-    def build_labels(self, path, *args, **kwargs):
+    def build_label(self, path, *args, **kwargs):
         def callback(ii, sub_id, act_id, trial_id, data):
             return np.zeros((data.shape[0], 1)) + act_id
         
-        return self.dataset.inv_lookup, uschad_iterator(path, callback=callback, desc='Labels')
+        return self.dataset_meta.inv_lookup, uschad_iterator(path, callback=callback, desc='Labels')
     
     @fold_decorator
-    def build_folds(self, path, *args, **kwargs):
+    def build_fold(self, path, *args, **kwargs):
         def callback(ii, sub_id, act_id, trial_id, data):
             return np.zeros((data.shape[0], 1)) + sub_id > 10
         
@@ -67,10 +68,10 @@ class uschad(Dataset):
             return np.c_[
                 np.zeros((data.shape[0], 1)) + sub_id,
                 np.zeros((data.shape[0], 1)) + ii,
-                np.arange(data.shape[0]) / self.dataset.meta['fs']
+                np.arange(data.shape[0]) / self.dataset_meta.meta['fs']
             ]
         
-        return uschad_iterator(path, callback=callback, columns=['sub', 'sub_seq', 'time'], desc='Index')
+        return uschad_iterator(path, callback=callback, columns=['subject', 'trial', 'time'], desc='Index')
     
     @data_decorator
     def build_data(self, path, modality, location, *args, **kwargs):

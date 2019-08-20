@@ -2,10 +2,12 @@ import pandas as pd
 import numpy as np
 
 from os.path import join
+
 from tqdm import tqdm
 
-from ..base import Dataset
 from ..utils import index_decorator, label_decorator, fold_decorator, data_decorator
+
+from .base import Dataset
 
 
 def iter_pamap2_subs(path, cols, desc, columns=None, callback=None, n_subjects=9):
@@ -31,22 +33,22 @@ def iter_pamap2_subs(path, cols, desc, columns=None, callback=None, n_subjects=9
 class pamap2(Dataset):
     def __init__(self):
         super(pamap2, self).__init__(
-            name=self.__class__.__name__,
+            dataset=self.__class__.__name__,
             unzip_path=lambda p: join(p, 'Protocol')
         )
     
     @label_decorator
-    def build_labels(self, path, *args, **kwargs):
+    def build_label(self, path, *args, **kwargs):
         df = pd.DataFrame(iter_pamap2_subs(
             path=path,
             cols=[1],
             desc='Labels'
         ))
         
-        return self.dataset.inv_lookup, df
+        return self.dataset_meta.inv_lookup, df
     
     @fold_decorator
-    def build_folds(self, path, *args, **kwargs):
+    def build_fold(self, path, *args, **kwargs):
         df = iter_pamap2_subs(
             path=path,
             cols=[1],
@@ -60,9 +62,9 @@ class pamap2(Dataset):
     def build_index(self, path, *args, **kwargs):
         def indexer(sid, data):
             subject = np.zeros(data.shape[0])[:, None] + sid
-            subject_seq = np.zeros(data.shape[0])[:, None] + sid
+            trial = np.zeros(data.shape[0])[:, None] + sid
             return np.concatenate((
-                subject, subject_seq, data
+                subject, trial, data
             ), axis=1)
         
         df = iter_pamap2_subs(
@@ -70,10 +72,10 @@ class pamap2(Dataset):
             cols=[0],
             desc='Index',
             callback=indexer,
-            columns=['sub', 'sub_seq', 'time']
+            columns=['subject', 'trial', 'time']
         ).astype(dict(
-            sub=int,
-            sub_seq=int,
+            subject=int,
+            trial=int,
             time=float
         ))
         return df

@@ -1,37 +1,31 @@
 from os.path import join, splitext, basename
-
 from os import environ
 
 from collections import defaultdict
 
-import yaml
-
 from mldb import ComputationGraph, PickleBackend, VolatileBackend
 
-from .utils import check_activities, check_modalities, check_locations, unzip_data
-from .utils import index_decorator, label_decorator, fold_decorator, data_decorator
+from .utils import check_activities, check_modalities, check_locations, unzip_data, load_yaml, build_path
+from . import label_decorator, index_decorator, data_decorator, fold_decorator
 
 __all__ = [
-    'DatasetMeta', 'BaseDataset', 'Dataset'
+    'DatasetMeta', 'BaseGraph'
 ]
 
 
 class DatasetMeta(object):
     def __init__(self, dataset):
         if not isinstance(dataset, dict):
-            datasets = yaml.load(open(join(
-                environ['PROJECT_ROOT'], 'datasets.yaml'
-            ), 'r'))
+            datasets = load_yaml('datasets.yaml')
             assert dataset in datasets
             dataset = datasets[dataset]
         
         self.name = dataset['name']
         self.meta = dataset
         
-        self.root = join(
-            environ['PROJECT_ROOT'],
-            'data'
-        )
+        self.fs = dataset['fs']
+        
+        self.root = build_path('data')
         
         self.inv_lookup = check_activities(self.meta['activities'])
         
@@ -44,32 +38,18 @@ class DatasetMeta(object):
         check_modalities(self.modalities)
     
     @property
-    def data_path(self):
-        return join(self.root, 'data', self.name)
-    
-    @property
     def zip_path(self):
-        return join(self.root, 'zip', self.name)
+        return build_path('data', 'zip', self.name)
     
     @property
-    def raw_path(self):
-        return join(self.root, 'raw', self.name)
-    
-    @property
-    def processed_path(self):
-        return join(self.root, 'processed', self.name)
-    
-    @property
-    def features_path(self):
-        return join(self.root, 'features', self.name)
-    
-    @property
-    def model_path(self):
-        return join(self.root, 'models', self.name)
+    def build_path(self):
+        return build_path('data', 'build', self.name)
     
     def make_row(self):
         def make_links(links, desc='Link'):
-            return ', '.join('[{} {}]({})'.format(desc, ii, url) for ii, url in enumerate(links, start=1))
+            return ', '.join(
+                '[{} {}]({})'.format(desc, ii, url) for ii, url in enumerate(links, start=1)
+            )
         
         # modalities = sorted(set([mn for ln, lm in self.meta['locations'].items() for mn, mv in lm.items() if mv]))
         
@@ -78,6 +58,7 @@ class DatasetMeta(object):
             self.meta['paper_name'],
             self.name,
             make_links(links=self.meta['description_urls'], desc='Link'),
+            self.meta.get('missing', ''),
             make_links(links=self.meta['paper_urls'], desc='Link'),
             self.meta['year'],
             self.meta['fs'],
@@ -90,7 +71,7 @@ class DatasetMeta(object):
         
         return (
             (
-                f'| First Author | Paper Name | Dataset Name | Description '
+                f'| First Author | Paper Name | Dataset Name | Description | Missing data '
                 f'| Download Links | Year | Sampling Rate | Device Locations | Device Modalities '
                 f'| Num Subjects | Num Activities | Activities | '
             ),
@@ -99,110 +80,96 @@ class DatasetMeta(object):
         )
 
 
-class BaseDataset(ComputationGraph):
+def walk_dict(dict_var, breadcrums=None):
+    if breadcrums is None:
+        breadcrums = tuple()
+    for kk, vv in dict_var.items():
+        if isinstance(vv, (dict, defaultdict)):
+            yield from walk_dict(vv, breadcrums + (kk,))
+        else:
+            yield breadcrums + (kk,), vv
+
+
+class BaseGraph(ComputationGraph):
     """
     A simple computational graph that is meant only to define backends and load metadata
     """
     
     def __init__(self, name):
-        super(BaseDataset, self).__init__(
-            name=name,
-            default_backend='fs',
+        super(BaseGraph, self).__init__(
+            name=name, default_backend='fs',
         )
         
-        self.dataset = DatasetMeta(self.name)
-        self.fs_root = join(self.dataset.root)
+        self.fs_root = build_path('data')
         
         self.add_backend('fs', PickleBackend(self.fs_root))
         self.add_backend('none', VolatileBackend())
-
-
-class Dataset(BaseDataset):
-    """
-    A dataset has labels, index, fold definitions, and outputs defined
-    """
-    
-    def __init__(self, name, *args, **kwargs):
-        super(Dataset, self).__init__(name=name)
         
-        self.labels = None
+        self.label = None
         self.fold = None
         self.index = None
+        
         self.outputs = None
-        
-        zip_name = basename(self.dataset.meta['download_urls'][0])
-        unzip_path = join(self.dataset.zip_path, splitext(zip_name)[0])
-        
-        self.unzip_path = kwargs.get('unzip_path', lambda x: x)(unzip_path)
-        
-        self.compose()
-        
-        self.node(
-            node_name='unzipped',
-            func=unzip_data,
-            kwargs=dict(
-                zip_path=self.dataset.zip_path,
-                in_name=zip_name,
-                out_name=self.unzip_path
-            ),
-            backend='none'
-        )
+    
+    def build_path(self, *args):
+        return build_path('data', 'build', self.identifier, '-'.join(args))
+    
+    def iter_outputs(self):
+        assert isinstance(self.outputs, (dict, defaultdict))
+        for kk, vv in walk_dict(self.outputs):
+            yield kk, vv
+    
+    def pre_compose(self):
+        pass
     
     def compose(self):
-        self.labels = self.node(
-            node_name=join(self.dataset.raw_path, 'labels'),
-            func=self.build_labels,
-            kwargs=dict(
-                path=self.unzip_path,
-                inv_lookup=self.dataset.inv_lookup
-            )
-        )
+        self.pre_compose()
         
-        self.fold = self.node(
-            node_name=join(self.dataset.raw_path, 'fold'),
-            func=self.build_folds,
-            kwargs=dict(
-                path=self.unzip_path,
-            )
-        )
+        self.index = self.compose_index()
+        assert self.index is not None
         
-        self.index = self.node(
-            node_name=join(self.dataset.raw_path, 'index'),
-            func=self.build_index,
-            kwargs=dict(
-                path=self.unzip_path
-            )
-        )
+        self.fold = self.compose_fold()
+        assert self.fold is not None
         
-        self.outputs = {kk: dict() for kk in self.dataset.modalities}
+        self.label = self.compose_label()
+        assert self.label is not None
         
-        for location, amga in self.dataset.meta['locations'].items():
-            for acc_mag_gyr, active in amga.items():
-                if not active:
-                    continue
-                self.outputs[acc_mag_gyr][location] = self.node(
-                    node_name=join(self.dataset.raw_path, f'{acc_mag_gyr}-{location}'),
-                    func=self.build_data,
-                    sources=None,
-                    kwargs=dict(
-                        path=self.unzip_path,
-                        modality=acc_mag_gyr,
-                        location=location,
-                    )
-                )
+        self.outputs = self.compose_outputs()
+        assert self.outputs is not None
+        
+        self.post_compose()
     
-    @label_decorator
-    def build_labels(self, path, *args, **kwargs):
+    def post_compose(self):
+        pass
+    
+    def compose_outputs(self):
         raise NotImplementedError
     
-    @fold_decorator
-    def build_folds(self, path, *args, **kwargs):
+    def compose_index(self):
+        raise NotImplementedError
+    
+    def compose_fold(self):
+        raise NotImplementedError
+    
+    def compose_label(self):
+        raise NotImplementedError
+    
+    @property
+    def identifier(self):
         raise NotImplementedError
     
     @index_decorator
-    def build_index(self, path, *args, **kwargs):
+    def build_index(self, *args, **kwargs):
+        raise NotImplementedError
+    
+    @fold_decorator
+    def build_fold(self, *args, **kwargs):
+        raise NotImplementedError
+    
+    @label_decorator
+    def build_label(self, *args, **kwargs):
         raise NotImplementedError
     
     @data_decorator
-    def build_data(self, path, modality, location, *args, **kwargs):
+    def build_data(self, modality, location, *args, **kwargs):
         raise NotImplementedError
