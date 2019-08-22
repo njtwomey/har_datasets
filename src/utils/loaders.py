@@ -5,8 +5,9 @@ import yaml
 
 __all__ = [
     'load_activities', 'load_locations', 'load_modalities', 'load_datasets',
-    'load_csv_data', 'load_features', 'load_yaml',
-    'dataset_importer', 'feature_importer', 'build_path'
+    'load_csv_data', 'load_features', 'load_transformations', 'load_yaml',
+    'dataset_importer', 'feature_importer', 'transformer_importer',
+    'build_path'
 ]
 
 
@@ -62,6 +63,10 @@ def load_features():
     return load_yaml('features.yaml')
 
 
+def load_transformations():
+    return load_yaml('transformers.yaml')
+
+
 def module_importer(module_path, class_name, *args, **kwargs):
     m = __import__(module_path, fromlist=[class_name])
     c = getattr(m, class_name)
@@ -79,6 +84,14 @@ def dataset_importer(class_name, *args, **kwargs):
 def feature_importer(class_name, *args, **kwargs):
     return module_importer(
         module_path='src.features',
+        class_name=class_name,
+        *args, **kwargs
+    )
+
+
+def transformer_importer(class_name, *args, **kwargs):
+    return module_importer(
+        module_path='src.transformers',
         class_name=class_name,
         *args, **kwargs
     )

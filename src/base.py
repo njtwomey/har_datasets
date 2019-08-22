@@ -1,7 +1,7 @@
-from os.path import join, splitext, basename
+from os.path import join, splitext, basename, curdir
 from os import environ
 
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 
 from mldb import ComputationGraph, PickleBackend, VolatileBackend
 
@@ -9,33 +9,72 @@ from .utils import check_activities, check_modalities, check_locations, unzip_da
 from . import label_decorator, index_decorator, data_decorator, fold_decorator
 
 __all__ = [
-    'DatasetMeta', 'BaseGraph'
+    'DatasetMeta', 'BaseGraph', 'FuncKeyMap',
+    'BaseMeta', 'ActivityMeta', 'LocationMeta', 'ModalityMeta', 'DatasetMeta', 'Window', 'FeatureMeta',
+    'TransformerMeta', 'RepresentationMeta', 'ModelMeta'
 ]
 
 
-class DatasetMeta(object):
-    def __init__(self, dataset):
-        if not isinstance(dataset, dict):
-            datasets = load_yaml('datasets.yaml')
-            assert dataset in datasets
-            dataset = datasets[dataset]
+class BaseMeta(object):
+    def __init__(self, name, yaml_file, *args, **kwargs):
+        values = load_yaml(yaml_file)
+        assert name in values
+        self.name = name
+        self.meta = values[name]
+    
+    def __getitem__(self, item):
+        assert item in self.meta, f'{item} not found in {self.__class__.__name__}'
+        return self.meta[item]
+
+
+class FuncKeyMap(namedtuple('FuncKeyMap', ('in_key', 'out_key', 'func'))):
+    def __new__(cls, in_key, out_key, func):
+        if in_key is not None:
+            in_key = in_key if isinstance(in_key, tuple) else (in_key,)
+        assert out_key is not None
+        out_key = out_key if isinstance(out_key, tuple) else (out_key,)
+        return super(FuncKeyMap, cls).__new__(cls, in_key, out_key, func)
+
+
+"""
+Non-functional metadata
+"""
+
+
+class ActivityMeta(BaseMeta):
+    def __init__(self, name, *args, **kwargs):
+        super(ActivityMeta, self).__init__(
+            name=name, yaml_file='activities.yaml'
+        )
+
+
+class LocationMeta(BaseMeta):
+    def __init__(self, name, *args, **kwargs):
+        super(LocationMeta, self).__init__(
+            name=name, yaml_file='locations.yaml'
+        )
+
+
+class ModalityMeta(BaseMeta):
+    def __init__(self, name, *args, **kwargs):
+        super(ModalityMeta, self).__init__(
+            name=name, yaml_file='modalities.yaml'
+        )
+
+
+class DatasetMeta(BaseMeta):
+    def __init__(self, name, *args, **kwargs):
+        super(DatasetMeta, self).__init__(
+            name=name, yaml_file='datasets.yaml'
+        )
         
-        self.name = dataset['name']
-        self.meta = dataset
+        assert 'fs' in self.meta
         
-        self.fs = dataset['fs']
-        
-        self.root = build_path('data')
-        
-        self.inv_lookup = check_activities(self.meta['activities'])
-        
-        self.labels = self.meta['activities']
-        self.locations = self.meta['locations'].keys()
-        self.modalities = self.meta['modalities']
-        
-        check_activities(self.labels)
-        check_locations(self.locations)
-        check_modalities(self.modalities)
+        self.inv_act_lookup = check_activities(self.meta['activities'])
+    
+    @property
+    def fs(self):
+        return float(self.meta['fs'])
     
     @property
     def zip_path(self):
@@ -44,50 +83,73 @@ class DatasetMeta(object):
     @property
     def build_path(self):
         return build_path('data', 'build', self.name)
+
+
+class Window(object):
+    def __init__(self, win_len=None, win_inc=None, *args, **kwargs):
+        self.win_len = win_len
+        self.win_inc = win_inc
     
-    def make_row(self):
-        def make_links(links, desc='Link'):
-            return ', '.join(
-                '[{} {}]({})'.format(desc, ii, url) for ii, url in enumerate(links, start=1)
-            )
-        
-        # modalities = sorted(set([mn for ln, lm in self.meta['locations'].items() for mn, mv in lm.items() if mv]))
-        
-        data = [
-            self.meta['author'],
-            self.meta['paper_name'],
-            self.name,
-            make_links(links=self.meta['description_urls'], desc='Link'),
-            self.meta.get('missing', ''),
-            make_links(links=self.meta['paper_urls'], desc='Link'),
-            self.meta['year'],
-            self.meta['fs'],
-            ', '.join(self.meta['locations'].keys()),
-            ', '.join(self.meta['modalities']),
-            self.meta['num_subjects'],
-            self.meta['num_activities'],
-            ', '.join(self.meta['activities'].keys()),
-        ]
-        
-        return (
-            (
-                f'| First Author | Paper Name | Dataset Name | Description | Missing data '
-                f'| Download Links | Year | Sampling Rate | Device Locations | Device Modalities '
-                f'| Num Subjects | Num Activities | Activities | '
-            ),
-            '| {} |'.format(' | '.join(['-----'] * len(data))),
-            '| {} |'.format(' | '.join(map(str, data)))
+    def dir_name(self):
+        if self.win_len is None:
+            return curdir
+        return join(
+            f'win_len={self.win_len}s',
+            f'win_inc={self.win_inc}s',
         )
 
 
-def walk_dict(dict_var, breadcrums=None):
-    if breadcrums is None:
-        breadcrums = tuple()
+class FeatureMeta(BaseMeta):
+    def __init__(self, name, *args, **kwargs):
+        super(FeatureMeta, self).__init__(
+            name=name, yaml_file='features.yaml'
+        )
+    
+    @property
+    def windowed(self):
+        return self.meta.get('windowed', False)
+    
+    @property
+    def window(self):
+        return Window(
+            **self.meta['win_spec']
+        )
+
+
+class TransformerMeta(BaseMeta):
+    def __init__(self, name, *args, **kwargs):
+        super(TransformerMeta, self).__init__(
+            name=name, yaml_file='transformers.yaml'
+        )
+
+
+class RepresentationMeta(BaseMeta):
+    def __init__(self, name, *args, **kwargs):
+        super(RepresentationMeta, self).__init__(
+            name=name, yaml_file='representation.yaml'
+        )
+
+
+class ModelMeta(BaseMeta):
+    def __init__(self, name, *args, **kwargs):
+        super(ModelMeta, self).__init__(
+            name=name, yaml_file='model.yaml'
+        )
+
+
+def walk_dict(dict_var, path=None):
+    if path is None:
+        path = tuple()
     for kk, vv in dict_var.items():
-        if isinstance(vv, (dict, defaultdict)):
-            yield from walk_dict(vv, breadcrums + (kk,))
+        next_path = path
+        if isinstance(kk, tuple):
+            next_path += kk
         else:
-            yield breadcrums + (kk,), vv
+            next_path += (kk,)
+        if isinstance(vv, (dict, defaultdict)):
+            yield from walk_dict(vv, next_path)
+        else:
+            yield next_path, vv
 
 
 class BaseGraph(ComputationGraph):
@@ -97,7 +159,7 @@ class BaseGraph(ComputationGraph):
     
     def __init__(self, name):
         super(BaseGraph, self).__init__(
-            name=name, default_backend='fs',
+            name=name, default_backend='fs'
         )
         
         self.fs_root = build_path('data')
@@ -110,6 +172,21 @@ class BaseGraph(ComputationGraph):
         self.index = None
         
         self.outputs = None
+        
+        self.output_list = None
+        self.extra_args = None
+    
+    def add_extra_kwargs(self, **kwargs):
+        if self.extra_args is None:
+            self.extra_args = dict()
+        self.extra_args.update(**kwargs)
+    
+    def add_outputs(self, *args):
+        if self.output_list is None:
+            self.output_list = []
+        for vv in args:
+            assert isinstance(vv, FuncKeyMap)
+        self.output_list.extend(args)
     
     def build_path(self, *args):
         return build_path('data', 'build', self.identifier, '-'.join(args))
@@ -118,6 +195,11 @@ class BaseGraph(ComputationGraph):
         assert isinstance(self.outputs, (dict, defaultdict))
         for kk, vv in walk_dict(self.outputs):
             yield kk, vv
+    
+    def evaluate_outputs(self, if_exists=False):
+        for node in self.outputs.values():
+            if (not node.exists) or (node.exists and if_exists):
+                node.evaluate()
     
     def pre_compose(self):
         pass
@@ -171,5 +253,5 @@ class BaseGraph(ComputationGraph):
         raise NotImplementedError
     
     @data_decorator
-    def build_data(self, modality, location, *args, **kwargs):
+    def build_data(self, key, *args, **kwargs):
         raise NotImplementedError

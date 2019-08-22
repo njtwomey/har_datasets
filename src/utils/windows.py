@@ -1,6 +1,11 @@
 import numpy as np
 from numpy.lib.stride_tricks import as_strided as ast
 
+__all__ = [
+    'sliding_window',
+    'sliding_window_rect'
+]
+
 
 def norm_shape(shape):
     try:
@@ -83,6 +88,13 @@ def sliding_window(a, ws, ss=None, flatten=True):
     dim = list(filter(lambda i: i != 1, dim))
     
     return strided.reshape(dim)
+
+
+def sliding_window_rect(data, length, increment):
+    length = (length, data.shape[1])
+    increment = (increment, data.shape[1])
+    
+    return sliding_window(data, length, increment)
 
 
 def main():

@@ -45,25 +45,26 @@ def uschad_iterator(path, columns=None, cols=None, callback=None, desc=None):
 class uschad(Dataset):
     def __init__(self):
         super(uschad, self).__init__(
-            dataset=self.__class__.__name__,
+            name=self.__class__.__name__,
         )
     
     @label_decorator
-    def build_label(self, path, *args, **kwargs):
+    def build_label(self, *args, **kwargs):
         def callback(ii, sub_id, act_id, trial_id, data):
             return np.zeros((data.shape[0], 1)) + act_id
         
-        return self.dataset_meta.inv_lookup, uschad_iterator(path, callback=callback, desc='Labels')
+        return self.dataset_meta.inv_lookup, uschad_iterator(
+            self.unzip_path, callback=callback, desc=f'{self.identifier} Labels')
     
     @fold_decorator
-    def build_fold(self, path, *args, **kwargs):
+    def build_fold(self, *args, **kwargs):
         def callback(ii, sub_id, act_id, trial_id, data):
             return np.zeros((data.shape[0], 1)) + sub_id > 10
         
-        return uschad_iterator(path, callback=callback, desc='Folds')
+        return uschad_iterator(self.unzip_path, callback=callback, desc=f'{self.identifier} Folds')
     
     @index_decorator
-    def build_index(self, path, *args, **kwargs):
+    def build_index(self, *args, **kwargs):
         def callback(ii, sub_id, act_id, trial_id, data):
             return np.c_[
                 np.zeros((data.shape[0], 1)) + sub_id,
@@ -71,10 +72,11 @@ class uschad(Dataset):
                 np.arange(data.shape[0]) / self.dataset_meta.meta['fs']
             ]
         
-        return uschad_iterator(path, callback=callback, columns=['subject', 'trial', 'time'], desc='Index')
+        return uschad_iterator(self.unzip_path, callback=callback, columns=['subject', 'trial', 'time'], desc=f'{self.identifier} Index')
     
     @data_decorator
-    def build_data(self, path, modality, location, *args, **kwargs):
+    def build_data(self, key, *args, **kwargs):
+        modality, location = key
         cols = dict(
             accel=[0, 1, 2],
             gyro=[3, 4, 5]
@@ -83,4 +85,4 @@ class uschad(Dataset):
         def callback(ii, sub_id, act_id, trial_id, data):
             return data[:, cols]
         
-        return uschad_iterator(path, callback=callback, desc=f'Data ({modality}-{location})')
+        return uschad_iterator(self.unzip_path, callback=callback, desc=f'Data ({modality}-{location})')

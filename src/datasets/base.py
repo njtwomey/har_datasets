@@ -4,21 +4,15 @@ from src import BaseGraph, DatasetMeta
 
 
 class Dataset(BaseGraph):
-    """
-    A dataset has labels, index, fold definitions, and outputs defined
-    """
-    
-    def __init__(self, dataset, *args, **kwargs):
-        super(Dataset, self).__init__(name=dataset)
+    def __init__(self, name, *args, **kwargs):
+        super(Dataset, self).__init__(name=name)
         
-        self.dataset_meta = DatasetMeta(self.name)
-
+        self.meta = DatasetMeta(self.name)
+        
         zip_name = kwargs.get('unzip_path', lambda x: x)(splitext(basename(
-            self.dataset_meta.meta['download_urls'][0]
+            self.meta.meta['download_urls'][0]
         ))[0])
-        self.unzip_path = join(self.dataset_meta.zip_path, splitext(zip_name)[0])
-        
-        self.compose()
+        self.unzip_path = join(self.meta.zip_path, splitext(zip_name)[0])
     
     @property
     def identifier(self):
@@ -48,13 +42,13 @@ class Dataset(BaseGraph):
             func=self.build_label,
             kwargs=dict(
                 path=self.unzip_path,
-                inv_lookup=self.dataset_meta.inv_lookup
+                inv_lookup=self.meta.inv_act_lookup
             )
         )
     
     def compose_outputs(self):
         outputs = dict()
-        for location, modalities in self.dataset_meta.meta['locations'].items():
+        for location, modalities in self.meta.meta['locations'].items():
             for modality, active in modalities.items():
                 if not active:
                     continue
@@ -64,8 +58,7 @@ class Dataset(BaseGraph):
                     sources=None,
                     kwargs=dict(
                         path=self.unzip_path,
-                        modality=modality,
-                        location=location,
+                        key=(modality, location),
                     )
                 )
         return outputs

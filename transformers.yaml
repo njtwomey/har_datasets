@@ -1,0 +1,4 @@
+body_grav:
+  resamples: false
+  filter_order: 3
+  cutoff: 0.3

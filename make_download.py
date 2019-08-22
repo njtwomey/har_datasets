@@ -2,9 +2,9 @@ from src import load_datasets, download_dataset, dot_env_stuff
 
 
 def main():
-    for name, meta in load_datasets().items():
+    for name in load_datasets().keys():
         print('Downloading {}'.format(name))
-        download_dataset(meta)
+        download_dataset(name)
 
 
 if __name__ == '__main__':

@@ -2,6 +2,7 @@ from src import load_datasets, load_features, dot_env_stuff, dataset_importer, f
 
 
 def main():
+    asdfasdfasdf
     for name in load_datasets():
         for feat_name in load_features():
             print(name, feat_name)
@@ -10,7 +11,7 @@ def main():
                 dataset=name
             )
             features.compose()
-            print(features.build_path())
+            features.evaluate_all()
 
 
 if __name__ == '__main__':

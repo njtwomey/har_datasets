@@ -37,6 +37,10 @@ download:
 raw:
 	$(PYTHON_INTERPRETER) make_raw.py
 
+## Make Transformations
+transformations:
+	$(PYTHON_INTERPRETER) make_transformations.py
+
 ## Make Features
 features:
 	$(PYTHON_INTERPRETER) make_features.py

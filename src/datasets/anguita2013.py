@@ -15,7 +15,7 @@ class anguita2013(Dataset):
         self.win_len = 128
         
         super(anguita2013, self).__init__(
-            dataset=self.__class__.__name__,
+            name=self.__class__.__name__,
             unzip_path=lambda s: s.replace('%20', ' ')
         )
     
@@ -25,7 +25,7 @@ class anguita2013(Dataset):
         for fold in ('train', 'test'):
             fold_labels = load_csv_data(join(self.unzip_path, fold, f'y_{fold}.txt'))
             labels.extend([l for l in fold_labels for _ in range(self.win_len)])
-        return self.dataset_meta.inv_lookup, pd.DataFrame(dict(labels=labels))
+        return self.meta.inv_act_lookup, pd.DataFrame(dict(labels=labels))
     
     @fold_decorator
     def build_fold(self, *args, **kwargs):
@@ -38,16 +38,17 @@ class anguita2013(Dataset):
     def build_index(self, *args, **kwargs):
         sub = []
         for fold in ('train', 'test'):
-            sub.extend(load_csv_data(join(self.unzip_path, fold, f'subject_{fold}.txt')))
+            sub.extend(load_csv_data(join(self.unzip_path, fold, f'y_{fold}.txt')))
         index = pd.DataFrame(dict(
             subject=[si for si in sub for _ in range(self.win_len)],
             trial=build_seq_list(subs=sub, win_len=self.win_len),
-            time=build_time(subs=sub, win_len=self.win_len, fs=float(self.dataset_meta.meta['fs'])),
+            time=build_time(subs=sub, win_len=self.win_len, fs=float(self.meta.meta['fs'])),
         ))
         return index
     
     @data_decorator
-    def build_data(self, modality, location, *args, **kwargs):
+    def build_data(self, key, *args, **kwargs):
+        modality, location = key
         x_data = []
         y_data = []
         z_data = []
