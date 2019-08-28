@@ -1,8 +1,10 @@
 import pandas as pd
+from numpy import isfinite
+
 from scipy import signal
 
 from .base import TransformerBase
-from .. import FuncKeyMap
+from ..utils import transformer_decorator
 
 
 def filter_signal(data, filter_order, cutoff, fs, btype, axis=0):
@@ -20,16 +22,21 @@ def filter_signal(data, filter_order, cutoff, fs, btype, axis=0):
     return dd
 
 
+@transformer_decorator
 def body_filt(key, index, data, **kwargs):
     df = filter_signal(data, btype='high', **kwargs)
+    assert isfinite(df.values).all()
     return df
 
 
+@transformer_decorator
 def grav_filt(key, index, data, **kwargs):
     df = filter_signal(data, btype='low', **kwargs)
+    assert isfinite(df.values).all()
     return df
 
 
+@transformer_decorator
 def body_jerk_filt(key, index, data, **kwargs):
     df = body_filt(key, index, data, **kwargs)
     return df.diff().fillna(0)
@@ -43,10 +50,10 @@ class body_grav(TransformerBase):
         )
         
         for key in parent.outputs.keys():
-            self.add_outputs(FuncKeyMap(key, key + ('body',), body_filt))
-            self.add_outputs(FuncKeyMap(key, key + ('body', 'jerk',), body_jerk_filt))
+            self.add_output(key, ('body',), body_filt)
+            self.add_output(key, ('body', 'jerk',), body_jerk_filt)
             if 'accel' in key:
-                self.add_outputs(FuncKeyMap(key, key + ('grav',), grav_filt))
+                self.add_output(key, ('grav',), grav_filt)
         
         self.add_extra_kwargs(
             filter_order=self.meta['filter_order'],

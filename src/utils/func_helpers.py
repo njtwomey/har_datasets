@@ -1,9 +1,13 @@
 import pandas as pd
+import numpy as np
+
 from tqdm import tqdm
-from ..utils import sliding_window_rect
+
+from . import sliding_window_rect
+from ..base import Window
 
 __all__ = [
-    'Partition', 'PartitionAndWindow'
+    'Partition', 'PartitionAndWindow', 'PartitionAndWindowMetadata'
 ]
 
 
@@ -13,100 +17,86 @@ class Partition(object):
         setattr(self, '__name__', func.__name__)
     
     def __call__(self, key, index, data, *args, **kwargs):
+        assert index.shape[0] == data.shape[0]
+        if not all(data.index == index.index):
+            index = index.reset_index(drop=True)
+            data = data.reset_index(drop=True)
         output = []
         trials = index.trial.unique()
         df_output = []
+        assert data.notna().all().all()
         for trial in tqdm(trials):
             inds = index.trial == trial
+            index_ = index.loc[inds]
+            data_ = data.loc[inds]
+            assert index_.shape[0] == data_.shape[0]
             vals = self.func(
-                key=key,
-                index=index.loc[inds],
-                data=data.loc[inds],
-                *args,
-                **kwargs
-            )
-            if isinstance(vals, pd.DataFrame):
-                output.append(vals)
-                df_output.append(True)
-            else:
-                output.extend(vals)
-                df_output.append(False)
-        assert len(set(df_output)) == 1
-        if all(df_output):
-            df = pd.concat(output, axis=0)
-        else:
-            df = pd.DataFrame(output)
-        return df
-
-
-class PartitionAndWindow(Partition):
-    def __init__(self, func, win_len, win_inc):
-        def partitioned_func(key, index, data, *args, **kwargs):
-            index_ = sliding_window_rect(index.values, win_len, win_inc)
-            data_ = sliding_window_rect(data.values, win_len, win_inc)
-            return func(
                 key=key,
                 index=index_,
                 data=data_,
                 *args,
                 **kwargs
             )
+            output.append(vals)
+            if isinstance(vals, pd.DataFrame):
+                df_output.append(True)
+            else:
+                df_output.append(False)
+        assert len(set(df_output)) == 1
+        if all(df_output):
+            df = pd.concat(output, axis=0)
+        else:
+            df = pd.DataFrame(
+                np.concatenate(output, axis=0)
+            )
+        return df.reset_index(drop=True)
+
+
+class PartitionAndWindow(Partition):
+    def __init__(self, func, win_len, win_inc):
+        def windowed_func(key, index, data, *args, **kwargs):
+            win_len_ = int(win_len * kwargs['fs'])
+            win_inc_ = int(win_inc * kwargs['fs'])
+            
+            index_ = sliding_window_rect(
+                index.values, win_len_, win_inc_
+            )
+            
+            data_ = sliding_window_rect(
+                data.values, win_len_, win_inc_
+            )
+            
+            assert index_.shape[0] == data_.shape[0]
+            assert index_.shape[1] == data_.shape[1]
+            
+            ret = func(
+                key=key,
+                index=index_,
+                data=data_,
+                *args,
+                **kwargs
+            )
+            
+            return ret
         
         super(PartitionAndWindow, self).__init__(
-            partitioned_func
+            windowed_func
         )
 
-# class PartitionWindowExtract(object):
-#     def __init__(self, win_len, win_inc, feat_func):
-#         self.win_len = win_len
-#         self.win_inc = win_inc
-#
-#         self.feat_func = feat_func
-#
-#         setattr(self, '__name__', feat_func.__name__)
-#
-#     def __call__(self, key, index, data, *args, **kwargs):
-#         assert index.shape[0] == data.shape[0]
-#
-#         t0, t1 = index.time.values[[0, 1]]
-#         print(t0, t1)
-#         fs = 1.0 / (t1 - t0)
-#         print(fs)
-#
-#         win_len = int(self.win_len * fs)
-#         win_inc = int(self.win_inc * fs)
-#
-#         output = []
-#
-#         data = data.copy()
-#         if key == 'label':
-#             lookup, lookdown = get_transformer(data)
-#             data = transform_df(data, lookup)
-#
-#         trials = index.trial.unique()
-#         for trial in tqdm(trials, 'Trial'):
-#             inds = index.trial == trial
-#             w_index = sliding_window_rect(index.loc[inds].values, win_len, win_inc)
-#             w_data = sliding_window_rect(data.loc[inds].values, win_len, win_inc)
-#             if data.shape[1] == 1:
-#                 w_data = w_data[..., None]
-#             feat = self.feat_func(key=key, index=w_index, data=w_data, *args, **kwargs)
-#             output.extend(feat)
-#
-#         df = pd.DataFrame(output)
-#         if key == 'label':
-#             df = transform_df(df, lookdown)
-#         return df
-#
-# class PartitionWindowExtractMetaData(PartitionWindowExtract):
-#     def __init__(self, win_len, win_inc):
-#         def medianifier(key, index, data, *args, **kwargs):
-#             assert key in {'label', 'index', 'fold'}
-#             assert data.ndim == 3
-#             return np.median(data, axis=1)
-#
-#         super(PartitionWindowExtractMetaData, self).__init__(
-#             win_len=win_len,
-#             win_inc=win_inc,
-#             feat_func=medianifier
-#         )
+
+class PartitionAndWindowMetadata(PartitionAndWindow):
+    def __init__(self, win_len, win_inc):
+        def median_filter(key, index, data, *args, **kwargs):
+            assert key in {'label', 'index', 'fold'}
+            if key == 'label':
+                vals, transformed = np.unique(data, return_inverse=True)
+                transformed = transformed.reshape(data.shape)
+                med = np.median(transformed, axis=1).astype(int)
+                return vals[med]
+            return np.median(data, axis=1)
+        
+        super(PartitionAndWindowMetadata, self).__init__(
+            func=median_filter,
+            win_len=win_len,
+            win_inc=win_inc,
+        )

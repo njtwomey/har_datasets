@@ -5,7 +5,7 @@ import yaml
 
 __all__ = [
     'load_activities', 'load_locations', 'load_modalities', 'load_datasets',
-    'load_csv_data', 'load_features', 'load_transformations', 'load_yaml',
+    'load_csv_data', 'load_features', 'load_transformations', 'load_representations', 'load_yaml',
     'dataset_importer', 'feature_importer', 'transformer_importer',
     'build_path'
 ]
@@ -61,6 +61,10 @@ def load_modalities():
 
 def load_features():
     return load_yaml('features.yaml')
+
+
+def load_representations():
+    return load_yaml('representations.yaml')
 
 
 def load_transformations():

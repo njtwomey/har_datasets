@@ -19,7 +19,8 @@ def iter_pamap2_subs(path, cols, desc, columns=None, callback=None, n_subjects=9
             delim_whitespace=True,
             header=None,
             usecols=cols
-        )
+        ).fillna(method='ffill')
+        assert np.isfinite(datum.values).all()
         if callback:
             data.extend(callback(sid, datum.values))
         else:
@@ -45,7 +46,7 @@ class pamap2(Dataset):
             desc=f'{self.identifier} Labels'
         ))
         
-        return self.dataset_meta.inv_lookup, df
+        return self.meta.inv_act_lookup, df
     
     @fold_decorator
     def build_fold(self, *args, **kwargs):

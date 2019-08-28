@@ -13,52 +13,39 @@ class Dataset(BaseGraph):
             self.meta.meta['download_urls'][0]
         ))[0])
         self.unzip_path = join(self.meta.zip_path, splitext(zip_name)[0])
+        
+        # Build list of outputs
+        for location, modalities in self.meta['locations'].items():
+            for modality, is_active in modalities.items():
+                if is_active:
+                    self.add_output(None, (modality, location), self.build_data)
+        self.add_extra_kwargs(path=self.unzip_path)
     
     @property
     def identifier(self):
         return self.name
     
-    def compose_index(self):
+    def compose_meta(self, name):
         return self.node(
-            node_name=self.build_path('index'),
-            func=self.build_index,
+            node_name=self.build_path(name),
+            func=dict(
+                index=self.build_index,
+                fold=self.build_fold,
+                label=self.build_label
+            )[name],
             kwargs=dict(
-                path=self.unzip_path
+                inv_lookup=self.meta.inv_act_lookup,
+                **(self.extra_args or dict())
             )
         )
     
-    def compose_fold(self):
+    def make_node(self, in_key, out_key, func):
         return self.node(
-            node_name=self.build_path('fold'),
-            func=self.build_fold,
+            node_name=self.build_path(*out_key),
+            func=func,
+            sources=None,
             kwargs=dict(
-                path=self.unzip_path,
+                key=out_key,
+                **(self.extra_args or dict())
             )
         )
-    
-    def compose_label(self):
-        return self.node(
-            node_name=self.build_path('label'),
-            func=self.build_label,
-            kwargs=dict(
-                path=self.unzip_path,
-                inv_lookup=self.meta.inv_act_lookup
-            )
-        )
-    
-    def compose_outputs(self):
-        outputs = dict()
-        for location, modalities in self.meta.meta['locations'].items():
-            for modality, active in modalities.items():
-                if not active:
-                    continue
-                outputs[modality, location] = self.node(
-                    node_name=self.build_path(modality, location),
-                    func=self.build_data,
-                    sources=None,
-                    kwargs=dict(
-                        path=self.unzip_path,
-                        key=(modality, location),
-                    )
-                )
-        return outputs

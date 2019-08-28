@@ -1,10 +1,11 @@
 import pandas as pd
+from numpy import isfinite
 
 from functools import update_wrapper, partial
 
 __all__ = [
     'index_decorator', 'fold_decorator', 'label_decorator', 'data_decorator',
-    'feature_decorator', 'model_decorator'
+    'transformer_decorator', 'feature_decorator', 'model_decorator',
 ]
 
 
@@ -69,14 +70,24 @@ class IndexDecorator(DecoratorBase):
 class DataDecorator(DecoratorBase):
     def __init__(self, func):
         super(DataDecorator, self).__init__(func)
+    
+    def __call__(self, *args, **kwargs):
+        df = super(DataDecorator, self).__call__(*args, **kwargs)
+        assert isfinite(df.values).all()
+        return df
 
 
-class FeatureDecorator(DecoratorBase):
+class TransformerDecorator(DataDecorator):
+    def __init__(self, func):
+        super(TransformerDecorator, self).__init__(func)
+
+
+class FeatureDecorator(DataDecorator):
     def __init__(self, func):
         super(FeatureDecorator, self).__init__(func)
 
 
-class ModelDecorator(DecoratorBase):
+class ModelDecorator(DataDecorator):
     def __init__(self, func):
         super(ModelDecorator, self).__init__(func)
 
@@ -85,5 +96,6 @@ label_decorator = LabelDecorator
 index_decorator = IndexDecorator
 fold_decorator = FoldDecorator
 data_decorator = DataDecorator
+transformer_decorator = TransformerDecorator
 feature_decorator = FeatureDecorator
 model_decorator = ModelDecorator

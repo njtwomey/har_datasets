@@ -1,5 +1,6 @@
 __all__ = [
-    'body_grav', 'get_transformer_list'
+    'TransformerBase', 'load_transformer',
+    'body_grav',
 ]
 
 from .base import *
@@ -7,5 +8,7 @@ from .base import *
 from .body_grav import body_grav
 
 
-def get_transformer_list():
-    return {kk: globals()[kk] for kk in __all__}
+def load_transformer(name, *args, **kwargs):
+    transformers = {kk: globals()[kk] for kk in __all__}
+    assert name in transformers
+    return transformers[name](*args, **kwargs)

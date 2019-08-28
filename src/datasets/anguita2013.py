@@ -1,6 +1,7 @@
 import pandas as pd
+from numpy import isfinite
+
 from os.path import join
-from tqdm import tqdm
 
 from ..utils import (
     load_csv_data, build_time, build_seq_list,

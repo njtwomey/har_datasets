@@ -4,7 +4,7 @@ import logging
 import zipfile
 
 __all__ = [
-    'dot_env_stuff', 'unzip_data'
+    'dot_env_stuff', 'unzip_data',
 ]
 
 

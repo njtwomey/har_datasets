@@ -22,6 +22,8 @@ class TransformerBase(BaseGraph):
         self.parent = parent
         
         assert hasattr(parent.meta, 'fs')
+        
+        self.meta.add_category('fs', parent.meta['fs'])
     
     @property
     def identifier(self):
@@ -30,20 +32,18 @@ class TransformerBase(BaseGraph):
             self.name,
         )
     
-    def make_node(self, in_key, out_key, func, backend=None):
-        if not self.meta['resamples']:
-            if in_key == out_key and isinstance(in_key, str) and in_key in {'index', 'label', 'fold'}:
-                key = out_key
-                return self.node(
-                    node_name=self.build_path(key),
-                    func=make_symlink,
-                    kwargs=dict(
-                        in_path=self.parent.build_path(key),
-                        out_path=self.build_path(key),
-                        ext=self.backends[self.default_backend].ext
-                    ),
-                )
-        
+    def compose_meta(self, name):
+        return self.node(
+            node_name=self.build_path(name),
+            func=make_symlink,
+            kwargs=dict(
+                in_path=self.parent.build_path(name),
+                out_path=self.build_path(name),
+                ext=self.backends[self.default_backend].ext
+            ),
+        )
+    
+    def make_node(self, in_key, out_key, func):
         return self.node(
             node_name=self.build_path(*out_key),
             func=Partition(
@@ -59,18 +59,3 @@ class TransformerBase(BaseGraph):
                 **(self.extra_args or dict())
             ),
         )
-    
-    def compose_index(self, *args, **kwargs):
-        return self.make_node('index', 'index', None, 'none')
-    
-    def compose_fold(self, *args, **kwargs):
-        return self.make_node('fold', 'fold', None, 'none')
-    
-    def compose_label(self, *args, **kwargs):
-        return self.make_node('label', 'label', None, 'none')
-    
-    def compose_outputs(self):
-        outputs = dict()
-        for in_key, out_key, func in self.output_list:
-            outputs[out_key] = self.make_node(in_key, out_key, func)
-        return outputs

@@ -1,4 +1,4 @@
-basic_stats:
+statistical_features:
   windowed: True
   win_spec:
     win_len: 3

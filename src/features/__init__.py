@@ -1,10 +1,14 @@
 __all__ = [
-    'FeatureBase',
-    'basic_stats'
+    'FeatureBase', 'load_feature',
+    'statistical_features'
 ]
 
 from .base import *
 
-from .basic_stats import basic_stats
+from .statistical_features import statistical_features
 
-feature_list = {kk: globals()[kk] for kk in __all__}
+
+def load_feature(name, *args, **kwargs):
+    features = {kk: globals()[kk] for kk in __all__}
+    assert name in features
+    return features[name](*args, **kwargs)

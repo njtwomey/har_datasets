@@ -6,7 +6,7 @@ from collections import defaultdict, namedtuple
 from mldb import ComputationGraph, PickleBackend, VolatileBackend
 
 from .utils import check_activities, check_modalities, check_locations, unzip_data, load_yaml, build_path
-from . import label_decorator, index_decorator, data_decorator, fold_decorator
+from .utils.decorators import label_decorator, index_decorator, data_decorator, fold_decorator
 
 __all__ = [
     'DatasetMeta', 'BaseGraph', 'FuncKeyMap',
@@ -25,14 +25,20 @@ class BaseMeta(object):
     def __getitem__(self, item):
         assert item in self.meta, f'{item} not found in {self.__class__.__name__}'
         return self.meta[item]
+    
+    def add_category(self, key, value):
+        assert key not in self.meta
+        self.meta[key] = value
 
 
 class FuncKeyMap(namedtuple('FuncKeyMap', ('in_key', 'out_key', 'func'))):
     def __new__(cls, in_key, out_key, func):
-        if in_key is not None:
-            in_key = in_key if isinstance(in_key, tuple) else (in_key,)
+        if in_key is None:
+            in_key = tuple()
+        in_key = in_key if isinstance(in_key, tuple) else (in_key,)
         assert out_key is not None
         out_key = out_key if isinstance(out_key, tuple) else (out_key,)
+        out_key = in_key + out_key
         return super(FuncKeyMap, cls).__new__(cls, in_key, out_key, func)
 
 
@@ -175,20 +181,31 @@ class BaseGraph(ComputationGraph):
         
         self.output_list = None
         self.extra_args = None
+        
+        self.composed = False
     
     def add_extra_kwargs(self, **kwargs):
         if self.extra_args is None:
             self.extra_args = dict()
         self.extra_args.update(**kwargs)
     
-    def add_outputs(self, *args):
+    def add_output(self, in_key, out_key, func):
+        assert out_key is not None
+        assert func is not None
         if self.output_list is None:
             self.output_list = []
-        for vv in args:
-            assert isinstance(vv, FuncKeyMap)
-        self.output_list.extend(args)
+        self.output_list.append(FuncKeyMap(
+            in_key=in_key, out_key=out_key, func=func
+        ))
+        
+    # def add_outputs(self, *args):
+    #     ass
+    #     for vv in args:
+    #         assert isinstance(vv, FuncKeyMap)
+    #     self.output_list.extend(args)
     
     def build_path(self, *args):
+        assert isinstance(args[0], str), 'The argument for `build_path` must be strings'
         return build_path('data', 'build', self.identifier, '-'.join(args))
     
     def iter_outputs(self):
@@ -196,7 +213,17 @@ class BaseGraph(ComputationGraph):
         for kk, vv in walk_dict(self.outputs):
             yield kk, vv
     
+    def compose_check(self):
+        if not self.composed:
+            self.compose()
+            self.composed = True
+    
+    def evaluate_all(self, if_exists=False):
+        self.compose_check()
+        super(BaseGraph, self).evaluate_all(if_exists=if_exists)
+    
     def evaluate_outputs(self, if_exists=False):
+        self.compose_check()
         for node in self.outputs.values():
             if (not node.exists) or (node.exists and if_exists):
                 node.evaluate()
@@ -223,17 +250,26 @@ class BaseGraph(ComputationGraph):
     
     def post_compose(self):
         pass
+
+    def compose_index(self):
+        return self.compose_meta('index')
+
+    def compose_fold(self):
+        return self.compose_meta('fold')
+
+    def compose_label(self):
+        return self.compose_meta('label')
     
     def compose_outputs(self):
+        outputs = dict()
+        for in_key, out_key, func in self.output_list:
+            outputs[out_key] = self.make_node(in_key, out_key, func)
+        return outputs
+    
+    def compose_meta(self, name):
         raise NotImplementedError
     
-    def compose_index(self):
-        raise NotImplementedError
-    
-    def compose_fold(self):
-        raise NotImplementedError
-    
-    def compose_label(self):
+    def make_node(self, in_key, out_key, func):
         raise NotImplementedError
     
     @property
