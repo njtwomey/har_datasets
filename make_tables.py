@@ -72,9 +72,12 @@ def main():
             fil.write('| ----- | ----- | \n')
             if not data or len(data) == 0:
                 continue
-            assert isinstance(data, dict)
-            for ki, kv in data.items():
-                fil.write(f'| {kv} | {ki} | \n')
+            if isinstance(data, dict):
+                for ki, kv in data.items():
+                    fil.write(f'| {kv} | {ki} | \n')
+            elif isinstance(data, list):
+                for ki, kv in enumerate(data):
+                    fil.write(f'| {kv} | {ki} | \n')
 
 
 if __name__ == '__main__':
