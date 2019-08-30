@@ -84,7 +84,12 @@ class uschad(Dataset):
         
         def callback(ii, sub_id, act_id, trial_id, data):
             return data[:, cols]
+
+        scale = dict(
+            accel=1.0,
+            gyro=2 * np.pi / 360
+        )
         
         data = uschad_iterator(self.unzip_path, callback=callback, desc=f'Data ({modality}-{location})')
 
-        return data
+        return data * scale[modality]

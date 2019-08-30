@@ -73,7 +73,7 @@ class DataDecorator(DecoratorBase):
     
     def __call__(self, *args, **kwargs):
         df = super(DataDecorator, self).__call__(*args, **kwargs)
-        assert isfinite(df.values).all(), f'Error evaluating {self.func}, {self.func.__name__}'
+        assert isfinite(df.values).all(), f'Error evaluating {self.func.__name__}'
         return df
 
 
