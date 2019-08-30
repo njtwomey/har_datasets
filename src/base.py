@@ -183,6 +183,13 @@ class BaseGraph(ComputationGraph):
         self.extra_args = None
         
         self.composed = False
+
+    def get_index(self, key):
+        return dict(
+            label=self.label,
+            fold=self.fold,
+            index=self.index
+        )[key]
     
     def add_extra_kwargs(self, **kwargs):
         if self.extra_args is None:

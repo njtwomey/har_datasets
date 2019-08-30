@@ -63,7 +63,7 @@ def td_entropy(data, axis, bins=16):
         ent = []
         for ci in range(datum.shape[1]):
             try:
-                pp, bb = np.histogram(datum[:, ci], bins, normed=True)
+                pp, bb = np.histogram(datum[:, ci], bins, density=True)
                 ent.append(scipy.stats.entropy(pp * (bb[1:] - bb[:-1]), base=2))
             except ValueError as ex:
                 raise ex

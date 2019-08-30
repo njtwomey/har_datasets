@@ -12,7 +12,7 @@ from .base import Dataset
 
 def iter_pamap2_subs(path, cols, desc, columns=None, callback=None, n_subjects=9):
     data = []
-    
+
     for sid in tqdm(range(1, n_subjects + 1), desc=desc):
         datum = pd.read_csv(
             join(path, f'subject10{sid}.dat'),
@@ -37,7 +37,7 @@ class pamap2(Dataset):
             name=self.__class__.__name__,
             unzip_path=lambda p: join(p, 'Protocol')
         )
-    
+
     @label_decorator
     def build_label(self, *args, **kwargs):
         df = pd.DataFrame(iter_pamap2_subs(
@@ -45,9 +45,9 @@ class pamap2(Dataset):
             cols=[1],
             desc=f'{self.identifier} Labels'
         ))
-        
+
         return self.meta.inv_act_lookup, df
-    
+
     @fold_decorator
     def build_fold(self, *args, **kwargs):
         df = iter_pamap2_subs(
@@ -58,7 +58,7 @@ class pamap2(Dataset):
             columns=['fold']
         ).astype(int)
         return df
-    
+
     @index_decorator
     def build_index(self, *args, **kwargs):
         def indexer(sid, data):
@@ -67,7 +67,7 @@ class pamap2(Dataset):
             return np.concatenate((
                 subject, trial, data
             ), axis=1)
-        
+
         df = iter_pamap2_subs(
             path=self.unzip_path,
             cols=[0],
@@ -80,7 +80,7 @@ class pamap2(Dataset):
             time=float
         ))
         return df
-    
+
     @data_decorator
     def build_data(self, key, *args, **kwargs):
         modality, location = key
@@ -93,12 +93,20 @@ class pamap2(Dataset):
             gyro=7,
             mag=10
         )[modality]
-        
+
         df = iter_pamap2_subs(
             path=self.unzip_path,
             cols=list(range(offset, offset + 3)),
             desc=f'Parsing {modality} at {location}',
             columns=['x', 'y', 'z']
-        ).astype(float) / 9.80665
-        
-        return df
+        ).astype(float)
+
+        scale = 1
+        if 'accel' in key:
+            scale = 9.80665
+        elif 'gyro' in key:
+            scale = np.pi * 2
+        elif 'mag' in key:
+            scale = 1
+
+        return df / scale
