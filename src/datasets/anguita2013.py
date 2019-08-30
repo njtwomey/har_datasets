@@ -39,7 +39,7 @@ class anguita2013(Dataset):
     def build_index(self, *args, **kwargs):
         sub = []
         for fold in ('train', 'test'):
-            sub.extend(load_csv_data(join(self.unzip_path, fold, f'y_{fold}.txt')))
+            sub.extend(load_csv_data(join(self.unzip_path, fold, f'subject_{fold}.txt')))
         index = pd.DataFrame(dict(
             subject=[si for si in sub for _ in range(self.win_len)],
             trial=build_seq_list(subs=sub, win_len=self.win_len),
