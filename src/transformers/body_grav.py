@@ -4,7 +4,7 @@ from numpy import isfinite
 from scipy import signal
 
 from .base import TransformerBase
-from ..utils import transformer_decorator
+from ..utils import transformer_decorator, Partition
 
 
 def filter_signal(data, filter_order, cutoff, fs, btype, axis=0):
@@ -42,6 +42,10 @@ def body_jerk_filt(key, index, data, **kwargs):
     return df.diff().fillna(0)
 
 
+def copy_file(key, index, data, **kwargs):
+    return data
+
+
 class body_grav(TransformerBase):
     def __init__(self, parent):
         super(body_grav, self).__init__(
@@ -49,13 +53,29 @@ class body_grav(TransformerBase):
             parent=parent,
         )
         
-        for key in parent.outputs.keys():
-            self.add_output(key, ('body',), body_filt)
-            self.add_output(key, ('body', 'jerk',), body_jerk_filt)
-            if 'accel' in key:
-                self.add_output(key, ('grav',), grav_filt)
+        kwargs = dict(filter_order=3, cutoff=0.3, fs=self.meta['fs'])
+        for key, node in parent.index.items():
+            self.index.clone_from_parent(parent=parent, key=key)
         
-        self.add_extra_kwargs(
-            filter_order=self.meta['filter_order'],
-            cutoff=self.meta['cutoff'],
-        )
+        for key, node in parent.outputs.items():
+            self.outputs.add_output(
+                key=key + ('body',),
+                func=Partition(func=body_filt),
+                sources=dict(data=node, index=parent.index.index),
+                **kwargs,
+            )
+            
+            self.outputs.add_output(
+                key=key + ('body', 'jerk',),
+                func=Partition(func=body_jerk_filt),
+                sources=dict(data=node, index=parent.index.index),
+                **kwargs,
+            )
+            
+            if 'accel' in key:
+                self.outputs.add_output(
+                    key=key + ('grav',),
+                    func=Partition(func=grav_filt),
+                    sources=dict(data=node, index=parent.index.index),
+                    **kwargs,
+                )

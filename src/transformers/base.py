@@ -9,7 +9,8 @@ from ..utils import Partition
 
 def symlink_allowed():
     """
-    Symbolic links are tricky in some
+    Symbolic link permissions are not allowed by default with some
+    operating systems (eg Windows 10).
     :return:
     """
     try:
@@ -30,25 +31,25 @@ def make_symlink(in_path, out_path, ext):
 
 class TransformerBase(BaseGraph):
     def __init__(self, name, parent, *args, **kwargs):
-        super(TransformerBase, self).__init__(name=name)
-
+        super(TransformerBase, self).__init__(name=name, parent=parent)
+        
         self.meta = TransformerMeta(name)
-        self.parent = parent
-
-        assert hasattr(parent.meta, 'fs')
-
+        
+        assert 'fs' in parent.meta, f'Parent "{parent}" has no attribute "fs"'
+        
         self.meta.add_category('fs', parent.meta['fs'])
-
+    
     @property
     def identifier(self):
         return join(
             self.parent.identifier,
             self.name,
         )
-
+    
     def compose_meta(self, name):
         assert name in {'label', 'index', 'fold'}
-
+        assert self.meta['resamples'] is False
+        
         if symlink_allowed():
             return self.node(
                 node_name=self.build_path(name),
@@ -59,10 +60,10 @@ class TransformerBase(BaseGraph):
                     ext=self.backends[self.default_backend].ext
                 ),
             )
-
+        
         def copy_file(key, index, data, **kwargs):
             return data
-
+        
         return self.node(
             node_name=self.build_path(name),
             func=Partition(
@@ -74,24 +75,7 @@ class TransformerBase(BaseGraph):
             ),
             kwargs=dict(
                 key=self.build_path(name),
-                fs=self.parent.meta.fs,
                 **(self.extra_args or dict())
             ),
         )
-
-    def make_node(self, in_key, out_key, func):
-        return self.node(
-            node_name=self.build_path(*out_key),
-            func=Partition(
-                func=func,
-            ),
-            sources=dict(
-                index=self.parent.index,
-                data=self.parent.outputs[in_key]
-            ),
-            kwargs=dict(
-                key=out_key,
-                fs=self.parent.meta.fs,
-                **(self.extra_args or dict())
-            ),
-        )
+    

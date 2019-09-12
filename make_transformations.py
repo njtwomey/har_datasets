@@ -4,13 +4,8 @@ from src import load_transformations, load_datasets, dot_env_stuff, dataset_impo
 def main():
     for dataset in load_datasets():
         dataset = dataset_importer(dataset)
-        dataset.compose()
-        
         for transformer in load_transformations():
-            transformer = transformer_importer(
-                transformer, parent=dataset,
-            )
-            transformer.compose()
+            transformer = transformer_importer(transformer, parent=dataset)
             transformer.evaluate_all()
 
 

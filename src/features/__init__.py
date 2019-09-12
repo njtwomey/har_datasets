@@ -6,6 +6,7 @@ __all__ = [
 from .base import *
 
 from .statistical_features import statistical_features
+from .ecdf_features import ecdf_features
 
 
 def load_feature(name, *args, **kwargs):

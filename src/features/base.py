@@ -9,19 +9,15 @@ __all__ = [
 
 class FeatureBase(BaseGraph):
     def __init__(self, name, parent, *args, **kwargs):
-        super(FeatureBase, self).__init__(name=name)
+        super(FeatureBase, self).__init__(name=name, parent=parent)
         
         self.meta = FeatureMeta(name)
-        self.parent = parent
         
-        self.add_extra_kwargs(fs=parent.meta['fs'])
-    
     @property
     def identifier(self):
         return join(
             self.parent.identifier,
             self.meta.name,
-            self.meta.window.dir_name(),
         )
     
     def compose_meta(self, key):

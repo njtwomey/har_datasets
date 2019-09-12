@@ -4,7 +4,6 @@ import numpy as np
 from tqdm import tqdm
 
 from . import sliding_window_rect
-from ..base import Window
 
 __all__ = [
     'Partition', 'PartitionAndWindow', 'PartitionAndWindowMetadata'
@@ -46,9 +45,12 @@ class Partition(object):
         if all(df_output):
             df = pd.concat(output, axis=0)
         else:
-            df = pd.DataFrame(
-                np.concatenate(output, axis=0)
-            )
+            try:
+                df = pd.DataFrame(
+                    np.concatenate(output, axis=0)
+                )
+            except ValueError:
+                return np.concatenate(output, axis=0)
         return df.reset_index(drop=True)
 
 

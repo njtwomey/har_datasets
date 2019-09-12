@@ -13,12 +13,12 @@ from .base import Dataset
 
 class anguita2013(Dataset):
     def __init__(self):
-        self.win_len = 128
-        
         super(anguita2013, self).__init__(
             name=self.__class__.__name__,
             unzip_path=lambda s: s.replace('%20', ' ')
         )
+        
+        self.win_len = 128
     
     @label_decorator
     def build_label(self, *args, **kwargs):
@@ -31,8 +31,10 @@ class anguita2013(Dataset):
     @fold_decorator
     def build_fold(self, *args, **kwargs):
         fold = []
-        fold.extend([-1 for _ in load_csv_data(join(self.unzip_path, 'train', 'y_train.txt')) for _ in range(self.win_len)])
-        fold.extend([+1 for _ in load_csv_data(join(self.unzip_path, 'test', 'y_test.txt')) for _ in range(self.win_len)])
+        fold.extend(
+            [-1 for _ in load_csv_data(join(self.unzip_path, 'train', 'y_train.txt')) for _ in range(self.win_len)])
+        fold.extend(
+            [+1 for _ in load_csv_data(join(self.unzip_path, 'test', 'y_test.txt')) for _ in range(self.win_len)])
         return pd.DataFrame(dict(fold=fold)).astype(int)
     
     @index_decorator
@@ -60,7 +62,8 @@ class anguita2013(Dataset):
         for fold in ('train', 'test'):
             for l, d in zip((x_data, y_data, z_data), ('x', 'y', 'z')):
                 ty = ['body', 'total'][modality in {'accel', 'acc'}]
-                acc = load_csv_data(join(self.unzip_path, fold, 'Inertial Signals', f'{ty}_{modality}_{d}_{fold}.txt'), astype='np')
+                acc = load_csv_data(join(self.unzip_path, fold, 'Inertial Signals', f'{ty}_{modality}_{d}_{fold}.txt'),
+                                    astype='np')
                 l.extend(acc.ravel().tolist())
         data = pd.DataFrame(dict(x=x_data, y=y_data, z=z_data))
         return data

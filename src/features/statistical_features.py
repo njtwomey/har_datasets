@@ -9,11 +9,41 @@ class statistical_features(FeatureBase):
             parent=parent,
         )
         
-        for key in self.parent.outputs.keys():
+        kwargs = dict(
+            fs=self.get_ancestral_metadata('fs')
+        )
+        
+        for key, node in self.parent.index.items():
+            self.index.clone_from_parent(parent=parent, key=key)
+        
+        index = self.parent.index['index']
+        for key, node in self.parent.outputs.items():
+            sources = dict(index=index, data=node, )
+            
             if 'accel' in key:
-                self.add_output(key, ('td',), t_feat)
+                self.outputs.add_output(
+                    key=key + ('td',),
+                    func=t_feat,
+                    sources=sources,
+                    **kwargs
+                )
                 if 'grav' not in key:
-                    self.add_output(key, ('fd',), f_feat)
+                    self.outputs.add_output(
+                        key=key + ('fd',),
+                        func=f_feat,
+                        sources=sources,
+                        **kwargs
+                    )
             if 'gyro' in key:
-                self.add_output(key, ('td',), t_feat)
-                self.add_output(key, ('fd',), f_feat)
+                self.outputs.add_output(
+                    key=key + ('td',),
+                    func=t_feat,
+                    sources=sources,
+                    **kwargs
+                )
+                self.outputs.add_output(
+                    key=key + ('fd',),
+                    func=f_feat,
+                    sources=sources,
+                    **kwargs
+                )

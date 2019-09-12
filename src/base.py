@@ -1,146 +1,13 @@
-from os.path import join, splitext, basename, curdir
-from os import environ
-
 from collections import defaultdict, namedtuple
 
 from mldb import ComputationGraph, PickleBackend, VolatileBackend
 
-from .utils import check_activities, check_modalities, check_locations, unzip_data, load_yaml, build_path
-from .utils.decorators import label_decorator, index_decorator, data_decorator, fold_decorator
+from .utils import build_path
+from .meta import *
 
 __all__ = [
-    'DatasetMeta', 'BaseGraph', 'FuncKeyMap',
-    'BaseMeta', 'ActivityMeta', 'LocationMeta', 'ModalityMeta', 'DatasetMeta', 'Window', 'FeatureMeta',
-    'TransformerMeta', 'RepresentationMeta', 'ModelMeta'
+    'BaseGraph',
 ]
-
-
-class BaseMeta(object):
-    def __init__(self, name, yaml_file, *args, **kwargs):
-        values = load_yaml(yaml_file)
-        assert name in values
-        self.name = name
-        self.meta = values[name]
-    
-    def __getitem__(self, item):
-        assert item in self.meta, f'{item} not found in {self.__class__.__name__}'
-        return self.meta[item]
-    
-    def add_category(self, key, value):
-        assert key not in self.meta
-        self.meta[key] = value
-
-
-class FuncKeyMap(namedtuple('FuncKeyMap', ('in_key', 'out_key', 'func'))):
-    def __new__(cls, in_key, out_key, func):
-        if in_key is None:
-            in_key = tuple()
-        in_key = in_key if isinstance(in_key, tuple) else (in_key,)
-        assert out_key is not None
-        out_key = out_key if isinstance(out_key, tuple) else (out_key,)
-        out_key = in_key + out_key
-        return super(FuncKeyMap, cls).__new__(cls, in_key, out_key, func)
-
-
-"""
-Non-functional metadata
-"""
-
-
-class ActivityMeta(BaseMeta):
-    def __init__(self, name, *args, **kwargs):
-        super(ActivityMeta, self).__init__(
-            name=name, yaml_file='activities.yaml'
-        )
-
-
-class LocationMeta(BaseMeta):
-    def __init__(self, name, *args, **kwargs):
-        super(LocationMeta, self).__init__(
-            name=name, yaml_file='locations.yaml'
-        )
-
-
-class ModalityMeta(BaseMeta):
-    def __init__(self, name, *args, **kwargs):
-        super(ModalityMeta, self).__init__(
-            name=name, yaml_file='modalities.yaml'
-        )
-
-
-class DatasetMeta(BaseMeta):
-    def __init__(self, name, *args, **kwargs):
-        super(DatasetMeta, self).__init__(
-            name=name, yaml_file='datasets.yaml'
-        )
-        
-        assert 'fs' in self.meta
-        
-        self.inv_act_lookup = check_activities(self.meta['activities'])
-    
-    @property
-    def fs(self):
-        return float(self.meta['fs'])
-    
-    @property
-    def zip_path(self):
-        return build_path('data', 'zip', self.name)
-    
-    @property
-    def build_path(self):
-        return build_path('data', 'build', self.name)
-
-
-class Window(object):
-    def __init__(self, win_len=None, win_inc=None, *args, **kwargs):
-        self.win_len = win_len
-        self.win_inc = win_inc
-    
-    def dir_name(self):
-        if self.win_len is None:
-            return curdir
-        return join(
-            f'win_len={self.win_len}s',
-            f'win_inc={self.win_inc}s',
-        )
-
-
-class FeatureMeta(BaseMeta):
-    def __init__(self, name, *args, **kwargs):
-        super(FeatureMeta, self).__init__(
-            name=name, yaml_file='features.yaml'
-        )
-    
-    @property
-    def windowed(self):
-        return self.meta.get('windowed', False)
-    
-    @property
-    def window(self):
-        return Window(
-            **self.meta['win_spec']
-        )
-
-
-class TransformerMeta(BaseMeta):
-    def __init__(self, name, *args, **kwargs):
-        super(TransformerMeta, self).__init__(
-            name=name, yaml_file='transformers.yaml'
-        )
-
-
-class RepresentationMeta(BaseMeta):
-    def __init__(self, name, *args, **kwargs):
-        super(RepresentationMeta, self).__init__(
-            name=name, yaml_file='representation.yaml'
-        )
-
-
-class ModelMeta(BaseMeta):
-    def __init__(self, name, *args, **kwargs):
-        super(ModelMeta, self).__init__(
-            name=name, yaml_file='model.yaml'
-        )
 
 
 def walk_dict(dict_var, path=None):
@@ -158,143 +25,203 @@ def walk_dict(dict_var, path=None):
             yield next_path, vv
 
 
+def key_check(key):
+    if key is None:
+        key = tuple()
+    if isinstance(key, str):
+        key = (key,)
+    assert isinstance(key, tuple)
+    return key
+
+
+def _get_ancestral_meta(graph, key):
+    assert graph.meta is not None, f'The key "{key}" cannot be found in "{graph}"'
+    if key in graph.meta:
+        return graph.meta[key]
+    assert graph.parent is not None, f'The key "{key}" cannot be found in the ancestry of "{graph}"'
+    return _get_ancestral_meta(graph.parent, key)
+
+
+class ComputationalSet(object):
+    def __init__(self, graph):
+        self.graph = graph
+        self.output_dict = dict()
+        
+        self.index_keys = {
+            'index',
+            'label',
+            'fold'
+        }
+    
+    def is_index_key(self, key):
+        if isinstance(key, tuple):
+            assert len(key) == 1
+            key = key[0]
+        return key in self.index_keys
+    
+    def keys(self):
+        return self.output_dict.keys()
+    
+    def items(self):
+        return self.output_dict.items()
+    
+    def __len__(self):
+        return len(self.output_dict)
+    
+    def __iter__(self):
+        yield from self.output_dict
+    
+    def __repr__(self):
+        return f"<{self.__class__.__name__} outputs={self.output_dict}/>"
+    
+    def __getitem__(self, key):
+        key = key_check(key)
+        assert key in self.output_dict, f'The key "{key}" not in {list(self.output_dict.keys())}'
+        return self.output_dict[key]
+    
+    def evaluate_all(self, force=False):
+        for node in self.node_list:
+            if (not node.exists) or (node.exists and force):
+                node.evaluate()
+    
+    def add_output(self, key, func, sources=None, backend=None, **kwargs):
+        assert callable(func)
+        
+        key = key_check(key)
+        
+        assert key not in self.output_dict
+        
+        node = self.graph.node(
+            node_name=self.graph.build_path(*key),
+            func=func,
+            sources=sources,
+            backend=backend,
+            kwargs=dict(key=key, **kwargs),
+        )
+        
+        self.output_dict[key] = node
+        
+        return node
+
+
+class IndexSet(ComputationalSet):
+    def __init__(self, graph):
+        super(IndexSet, self).__init__(graph=graph)
+    
+    def add_output(self, key, func, sources=None, backend=None, **kwargs):
+        assert self.is_index_key(key)
+        return super(IndexSet, self).add_output(
+            key=key,
+            func=func,
+            sources=sources,
+            backend=backend,
+            **kwargs
+        )
+    
+    def evaluate_all(self, force=False):
+        return super(IndexSet, self).evaluate_all(force=force)
+    
+    def clone_from_parent(self, key, parent, **kwargs):
+        assert self.is_index_key(key)
+        
+        def identity(key, index, data):
+            return data
+        
+        return self.add_output(
+            key=key,
+            func=identity,
+            sources=dict(
+                index=parent.index.index,
+                data=parent.index[key],
+            ),
+            **kwargs
+        )
+    
+    @property
+    def index(self):
+        return self['index']
+    
+    @property
+    def label(self):
+        return self['label']
+    
+    @property
+    def fold(self):
+        return self['fold']
+
+
+class ComputationalCollection(object):
+    def __init__(self, **kwargs):
+        self.items = kwargs
+        for kk, vv in kwargs.items():
+            setattr(self, kk, vv)
+    
+    def iter_outputs(self):
+        yield from self.items.items()
+    
+    @property
+    def is_composed(self):
+        return all(vv.is_composed for kk, vv in self.iter_outputs())
+    
+    def compose(self):
+        for kk, vv in self.iter_outputs():
+            vv.compose()
+    
+    def evaluate_all(self):
+        for kk, vv in self.iter_outputs():
+            vv.evaluate_all()
+    
+    def __getitem__(self, key):
+        return self.items[key]
+
+
 class BaseGraph(ComputationGraph):
     """
     A simple computational graph that is meant only to define backends and load metadata
     """
     
-    def __init__(self, name):
+    def __init__(self, name, parent=None, default_backend='fs'):
         super(BaseGraph, self).__init__(
-            name=name, default_backend='fs'
+            default_backend=default_backend,
+            name=name,
         )
+        
+        self.parent = parent
         
         self.fs_root = build_path('data')
         
         self.add_backend('fs', PickleBackend(self.fs_root))
         self.add_backend('none', VolatileBackend())
         
-        self.label = None
-        self.fold = None
-        self.index = None
+        self.collections = ComputationalCollection(
+            index=IndexSet(self),
+            outputs=ComputationalSet(self),
+        )
         
-        self.outputs = None
-        
-        self.output_list = None
+        self.meta = None
         self.extra_args = None
-        
-        self.composed = False
-
-    def get_index(self, key):
-        return dict(
-            label=self.label,
-            fold=self.fold,
-            index=self.index
-        )[key]
     
-    def add_extra_kwargs(self, **kwargs):
-        if self.extra_args is None:
-            self.extra_args = dict()
-        self.extra_args.update(**kwargs)
+    @property
+    def index(self):
+        return self.collections['index']
     
-    def add_output(self, in_key, out_key, func):
-        assert out_key is not None
-        assert func is not None
-        if self.output_list is None:
-            self.output_list = []
-        self.output_list.append(FuncKeyMap(
-            in_key=in_key, out_key=out_key, func=func
-        ))
-        
-    # def add_outputs(self, *args):
-    #     ass
-    #     for vv in args:
-    #         assert isinstance(vv, FuncKeyMap)
-    #     self.output_list.extend(args)
-    
-    def build_path(self, *args):
-        assert isinstance(args[0], str), 'The argument for `build_path` must be strings'
-        return build_path('data', 'build', self.identifier, '-'.join(args))
-    
-    def iter_outputs(self):
-        assert isinstance(self.outputs, (dict, defaultdict))
-        for kk, vv in walk_dict(self.outputs):
-            yield kk, vv
-    
-    def compose_check(self):
-        if not self.composed:
-            self.compose()
-            self.composed = True
-    
-    def evaluate_all(self, if_exists=False):
-        self.compose_check()
-        super(BaseGraph, self).evaluate_all(if_exists=if_exists)
-    
-    def evaluate_outputs(self, if_exists=False):
-        self.compose_check()
-        for node in self.outputs.values():
-            if (not node.exists) or (node.exists and if_exists):
-                node.evaluate()
-    
-    def pre_compose(self):
-        pass
-    
-    def compose(self):
-        self.pre_compose()
-        
-        self.index = self.compose_index()
-        assert self.index is not None
-        
-        self.fold = self.compose_fold()
-        assert self.fold is not None
-        
-        self.label = self.compose_label()
-        assert self.label is not None
-        
-        self.outputs = self.compose_outputs()
-        assert self.outputs is not None
-        
-        self.post_compose()
-    
-    def post_compose(self):
-        pass
-
-    def compose_index(self):
-        return self.compose_meta('index')
-
-    def compose_fold(self):
-        return self.compose_meta('fold')
-
-    def compose_label(self):
-        return self.compose_meta('label')
-    
-    def compose_outputs(self):
-        outputs = dict()
-        for in_key, out_key, func in self.output_list:
-            outputs[out_key] = self.make_node(in_key, out_key, func)
-        return outputs
-    
-    def compose_meta(self, name):
-        raise NotImplementedError
-    
-    def make_node(self, in_key, out_key, func):
-        raise NotImplementedError
+    @property
+    def outputs(self):
+        return self.collections['outputs']
     
     @property
     def identifier(self):
         raise NotImplementedError
     
-    @index_decorator
-    def build_index(self, *args, **kwargs):
-        raise NotImplementedError
+    def build_path(self, *args):
+        assert isinstance(args[0], str), 'The argument for `build_path` must be strings'
+        path = build_path('data', 'build', self.identifier, '-'.join(args))
+        return path
     
-    @fold_decorator
-    def build_fold(self, *args, **kwargs):
-        raise NotImplementedError
+    def evaluate_all(self, if_exists=False):
+        assert len(self.index), f'The index graph for {self} is empty'
+        assert len(self.outputs), f'The output graph for {self} is empty'
+        return super(BaseGraph, self).evaluate_all(if_exists=if_exists)
     
-    @label_decorator
-    def build_label(self, *args, **kwargs):
-        raise NotImplementedError
-    
-    @data_decorator
-    def build_data(self, key, *args, **kwargs):
-        raise NotImplementedError
+    def get_ancestral_metadata(self, key):
+        return _get_ancestral_meta(self, key)

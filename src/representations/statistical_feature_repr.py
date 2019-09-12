@@ -5,12 +5,7 @@ from src.features import load_feature
 
 def statistical_feature_repr(name, *args, **kwargs):
     dataset = load_dataset(name)
-    dataset.compose_check()
-    
     filtered = load_transformer('body_grav', parent=dataset)
-    filtered.compose()
-    
-    features = load_feature('statistical_features', parent=filtered)
-    features.compose()
-    
+    windowed = load_transformer('window_256_1', parent=filtered)
+    features = load_feature('statistical_features', parent=windowed)
     return features

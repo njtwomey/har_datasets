@@ -77,17 +77,25 @@ class DataDecorator(DecoratorBase):
         return df
 
 
-class TransformerDecorator(DataDecorator):
+class FunctionDecorator(DecoratorBase):
+    def __init__(self, func):
+        super(FunctionDecorator, self).__init__(func)
+    
+    def __call__(self, *args, **kwargs):
+        return self.func(*args, **kwargs)
+
+
+class TransformerDecorator(FunctionDecorator):
     def __init__(self, func):
         super(TransformerDecorator, self).__init__(func)
 
 
-class FeatureDecorator(DataDecorator):
+class FeatureDecorator(FunctionDecorator):
     def __init__(self, func):
         super(FeatureDecorator, self).__init__(func)
 
 
-class ModelDecorator(DataDecorator):
+class ModelDecorator(FunctionDecorator):
     def __init__(self, func):
         super(ModelDecorator, self).__init__(func)
 
