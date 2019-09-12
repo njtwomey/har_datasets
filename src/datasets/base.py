@@ -5,9 +5,11 @@ from src import BaseGraph, DatasetMeta
 
 class Dataset(BaseGraph):
     def __init__(self, name, *args, **kwargs):
-        super(Dataset, self).__init__(name=name)
-    
-        self.meta = DatasetMeta(self.name)
+        super(Dataset, self).__init__(
+            name=name,
+            parent=None,
+            meta=DatasetMeta(name)
+        )
     
         zip_name = kwargs.get('unzip_path', lambda x: x)(splitext(basename(
             self.meta.meta['download_urls'][0]

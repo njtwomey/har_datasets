@@ -31,9 +31,11 @@ def make_symlink(in_path, out_path, ext):
 
 class TransformerBase(BaseGraph):
     def __init__(self, name, parent, *args, **kwargs):
-        super(TransformerBase, self).__init__(name=name, parent=parent)
-        
-        self.meta = TransformerMeta(name)
+        super(TransformerBase, self).__init__(
+            name=name,
+            parent=parent,
+            meta=TransformerMeta(name)
+        )
         
         assert 'fs' in parent.meta, f'Parent "{parent}" has no attribute "fs"'
         

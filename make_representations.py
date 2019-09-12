@@ -7,7 +7,7 @@ def main():
         representation = load_representation(
             'statistical_feature_repr', name=name
         )
-        representation.evaluate_all()
+        representation.evaluate_outputs()
 
 
 if __name__ == '__main__':

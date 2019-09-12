@@ -6,7 +6,7 @@ def main():
         dataset = dataset_importer(dataset)
         for transformer in load_transformations():
             transformer = transformer_importer(transformer, parent=dataset)
-            transformer.evaluate_all()
+            transformer.evaluate_outputs()
 
 
 if __name__ == '__main__':

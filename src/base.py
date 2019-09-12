@@ -79,9 +79,9 @@ class ComputationalSet(object):
         assert key in self.output_dict, f'The key "{key}" not in {list(self.output_dict.keys())}'
         return self.output_dict[key]
     
-    def evaluate_all(self, force=False):
-        for node in self.node_list:
-            if (not node.exists) or (node.exists and force):
+    def evaluate_outputs(self, force=False):
+        for key, node in self.items():
+            if not node.exists or force:
                 node.evaluate()
     
     def add_output(self, key, func, sources=None, backend=None, **kwargs):
@@ -118,10 +118,11 @@ class IndexSet(ComputationalSet):
             **kwargs
         )
     
-    def evaluate_all(self, force=False):
-        return super(IndexSet, self).evaluate_all(force=force)
+    def clone_all_from_parent(self, parent, **kwargs):
+        for key in self.index_keys:
+            self.clone_from_parent(key=key, parent=parent)
     
-    def clone_from_parent(self, key, parent, **kwargs):
+    def clone_from_parent(self, key, parent):
         assert self.is_index_key(key)
         
         def identity(key, index, data):
@@ -134,7 +135,6 @@ class IndexSet(ComputationalSet):
                 index=parent.index.index,
                 data=parent.index[key],
             ),
-            **kwargs
         )
     
     @property
@@ -167,10 +167,6 @@ class ComputationalCollection(object):
         for kk, vv in self.iter_outputs():
             vv.compose()
     
-    def evaluate_all(self):
-        for kk, vv in self.iter_outputs():
-            vv.evaluate_all()
-    
     def __getitem__(self, key):
         return self.items[key]
 
@@ -180,7 +176,7 @@ class BaseGraph(ComputationGraph):
     A simple computational graph that is meant only to define backends and load metadata
     """
     
-    def __init__(self, name, parent=None, default_backend='fs'):
+    def __init__(self, name, parent=None, meta=None, default_backend='fs'):
         super(BaseGraph, self).__init__(
             default_backend=default_backend,
             name=name,
@@ -198,8 +194,7 @@ class BaseGraph(ComputationGraph):
             outputs=ComputationalSet(self),
         )
         
-        self.meta = None
-        self.extra_args = None
+        self.meta = meta
     
     @property
     def index(self):
@@ -218,10 +213,12 @@ class BaseGraph(ComputationGraph):
         path = build_path('data', 'build', self.identifier, '-'.join(args))
         return path
     
-    def evaluate_all(self, if_exists=False):
+    def evaluate_outputs(self):
         assert len(self.index), f'The index graph for {self} is empty'
+        self.index.evaluate_outputs()
+        
         assert len(self.outputs), f'The output graph for {self} is empty'
-        return super(BaseGraph, self).evaluate_all(if_exists=if_exists)
+        self.outputs.evaluate_outputs()
     
     def get_ancestral_metadata(self, key):
         return _get_ancestral_meta(self, key)

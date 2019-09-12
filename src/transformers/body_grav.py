@@ -53,10 +53,9 @@ class body_grav(TransformerBase):
             parent=parent,
         )
         
-        kwargs = dict(filter_order=3, cutoff=0.3, fs=self.meta['fs'])
-        for key, node in parent.index.items():
-            self.index.clone_from_parent(parent=parent, key=key)
+        self.index.clone_all_from_parent(parent=parent)
         
+        kwargs = dict(filter_order=3, cutoff=0.3, fs=self.meta['fs'])
         for key, node in parent.outputs.items():
             self.outputs.add_output(
                 key=key + ('body',),
@@ -64,14 +63,12 @@ class body_grav(TransformerBase):
                 sources=dict(data=node, index=parent.index.index),
                 **kwargs,
             )
-            
             self.outputs.add_output(
                 key=key + ('body', 'jerk',),
                 func=Partition(func=body_jerk_filt),
                 sources=dict(data=node, index=parent.index.index),
                 **kwargs,
             )
-            
             if 'accel' in key:
                 self.outputs.add_output(
                     key=key + ('grav',),
