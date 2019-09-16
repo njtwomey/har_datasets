@@ -13,17 +13,17 @@ class NameOfTheDataset(Dataset):
         )
     
     @label_decorator
-    def build_labels(self, path, *args, **kwargs):
+    def build_labels(self, *args, **kwargs):
         raise NotImplementedError
     
     @fold_decorator
-    def build_folds(self, path, *args, **kwargs):
+    def build_folds(self, *args, **kwargs):
         raise NotImplementedError
     
     @index_decorator
-    def build_index(self, path, *args, **kwargs):
+    def build_index(self, *args, **kwargs):
         raise NotImplementedError
     
     @data_decorator
-    def build_data(self, path, modality, location, *args, **kwargs):
+    def build_data(self, key, *args, **kwargs):
         raise NotImplementedError

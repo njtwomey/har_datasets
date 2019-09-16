@@ -45,10 +45,6 @@ class Dataset(BaseGraph):
                         func=self.build_data,
                     )
     
-    @property
-    def identifier(self):
-        return self.name
-    
     def build_label(self, *args, **kwargs):
         raise NotImplementedError
 

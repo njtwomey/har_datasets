@@ -6,3 +6,8 @@ ecdf_11:
   description:
     - "https://dl.acm.org/citation.cfm?id=2494353"
     - "http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.725.908&rep=rep1&type=pdf"
+
+ecdf_21:
+  description:
+    - "https://dl.acm.org/citation.cfm?id=2494353"
+    - "http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.725.908&rep=rep1&type=pdf"

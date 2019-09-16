@@ -1,11 +1,12 @@
 # Filter the static gravity component from the
 # dynamic body component
-body_grav:
+body_grav_filter:
   resamples: false
 
 # Resample the signals to 33 Hz
 resample_33:
   resamples: true
+  fs: 33
 
 # Window the data to length of 1.28 s with increments of 1s
 window_128_1:

@@ -1,0 +1,2 @@
+umap_embedding:
+  n_components: 50

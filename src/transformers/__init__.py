@@ -1,11 +1,11 @@
 __all__ = [
     'TransformerBase', 'load_transformer',
-    'body_grav', 'window_256_1', 'resample_33'
+    'body_grav_filter', 'window_256_1', 'resample_33'
 ]
 
 from .base import *
 
-from .body_grav import body_grav
+from .body_grav_filter import body_grav_filter
 from .window import window_256_1
 from .resample import resample_33
 

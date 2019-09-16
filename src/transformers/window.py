@@ -1,10 +1,9 @@
 import pandas as pd
 from numpy import atleast_2d, atleast_3d
 
-from .base import TransformerBase, Partition
+from .base import TransformerBase
 
-from .. import transformer_decorator
-from .. import sliding_window_rect
+from .. import transformer_decorator, sliding_window_rect, Partition
 
 
 @transformer_decorator
@@ -74,5 +73,5 @@ class window_256_1(window):
             parent=parent,
             win_len=2.56,
             win_inc=1.0,
-            fs=parent.meta['fs']
+            fs=parent.get_ancestral_metadata('fs'),
         )

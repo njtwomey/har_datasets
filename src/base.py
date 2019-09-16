@@ -1,9 +1,11 @@
-from collections import defaultdict, namedtuple
+from collections import defaultdict
+from os.path import join
+
+import warnings
 
 from mldb import ComputationGraph, PickleBackend, VolatileBackend
 
 from .utils import build_path
-from .meta import *
 
 __all__ = [
     'BaseGraph',
@@ -84,7 +86,7 @@ class ComputationalSet(object):
             if not node.exists or force:
                 node.evaluate()
     
-    def add_output(self, key, func, sources=None, backend=None, **kwargs):
+    def make_output(self, key, func, sources=None, backend=None, **kwargs):
         assert callable(func)
         
         key = key_check(key)
@@ -99,7 +101,23 @@ class ComputationalSet(object):
             kwargs=dict(key=key, **kwargs),
         )
         
+        return node
+    
+    def append_output(self, key, node):
+        key = key_check(key)
+        assert key not in self.output_dict
         self.output_dict[key] = node
+    
+    def add_output(self, key, func, sources=None, backend=None, **kwargs):
+        node = self.make_output(
+            key=key,
+            func=func,
+            sources=sources,
+            backend=backend,
+            **kwargs
+        )
+        
+        self.append_output(key=key, node=node)
         
         return node
 
@@ -196,6 +214,19 @@ class BaseGraph(ComputationGraph):
         
         self.meta = meta
     
+    def build_path(self, *args):
+        assert len(args) > 0
+        assert isinstance(args[0], str), f'The argument for `build_path` must be strings, but is {type(args[0])}'
+        path = build_path('data', 'build', self.identifier, '-'.join(args))
+        return path
+    
+    def evaluate_outputs(self):
+        # warnings.warn(len(self.index), f'The index graph for {self} is empty')
+        self.index.evaluate_outputs()
+        
+        # warnings.warn(len(self.outputs), f'The output graph for {self} is empty')
+        self.outputs.evaluate_outputs()
+    
     @property
     def index(self):
         return self.collections['index']
@@ -206,19 +237,12 @@ class BaseGraph(ComputationGraph):
     
     @property
     def identifier(self):
-        raise NotImplementedError
-    
-    def build_path(self, *args):
-        assert isinstance(args[0], str), 'The argument for `build_path` must be strings'
-        path = build_path('data', 'build', self.identifier, '-'.join(args))
-        return path
-    
-    def evaluate_outputs(self):
-        assert len(self.index), f'The index graph for {self} is empty'
-        self.index.evaluate_outputs()
-        
-        assert len(self.outputs), f'The output graph for {self} is empty'
-        self.outputs.evaluate_outputs()
+        if self.parent is None:
+            return self.name
+        return join(
+            self.parent.identifier,
+            self.name,
+        )
     
     def get_ancestral_metadata(self, key):
         return _get_ancestral_meta(self, key)

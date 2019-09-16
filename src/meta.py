@@ -1,14 +1,14 @@
-from .utils import load_yaml, build_path, check_activities
+from .utils import load_metadata, build_path, check_activities
 
 __all__ = [
     'DatasetMeta', 'BaseMeta', 'ActivityMeta', 'LocationMeta', 'ModalityMeta', 'DatasetMeta',
-    'FeatureMeta', 'TransformerMeta', 'RepresentationMeta', 'ModelMeta'
+    'FeatureMeta', 'TransformerMeta', 'VisualisationMeta', 'RepresentationMeta', 'ModelMeta'
 ]
 
 
 class BaseMeta(object):
     def __init__(self, name, yaml_file, *args, **kwargs):
-        values = load_yaml(yaml_file)
+        values = load_metadata(yaml_file)
         assert name in values, f'The function "{name}" is not in the set {{{values}}} found in {yaml_file}'
         self.name = name
         self.meta = values[name]
@@ -97,6 +97,13 @@ class TransformerMeta(BaseMeta):
     def __init__(self, name, *args, **kwargs):
         super(TransformerMeta, self).__init__(
             name=name, yaml_file='transformers.yaml'
+        )
+
+
+class VisualisationMeta(BaseMeta):
+    def __init__(self, name, *args, **kwargs):
+        super(VisualisationMeta, self).__init__(
+            name=name, yaml_file='visualisations.yaml',
         )
 
 

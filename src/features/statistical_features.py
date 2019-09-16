@@ -1,5 +1,15 @@
+from collections import defaultdict
+from numpy import concatenate
+
 from .base import FeatureBase
 from .statistical_features_impl import t_feat, f_feat
+
+
+def concatenate_sources(key, **datas):
+    assert len(set([type(i) for i in datas.values()])) == 1
+    return concatenate([
+        datas[kk] for kk in sorted(datas.keys())
+    ], axis=1)
 
 
 class statistical_features(FeatureBase):
@@ -16,34 +26,53 @@ class statistical_features(FeatureBase):
         for key, node in self.parent.index.items():
             self.index.clone_from_parent(parent=parent, key=key)
         
+        endpoints = defaultdict(dict)
+        feats = ('td', 'fd')
+        
         index = self.parent.index['index']
         for key, node in self.parent.outputs.items():
-            sources = dict(index=index, data=node, )
+            sources = dict(index=index, data=node)
+            
+            key_td = key + ('td',)
+            key_fd = key + ('fd',)
             
             if 'accel' in key:
-                self.outputs.add_output(
-                    key=key + ('td',),
+                self.process_output(
+                    endpoints=endpoints,
+                    key=key_td,
                     func=t_feat,
                     sources=sources,
+                    feats=feats,
                     **kwargs
                 )
+                
                 if 'grav' not in key:
-                    self.outputs.add_output(
-                        key=key + ('fd',),
+                    self.process_output(
+                        endpoints=endpoints,
+                        key=key_fd,
                         func=f_feat,
                         sources=sources,
+                        feats=feats,
                         **kwargs
                     )
+            
             if 'gyro' in key:
-                self.outputs.add_output(
-                    key=key + ('td',),
-                    func=t_feat,
-                    sources=sources,
-                    **kwargs
-                )
-                self.outputs.add_output(
-                    key=key + ('fd',),
+                self.process_output(
+                    endpoints=endpoints,
+                    key=key_td,
                     func=f_feat,
                     sources=sources,
+                    feats=feats,
                     **kwargs
                 )
+                
+                self.process_output(
+                    endpoints=endpoints,
+                    key=key_fd,
+                    func=f_feat,
+                    sources=sources,
+                    feats=feats,
+                    **kwargs
+                )
+        
+        self.construct_aggregated_outputs(endpoints)

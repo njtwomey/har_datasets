@@ -3,10 +3,8 @@ import numpy as np
 
 from tqdm import tqdm
 
-from . import sliding_window_rect
-
 __all__ = [
-    'Partition', 'PartitionAndWindow', 'PartitionAndWindowMetadata'
+    'Partition',
 ]
 
 
@@ -53,52 +51,53 @@ class Partition(object):
                 return np.concatenate(output, axis=0)
         return df.reset_index(drop=True)
 
-
-class PartitionAndWindow(Partition):
-    def __init__(self, func, win_len, win_inc):
-        def windowed_func(key, index, data, *args, **kwargs):
-            win_len_ = int(win_len * kwargs['fs'])
-            win_inc_ = int(win_inc * kwargs['fs'])
-            
-            index_ = sliding_window_rect(
-                index.values, win_len_, win_inc_
-            )
-            
-            data_ = sliding_window_rect(
-                data.values, win_len_, win_inc_
-            )
-            
-            assert index_.shape[0] == data_.shape[0]
-            assert index_.shape[1] == data_.shape[1]
-            
-            ret = func(
-                key=key,
-                index=index_,
-                data=data_,
-                *args,
-                **kwargs
-            )
-            
-            return ret
-        
-        super(PartitionAndWindow, self).__init__(
-            windowed_func
-        )
-
-
-class PartitionAndWindowMetadata(PartitionAndWindow):
-    def __init__(self, win_len, win_inc):
-        def median_filter(key, index, data, *args, **kwargs):
-            assert key in {'label', 'index', 'fold'}
-            if key == 'label':
-                vals, transformed = np.unique(data, return_inverse=True)
-                transformed = transformed.reshape(data.shape)
-                med = np.median(transformed, axis=1).astype(int)
-                return vals[med]
-            return np.median(data, axis=1)
-        
-        super(PartitionAndWindowMetadata, self).__init__(
-            func=median_filter,
-            win_len=win_len,
-            win_inc=win_inc,
-        )
+# from . import sliding_window_rect
+#
+# class PartitionAndWindow(Partition):
+#     def __init__(self, func, win_len, win_inc):
+#         def windowed_func(key, index, data, *args, **kwargs):
+#             win_len_ = int(win_len * kwargs['fs'])
+#             win_inc_ = int(win_inc * kwargs['fs'])
+#
+#             index_ = sliding_window_rect(
+#                 index.values, win_len_, win_inc_
+#             )
+#
+#             data_ = sliding_window_rect(
+#                 data.values, win_len_, win_inc_
+#             )
+#
+#             assert index_.shape[0] == data_.shape[0]
+#             assert index_.shape[1] == data_.shape[1]
+#
+#             ret = func(
+#                 key=key,
+#                 index=index_,
+#                 data=data_,
+#                 *args,
+#                 **kwargs
+#             )
+#
+#             return ret
+#
+#         super(PartitionAndWindow, self).__init__(
+#             windowed_func
+#         )
+#
+#
+# class PartitionAndWindowMetadata(PartitionAndWindow):
+#     def __init__(self, win_len, win_inc):
+#         def median_filter(key, index, data, *args, **kwargs):
+#             assert key in {'label', 'index', 'fold'}
+#             if key == 'label':
+#                 vals, transformed = np.unique(data, return_inverse=True)
+#                 transformed = transformed.reshape(data.shape)
+#                 med = np.median(transformed, axis=1).astype(int)
+#                 return vals[med]
+#             return np.median(data, axis=1)
+#
+#         super(PartitionAndWindowMetadata, self).__init__(
+#             func=median_filter,
+#             win_len=win_len,
+#             win_inc=win_inc,
+#         )

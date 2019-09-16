@@ -1,6 +1,6 @@
 from numpy import isfinite
 
-from .loaders import load_yaml
+from .loaders import load_yaml, load_metadata
 
 __all__ = [
     'check_yaml', 'check_modalities', 'check_locations', 'check_activities',
@@ -14,7 +14,7 @@ YAML checkers
 
 
 def check_yaml(name, values):
-    value_set = load_yaml(name)
+    value_set = load_metadata(name)
     for value in values:
         if value not in value_set:
             raise ValueError(f'{value} is not yet in `{name}.yaml`')

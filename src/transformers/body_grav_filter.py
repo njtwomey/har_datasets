@@ -42,20 +42,20 @@ def body_jerk_filt(key, index, data, **kwargs):
     return df.diff().fillna(0)
 
 
-def copy_file(key, index, data, **kwargs):
-    return data
-
-
-class body_grav(TransformerBase):
+class body_grav_filter(TransformerBase):
     def __init__(self, parent):
-        super(body_grav, self).__init__(
+        super(body_grav_filter, self).__init__(
             name=self.__class__.__name__,
             parent=parent,
         )
         
         self.index.clone_all_from_parent(parent=parent)
         
-        kwargs = dict(filter_order=3, cutoff=0.3, fs=self.meta['fs'])
+        kwargs = dict(
+            filter_order=3, cutoff=0.3,
+            fs=self.get_ancestral_metadata('fs')
+        )
+        
         for key, node in parent.outputs.items():
             self.outputs.add_output(
                 key=key + ('body',),

@@ -1,3 +1,6 @@
+umap-learn
+scikit-learn
+matplotlib
 numpy
 click
 Sphinx
