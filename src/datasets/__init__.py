@@ -5,11 +5,11 @@ __all__ = [
     'uschad',
 ]
 
-from .base import Dataset
+from .base import *
 
-from .anguita2013 import anguita2013
-from .pamap2 import pamap2
-from .uschad import uschad
+from .anguita2013 import *
+from .pamap2 import *
+from .uschad import *
 
 
 def load_dataset(name, *args, **kwargs):

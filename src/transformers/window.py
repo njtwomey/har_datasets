@@ -1,9 +1,13 @@
 import pandas as pd
-from numpy import atleast_2d, atleast_3d
+import numpy as np
 
 from .base import TransformerBase
 
 from .. import transformer_decorator, sliding_window_rect, Partition
+
+__all__ = [
+    'window_256_1', 'window_128_1',
+]
 
 
 @transformer_decorator
@@ -11,16 +15,22 @@ def window_data(key, index, data, fs, win_len, win_inc):
     win_len = int(win_len * fs)
     win_inc = int(win_inc * fs)
     data_windowed = sliding_window_rect(
-        atleast_2d(data.values), win_len, win_inc
+        np.atleast_2d(data), win_len, win_inc
     )
-    return atleast_3d(data_windowed)
+    return np.atleast_3d(data_windowed)
 
 
-def window_index(key, index, data, fs, win_len, win_inc, first=True):
+def window_index(key, index, data, fs, win_len, win_inc, slice_at='middle'):
     assert isinstance(data, pd.DataFrame)
-    data_windowed = window_data(key, index, data, fs, win_len, win_inc)
-    ind = [-1, 0][first]
-    return pd.DataFrame(data_windowed[:, ind, :], columns=data.columns, )
+    data_windowed = window_data(key, index, data.values, fs, win_len, win_inc)
+    ind = dict(
+        start=0,
+        middle=data_windowed.shape[1] // 2,
+        end=-1,
+    )[slice_at]
+    df = pd.DataFrame(data_windowed[:, ind, :], columns=data.columns)
+    df = df.astype(data.dtypes)
+    return df
 
 
 class window(TransformerBase):

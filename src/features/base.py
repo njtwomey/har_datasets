@@ -21,19 +21,17 @@ class FeatureBase(BaseGraph):
             parent=parent,
             meta=FeatureMeta(name),
         )
+        
+        self.locations_set = set(self.get_ancestral_metadata('locations').keys())
+        self.modality_set = set(self.get_ancestral_metadata('modalities'))
     
     def pre_aggregate_output(self, endpoints, key, func, sources, feats=None, **kwargs):
         node = self.outputs.make_output(
             key=key, func=func, sources=sources, **kwargs
         )
         
-        modality = next(filter(
-            lambda k: k in set(self.get_ancestral_metadata('locations')), key
-        ))
-        
-        location = next(filter(
-            lambda k: k in set(self.get_ancestral_metadata('modalities')), key
-        ))
+        modality = next(filter(lambda k: k in self.modality_set, key))
+        location = next(filter(lambda k: k in self.locations_set, key))
         
         endpoints[('all',)][node.name] = node
         endpoints[(location, modality,)][node.name] = node

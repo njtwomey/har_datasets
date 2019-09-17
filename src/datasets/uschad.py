@@ -11,6 +11,10 @@ from ..utils import index_decorator, label_decorator, fold_decorator, data_decor
 
 from .base import Dataset
 
+__all__ = [
+    'uschad'
+]
+
 
 def uschad_iterator(path, columns=None, cols=None, callback=None, desc=None):
     data_list = []
@@ -59,7 +63,10 @@ class uschad(Dataset):
     @fold_decorator
     def build_fold(self, *args, **kwargs):
         def callback(ii, sub_id, act_id, trial_id, data):
-            return np.zeros((data.shape[0], 1)) + sub_id > 10
+            return np.tile(
+                ['train', 'test'][sub_id > 10],
+                (data.shape[0], 1)
+            )
         
         return uschad_iterator(self.unzip_path, callback=callback, desc=f'{self.identifier} Folds')
     
@@ -72,7 +79,8 @@ class uschad(Dataset):
                 np.arange(data.shape[0]) / self.meta['fs']
             ]
         
-        return uschad_iterator(self.unzip_path, callback=callback, columns=['subject', 'trial', 'time'], desc=f'{self.identifier} Index')
+        return uschad_iterator(self.unzip_path, callback=callback, columns=['subject', 'trial', 'time'],
+                               desc=f'{self.identifier} Index')
     
     @data_decorator
     def build_data(self, key, *args, **kwargs):
@@ -84,12 +92,12 @@ class uschad(Dataset):
         
         def callback(ii, sub_id, act_id, trial_id, data):
             return data[:, cols]
-
+        
         scale = dict(
             accel=1.0,
             gyro=2 * np.pi / 360
         )
         
         data = uschad_iterator(self.unzip_path, callback=callback, desc=f'Data ({modality}-{location})')
-
-        return data * scale[modality]
+        
+        return data.values * scale[modality]

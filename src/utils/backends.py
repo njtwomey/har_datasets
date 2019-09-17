@@ -32,7 +32,7 @@ class PNGBackend(FileSystemBase):
 
 class PandasBackend(FileSystemBase):
     def __init__(self, path):
-        super(PandasBackend, self).__init__(path, 'pd.pkl')
+        super(PandasBackend, self).__init__(path, 'pd')
         self.compression = 'gzip'
     
     def load_data(self, node_name):

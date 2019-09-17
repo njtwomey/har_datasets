@@ -1,5 +1,5 @@
 import pandas as pd
-from numpy import isfinite
+import numpy as np
 
 from os.path import join
 
@@ -9,6 +9,10 @@ from ..utils import (
 )
 
 from .base import Dataset
+
+__all__ = [
+    'anguita2013'
+]
 
 
 class anguita2013(Dataset):
@@ -32,10 +36,10 @@ class anguita2013(Dataset):
     def build_fold(self, *args, **kwargs):
         fold = []
         fold.extend(
-            [-1 for _ in load_csv_data(join(self.unzip_path, 'train', 'y_train.txt')) for _ in range(self.win_len)])
+            ['train' for _ in load_csv_data(join(self.unzip_path, 'train', 'y_train.txt')) for _ in range(self.win_len)])
         fold.extend(
-            [+1 for _ in load_csv_data(join(self.unzip_path, 'test', 'y_test.txt')) for _ in range(self.win_len)])
-        return pd.DataFrame(dict(fold=fold)).astype(int)
+            ['test' for _ in load_csv_data(join(self.unzip_path, 'test', 'y_test.txt')) for _ in range(self.win_len)])
+        return pd.DataFrame(fold)
     
     @index_decorator
     def build_index(self, *args, **kwargs):
@@ -65,5 +69,4 @@ class anguita2013(Dataset):
                 acc = load_csv_data(join(self.unzip_path, fold, 'Inertial Signals', f'{ty}_{modality}_{d}_{fold}.txt'),
                                     astype='np')
                 l.extend(acc.ravel().tolist())
-        data = pd.DataFrame(dict(x=x_data, y=y_data, z=z_data))
-        return data
+        return np.c_[x_data, y_data, z_data]

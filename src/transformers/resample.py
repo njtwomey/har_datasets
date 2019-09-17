@@ -1,6 +1,10 @@
 from .base import TransformerBase
 from .. import Partition
 
+__all__ = [
+    'resample_33',
+]
+
 
 def resample_data(key, index, data, fs_old, fs_new):
     print(key)
@@ -12,7 +16,7 @@ def resample_metadata(key, index, data, fs_old, fs_new):
     print()
 
 
-class Resampler(TransformerBase):
+class resampler(TransformerBase):
     def __init__(self, name, parent, fs_new):
         super(Resampler, self).__init__(name=name, parent=parent)
         
@@ -44,7 +48,7 @@ class Resampler(TransformerBase):
             )
 
 
-class resample_33(Resampler):
+class resample_33(resampler):
     def __init__(self, parent):
         super(resample_33, self).__init__(
             name=self.__class__.__name__,

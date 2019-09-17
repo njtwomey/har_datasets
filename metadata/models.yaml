@@ -5,3 +5,11 @@ scale_log_reg:
   params:
     Cs: 10
     multi_class: multinomial
+    verbose: 10
+
+random_forest:
+  description:
+    - https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html
+  params:
+    n_estimators: 50
+    verbose: 10

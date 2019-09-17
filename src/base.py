@@ -1,9 +1,8 @@
 from collections import defaultdict
 from os.path import join
 
-import warnings
-
-from mldb import ComputationGraph, PickleBackend, VolatileBackend
+from mldb import ComputationGraph, PickleBackend, VolatileBackend, JsonBackend
+from .utils.backends import PandasBackend, NumpyBackend
 
 from .utils import build_path
 
@@ -87,7 +86,7 @@ class ComputationalSet(object):
     
     def evaluate_outputs(self, force=False):
         for key, node in self.items():
-            print(key, node)
+            # print(key, node)
             if not node.exists or force:
                 node.evaluate()
     
@@ -138,8 +137,13 @@ class IndexSet(ComputationalSet):
             key=key,
             func=func,
             sources=sources,
-            backend=backend,
+            backend=backend or 'pandas',
             **kwargs
+        )
+    
+    def make_output(self, key, func, sources=None, backend=None, **kwargs):
+        return super(IndexSet, self).make_output(
+            key=key, func=func, sources=sources, backend=backend or 'pandas', **kwargs
         )
     
     def clone_all_from_parent(self, parent, **kwargs):
@@ -160,7 +164,7 @@ class IndexSet(ComputationalSet):
                 data=parent.index[key],
             ),
         )
-
+    
     def __getitem__(self, key):
         """
         Overwrite to automatically inherit index values from the ancestry
@@ -213,9 +217,8 @@ class BaseGraph(ComputationGraph):
     A simple computational graph that is meant only to define backends and load metadata
     """
     
-    def __init__(self, name, parent=None, meta=None, default_backend='fs'):
+    def __init__(self, name, parent=None, meta=None, default_backend='numpy'):
         super(BaseGraph, self).__init__(
-            default_backend=default_backend,
             name=name.lower(),
         )
         
@@ -223,8 +226,13 @@ class BaseGraph(ComputationGraph):
         
         self.fs_root = build_path('data')
         
-        self.add_backend('fs', PickleBackend(self.fs_root))
+        self.add_backend('pickle', PickleBackend(self.fs_root))
+        self.add_backend('json', JsonBackend(self.fs_root))
+        self.add_backend('pandas', PandasBackend(self.fs_root))
+        self.add_backend('numpy', NumpyBackend(self.fs_root))
         self.add_backend('none', VolatileBackend())
+        
+        self.set_default_backend(default_backend)
         
         self.collections = ComputationalCollection(
             index=IndexSet(graph=self, parent=parent),

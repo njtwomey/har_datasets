@@ -60,7 +60,7 @@ class umap_embedding(VisualisationBase):
         
         for key, node in parent.outputs.items():
             model = self.outputs.make_output(
-                key=key,
+                key=key + ('umap',),
                 func=learn_umap,
                 sources=dict(
                     label=label,
@@ -70,7 +70,7 @@ class umap_embedding(VisualisationBase):
             )
             
             self.outputs.add_output(
-                key=key,
+                key=('viz',) + key,
                 func=embed_umap,
                 sources=dict(
                     label=label,

@@ -1,8 +1,8 @@
-from .sklearn import scale_log_reg
+from .sklearn import *
 
 __all__ = [
     'load_model',
-    'scale_log_reg',
+    'scale_log_reg', 'random_forest'
 ]
 
 

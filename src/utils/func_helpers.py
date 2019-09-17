@@ -8,6 +8,13 @@ __all__ = [
 ]
 
 
+def infer_data_type(data):
+    if isinstance(data, np.ndarray):
+        return 'numpy'
+    elif isinstance(data, pd.DataFrame):
+        return 'pandas'
+
+
 class Partition(object):
     def __init__(self, func):
         self.func = func
@@ -15,17 +22,18 @@ class Partition(object):
     
     def __call__(self, key, index, data, *args, **kwargs):
         assert index.shape[0] == data.shape[0]
-        if not all(data.index == index.index):
-            index = index.reset_index(drop=True)
-            data = data.reset_index(drop=True)
         output = []
         trials = index.trial.unique()
-        df_output = []
-        assert data.notna().all().all()
+        data_type = infer_data_type(data)
         for trial in tqdm(trials):
             inds = index.trial == trial
             index_ = index.loc[inds]
-            data_ = data.loc[inds]
+            if data_type == 'numpy':
+                data_ = data[inds]
+            elif data_type == 'pandas':
+                data_ = data.loc[inds]
+            else:
+                raise ValueError
             assert index_.shape[0] == data_.shape[0]
             vals = self.func(
                 key=key,
@@ -34,22 +42,25 @@ class Partition(object):
                 *args,
                 **kwargs
             )
+            assert infer_data_type(vals) == data_type
             output.append(vals)
-            if isinstance(vals, pd.DataFrame):
-                df_output.append(True)
-            else:
-                df_output.append(False)
-        assert len(set(df_output)) == 1
-        if all(df_output):
+        if data_type == 'numpy':
+            df = np.concatenate(output, axis=0)
+        elif data_type == 'pandas':
             df = pd.concat(output, axis=0)
+            df = df.reset_index(drop=True)
         else:
-            try:
-                df = pd.DataFrame(
-                    np.concatenate(output, axis=0)
-                )
-            except ValueError:
-                return np.concatenate(output, axis=0)
-        return df.reset_index(drop=True)
+            raise ValueError
+        return df
+        # if all(df_output):
+        #     df = pd.concat(output, axis=0)
+        # else:
+        #     try:
+        #         df = pd.DataFrame(
+        #             np.concatenate(output, axis=0)
+        #         )
+        #     except ValueError:
+        #         return np.concatenate(output, axis=0)
 
 # from . import sliding_window_rect
 #

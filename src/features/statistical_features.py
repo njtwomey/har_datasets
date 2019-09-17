@@ -4,6 +4,10 @@ from numpy import concatenate
 from .base import FeatureBase
 from .statistical_features_impl import t_feat, f_feat
 
+__all__ = [
+    'statistical_features'
+]
+
 
 def concatenate_sources(key, **datas):
     assert len(set([type(i) for i in datas.values()])) == 1

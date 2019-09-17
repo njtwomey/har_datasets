@@ -2,6 +2,10 @@ from os.path import join, basename, splitext
 
 from src import BaseGraph, DatasetMeta
 
+__all__ = [
+    'Dataset',
+]
+
 
 class Dataset(BaseGraph):
     def __init__(self, name, *args, **kwargs):
@@ -10,30 +14,33 @@ class Dataset(BaseGraph):
             parent=None,
             meta=DatasetMeta(name)
         )
-    
+        
         zip_name = kwargs.get('unzip_path', lambda x: x)(splitext(basename(
             self.meta.meta['download_urls'][0]
         ))[0])
         self.unzip_path = join(self.meta.zip_path, splitext(zip_name)[0])
-    
+        
         # Build the indexes
         self.index.add_output(
             key='label',
             func=self.build_label,
             path=self.unzip_path,
-            inv_lookup=self.meta.inv_act_lookup
+            inv_lookup=self.meta.inv_act_lookup,
+            backend='pandas'
         )
         
         self.index.add_output(
             key='fold',
             func=self.build_fold,
-            path=self.unzip_path
+            path=self.unzip_path,
+            backend='pandas'
         )
         
         self.index.add_output(
             key='index',
             func=self.build_index,
-            path=self.unzip_path
+            path=self.unzip_path,
+            backend='pandas'
         )
         
         # Build list of outputs
@@ -43,16 +50,17 @@ class Dataset(BaseGraph):
                     self.outputs.add_output(
                         key=(modality, location),
                         func=self.build_data,
+                        backend='numpy'
                     )
     
     def build_label(self, *args, **kwargs):
         raise NotImplementedError
-
+    
     def build_index(self, *args, **kwargs):
         raise NotImplementedError
-
+    
     def build_fold(self, *args, **kwargs):
         raise NotImplementedError
-
+    
     def build_data(self, *args, **kwargs):
         raise NotImplementedError

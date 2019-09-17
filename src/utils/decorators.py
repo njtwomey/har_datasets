@@ -1,5 +1,5 @@
 import pandas as pd
-from numpy import isfinite
+import numpy as np
 
 from functools import update_wrapper, partial
 
@@ -22,7 +22,7 @@ class DecoratorBase(object):
         if isinstance(df, tuple):
             assert len(df) == 2
             return df
-        return pd.DataFrame(df)
+        return df
 
 
 class LabelDecorator(DecoratorBase):
@@ -31,6 +31,8 @@ class LabelDecorator(DecoratorBase):
     
     def __call__(self, *args, **kwargs):
         df = super(LabelDecorator, self).__call__(*args, **kwargs)
+        
+        # TODO/FIXME: remove this strange pattern
         if isinstance(df, tuple):
             inv_lookup, df = df
             df = pd.DataFrame(df)
@@ -38,8 +40,10 @@ class LabelDecorator(DecoratorBase):
                 df[ci] = df[ci].apply(
                     lambda ll: inv_lookup[ll]
                 )
-        df = pd.DataFrame(df).astype('category')
+        
+        df = pd.DataFrame(df)
         df.columns = [f'track_{fi}' for fi in range(len(df.columns))]
+        df = df.astype({col: 'category' for col in df.columns})
         return df
 
 
@@ -48,8 +52,10 @@ class FoldDecorator(DecoratorBase):
         super(FoldDecorator, self).__init__(func)
     
     def __call__(self, *args, **kwargs):
-        df = super(FoldDecorator, self).__call__(*args, **kwargs).astype(int)
-        df.columns = [f'fold_{fi}' for fi in range(len(df.columns))]
+        df = super(FoldDecorator, self).__call__(*args, **kwargs)
+        if isinstance(df.columns, pd.RangeIndex):
+            df.columns = [f'fold_{fi}' for fi in range(len(df.columns))]
+        df = df.astype({col: 'category' for col in df.columns})
         return df
 
 
@@ -61,8 +67,8 @@ class IndexDecorator(DecoratorBase):
         df = super(IndexDecorator, self).__call__(*args, **kwargs)
         df.columns = ['subject', 'trial', 'time']
         return df.astype(dict(
-            subject=int,
-            trial=int,
+            subject='category',
+            trial='category',
             time=float
         ))
 
@@ -72,9 +78,9 @@ class DataDecorator(DecoratorBase):
         super(DataDecorator, self).__init__(func)
     
     def __call__(self, *args, **kwargs):
-        df = super(DataDecorator, self).__call__(*args, **kwargs)
-        assert isfinite(df.values).all(), f'Error evaluating {self.func.__name__}'
-        return df
+        data = super(DataDecorator, self).__call__(*args, **kwargs)
+        assert np.isfinite(data).all(), f'Error evaluating {self.func.__name__}: data not all finite'
+        return data
 
 
 class FunctionDecorator(DecoratorBase):
