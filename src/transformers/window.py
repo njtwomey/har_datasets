@@ -16,10 +16,11 @@ def window_data(key, index, data, fs, win_len, win_inc):
     return atleast_3d(data_windowed)
 
 
-def window_index(key, index, data, fs, win_len, win_inc):
+def window_index(key, index, data, fs, win_len, win_inc, first=True):
     assert isinstance(data, pd.DataFrame)
     data_windowed = window_data(key, index, data, fs, win_len, win_inc)
-    return pd.DataFrame(data_windowed[:, 0, :], columns=data.columns, )
+    ind = [-1, 0][first]
+    return pd.DataFrame(data_windowed[:, ind, :], columns=data.columns, )
 
 
 class window(TransformerBase):
@@ -51,6 +52,7 @@ class window(TransformerBase):
                     index=parent.index['index'],
                     data=node,
                 ),
+                backend='none',
                 **kwargs
             )
 

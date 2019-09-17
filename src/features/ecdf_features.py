@@ -30,12 +30,10 @@ class ecdf_features(FeatureBase):
             name=name, parent=parent,
         )
         
-        self.index.clone_all_from_parent(parent=parent)
-        
         endpoints = defaultdict(dict)
         
         for key, node in parent.outputs.items():
-            self.process_output(
+            self.pre_aggregate_output(
                 endpoints=endpoints,
                 key=key + ('ecdf',),
                 func=calc_ecdf,
@@ -43,7 +41,7 @@ class ecdf_features(FeatureBase):
                 n_components=n_components
             )
         
-        self.construct_aggregated_outputs(endpoints)
+        self.aggregate_outputs(endpoints)
 
 
 class ecdf_11(ecdf_features):

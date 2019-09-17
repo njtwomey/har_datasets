@@ -76,13 +76,18 @@ class ComputationalSet(object):
     def __repr__(self):
         return f"<{self.__class__.__name__} outputs={self.output_dict}/>"
     
+    def __contains__(self, item):
+        return item in self.output_dict
+    
     def __getitem__(self, key):
         key = key_check(key)
-        assert key in self.output_dict, f'The key "{key}" not in {list(self.output_dict.keys())}'
+        if key not in self.output_dict:
+            raise ValueError(f'The key "{key}" not in {list(self.output_dict.keys())}')
         return self.output_dict[key]
     
     def evaluate_outputs(self, force=False):
         for key, node in self.items():
+            print(key, node)
             if not node.exists or force:
                 node.evaluate()
     
@@ -123,8 +128,9 @@ class ComputationalSet(object):
 
 
 class IndexSet(ComputationalSet):
-    def __init__(self, graph):
+    def __init__(self, graph, parent):
         super(IndexSet, self).__init__(graph=graph)
+        self.parent = parent
     
     def add_output(self, key, func, sources=None, backend=None, **kwargs):
         assert self.is_index_key(key)
@@ -154,6 +160,19 @@ class IndexSet(ComputationalSet):
                 data=parent.index[key],
             ),
         )
+
+    def __getitem__(self, key):
+        """
+        Overwrite to automatically inherit index values from the ancestry
+
+        :param key:
+        :return:
+        """
+        try:
+            return super(IndexSet, self).__getitem__(key)
+        except ValueError:
+            assert self.parent is not None
+            return self.parent.index[key]
     
     @property
     def index(self):
@@ -197,7 +216,7 @@ class BaseGraph(ComputationGraph):
     def __init__(self, name, parent=None, meta=None, default_backend='fs'):
         super(BaseGraph, self).__init__(
             default_backend=default_backend,
-            name=name,
+            name=name.lower(),
         )
         
         self.parent = parent
@@ -208,8 +227,8 @@ class BaseGraph(ComputationGraph):
         self.add_backend('none', VolatileBackend())
         
         self.collections = ComputationalCollection(
-            index=IndexSet(self),
-            outputs=ComputationalSet(self),
+            index=IndexSet(graph=self, parent=parent),
+            outputs=ComputationalSet(graph=self),
         )
         
         self.meta = meta

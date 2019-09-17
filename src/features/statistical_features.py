@@ -23,9 +23,6 @@ class statistical_features(FeatureBase):
             fs=self.get_ancestral_metadata('fs')
         )
         
-        for key, node in self.parent.index.items():
-            self.index.clone_from_parent(parent=parent, key=key)
-        
         endpoints = defaultdict(dict)
         feats = ('td', 'fd')
         
@@ -37,7 +34,7 @@ class statistical_features(FeatureBase):
             key_fd = key + ('fd',)
             
             if 'accel' in key:
-                self.process_output(
+                self.pre_aggregate_output(
                     endpoints=endpoints,
                     key=key_td,
                     func=t_feat,
@@ -47,7 +44,7 @@ class statistical_features(FeatureBase):
                 )
                 
                 if 'grav' not in key:
-                    self.process_output(
+                    self.pre_aggregate_output(
                         endpoints=endpoints,
                         key=key_fd,
                         func=f_feat,
@@ -57,7 +54,7 @@ class statistical_features(FeatureBase):
                     )
             
             if 'gyro' in key:
-                self.process_output(
+                self.pre_aggregate_output(
                     endpoints=endpoints,
                     key=key_td,
                     func=f_feat,
@@ -66,7 +63,7 @@ class statistical_features(FeatureBase):
                     **kwargs
                 )
                 
-                self.process_output(
+                self.pre_aggregate_output(
                     endpoints=endpoints,
                     key=key_fd,
                     func=f_feat,
@@ -75,4 +72,4 @@ class statistical_features(FeatureBase):
                     **kwargs
                 )
         
-        self.construct_aggregated_outputs(endpoints)
+        self.aggregate_outputs(endpoints)

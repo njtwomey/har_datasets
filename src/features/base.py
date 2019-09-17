@@ -22,7 +22,7 @@ class FeatureBase(BaseGraph):
             meta=FeatureMeta(name),
         )
     
-    def process_output(self, endpoints, key, func, sources, feats=None, **kwargs):
+    def pre_aggregate_output(self, endpoints, key, func, sources, feats=None, **kwargs):
         node = self.outputs.make_output(
             key=key, func=func, sources=sources, **kwargs
         )
@@ -41,7 +41,7 @@ class FeatureBase(BaseGraph):
             if feat in key:
                 endpoints[(location, modality, feat,)][node.name] = node
     
-    def construct_aggregated_outputs(self, endpoints):
+    def aggregate_outputs(self, endpoints):
         for key, node_dict in endpoints.items():
             self.outputs.add_output(
                 key=key,

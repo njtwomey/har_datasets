@@ -1,5 +1,5 @@
 from .. import BaseGraph, VisualisationMeta
-from ..utils.backends import ScikitLearnBackend, PNGBackend
+from ..utils.backends import PNGBackend
 
 
 class VisualisationBase(BaseGraph):
@@ -10,5 +10,4 @@ class VisualisationBase(BaseGraph):
             meta=VisualisationMeta(name)
         )
         
-        self.add_backend('sklearn', ScikitLearnBackend(self.fs_root))
         self.add_backend('png', PNGBackend(self.fs_root))

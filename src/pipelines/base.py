@@ -1,4 +1,4 @@
-from .. import BaseGraph, RepresentationMeta
+from .. import BaseGraph, PipelineMeta
 
 
 class TransformerBase(BaseGraph):
@@ -6,5 +6,5 @@ class TransformerBase(BaseGraph):
         super(TransformerBase, self).__init__(
             name=name,
             parent=parent,
-            meta=RepresentationMeta(name)
+            meta=PipelineMeta(name)
         )

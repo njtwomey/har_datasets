@@ -2,7 +2,8 @@ from .utils import load_metadata, build_path, check_activities
 
 __all__ = [
     'DatasetMeta', 'BaseMeta', 'ActivityMeta', 'LocationMeta', 'ModalityMeta', 'DatasetMeta',
-    'FeatureMeta', 'TransformerMeta', 'VisualisationMeta', 'RepresentationMeta', 'ModelMeta'
+    'FeatureMeta', 'TransformerMeta', 'VisualisationMeta', 'RepresentationMeta', 'ModelMeta',
+    'PipelineMeta', 'EvaluationMeta',
 ]
 
 
@@ -100,6 +101,13 @@ class TransformerMeta(BaseMeta):
         )
 
 
+class PipelineMeta(BaseMeta):
+    def __init__(self, name, *args, **kwargs):
+        super(PipelineMeta, self).__init__(
+            name=name, yaml_file='pipeline.yaml'
+        )
+
+
 class VisualisationMeta(BaseMeta):
     def __init__(self, name, *args, **kwargs):
         super(VisualisationMeta, self).__init__(
@@ -110,12 +118,19 @@ class VisualisationMeta(BaseMeta):
 class RepresentationMeta(BaseMeta):
     def __init__(self, name, *args, **kwargs):
         super(RepresentationMeta, self).__init__(
-            name=name, yaml_file='representation.yaml'
+            name=name, yaml_file='representations.yaml'
         )
 
 
 class ModelMeta(BaseMeta):
     def __init__(self, name, *args, **kwargs):
         super(ModelMeta, self).__init__(
-            name=name, yaml_file='model.yaml'
+            name=name, yaml_file='models.yaml'
+        )
+
+
+class EvaluationMeta(BaseMeta):
+    def __init__(self, name, *args, **kwargs):
+        super(EvaluationMeta, self).__init__(
+            name=name, yaml_file='Evaluations.yaml'
         )

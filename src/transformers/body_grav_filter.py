@@ -61,12 +61,14 @@ class body_grav_filter(TransformerBase):
                 key=key + ('body',),
                 func=Partition(func=body_filt),
                 sources=dict(data=node, index=parent.index.index),
+                backend='none',
                 **kwargs,
             )
             self.outputs.add_output(
                 key=key + ('body', 'jerk',),
                 func=Partition(func=body_jerk_filt),
                 sources=dict(data=node, index=parent.index.index),
+                backend='none',
                 **kwargs,
             )
             if 'accel' in key:
@@ -74,5 +76,6 @@ class body_grav_filter(TransformerBase):
                     key=key + ('grav',),
                     func=Partition(func=grav_filt),
                     sources=dict(data=node, index=parent.index.index),
+                    backend='none',
                     **kwargs,
                 )

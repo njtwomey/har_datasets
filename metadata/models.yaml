@@ -1,0 +1,7 @@
+scale_log_reg:
+  description:
+    - https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html
+    - https://scikit-learn.org/stable/modules/generated/sklearn.linear_model.LogisticRegressionCV.html
+  params:
+    Cs: 10
+    multi_class: multinomial

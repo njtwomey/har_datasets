@@ -68,11 +68,15 @@ def load_features():
 
 
 def load_representations():
-    return load_yaml('representations.yaml')
+    return load_metadata('representations.yaml')
 
 
 def load_transformations():
-    return load_yaml('transformers.yaml')
+    return load_metadata('transformers.yaml')
+
+
+def load_models():
+    return load_metadata('models.yaml')
 
 
 def module_importer(module_path, class_name, *args, **kwargs):
