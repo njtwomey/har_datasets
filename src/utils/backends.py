@@ -22,7 +22,7 @@ class PNGBackend(FileSystemBase):
         super(PNGBackend, self).__init__(path, 'png')
     
     def load_data(self, node_name):
-        return None
+        return True
     
     def save_data(self, node_name, data):
         fig = data

@@ -2,10 +2,10 @@ import os
 import tempfile
 from dotenv import find_dotenv, load_dotenv
 import logging
-import zipfile
+import random
 
 __all__ = [
-    'dot_env_stuff', 'unzip_data', 'symlink_allowed', 'make_symlink'
+    'dot_env_stuff', 'symlink_allowed', 'make_symlink', 'randomised_order'
 ]
 
 
@@ -21,20 +21,6 @@ def dot_env_stuff(func):
     load_dotenv(find_dotenv())
     
     func()
-
-
-def unzip_data(zip_path, in_name, out_name):
-    """
-    
-    :param zip_path:
-    :param in_name:
-    :param out_name:
-    :return:
-    """
-    if os.path.exists(os.path.join(zip_path, out_name)):
-        return
-    with zipfile.ZipFile(os.path.join(zip_path, in_name), 'r') as fil:
-        fil.extractall(zip_path)
 
 
 def symlink_allowed():
@@ -64,3 +50,14 @@ def make_symlink(in_path, out_path, ext):
     assert os.path.exists(in_path)
     if not os.path.exists(out_path):
         os.symlink(in_path, out_path)
+
+
+def randomised_order(iterable):
+    """
+    
+    :param iterable:
+    :return:
+    """
+    iterable = list(iterable)
+    random.shuffle(iterable)
+    yield from iterable

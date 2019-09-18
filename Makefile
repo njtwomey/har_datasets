@@ -33,17 +33,9 @@ tables:
 download:
 	$(PYTHON_INTERPRETER) make_download.py
 
-## Make Processed
-raw:
-	$(PYTHON_INTERPRETER) make_raw.py
-
-## Make Transformations
-transformations:
-	$(PYTHON_INTERPRETER) make_transformations.py
-
-## Make Features
-features:
-	$(PYTHON_INTERPRETER) make_features.py
+## Make Makefiles
+makefiles:
+	$(PYTHON_INTERPRETER) make_makefiles.py
 
 ## Delete all compiled Python files
 clean:

@@ -4,7 +4,6 @@ import numpy as np
 from sklearn.neighbors import NearestNeighbors
 
 from scipy import signal
-from scipy.interpolate import interp1d
 
 from .base import TransformerBase
 from .. import Partition
@@ -32,7 +31,7 @@ def resample_metadata(key, index, data, fs_old, fs_new):
     knn1.fit(t_old[:, None])
     _, inds = knn1.kneighbors(t_new[:, None], 1)
     inds = inds.ravel()
-
+    
     df = data.iloc[inds]
     
     return df

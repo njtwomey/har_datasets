@@ -1,16 +1,17 @@
-from src import dot_env_stuff, load_datasets, load_chains, load_representation
+from src import load_datasets_metadata, load_chains_metadata
+from src import chain_importer
+from src import dot_env_stuff
 
 
 def main():
-    datasets = load_datasets()
-    representations = load_chains()
+    datasets = load_datasets_metadata()
+    chains = load_chains_metadata()
     for name in datasets.keys():
-        for representation in representations:
-            print(name, representation)
-            load_representation(
-                representation, name=name
+        for chain in reversed(list(chains.keys())):
+            print(name, chain)
+            chain_importer(
+                chain, name=name
             ).evaluate_outputs()
-        break
 
 
 if __name__ == '__main__':

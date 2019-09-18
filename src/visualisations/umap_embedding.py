@@ -1,6 +1,8 @@
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
+import pandas as pd
+
 import matplotlib.pyplot as pl
 import seaborn as sns
 
@@ -27,7 +29,9 @@ def learn_umap(key, label, data):
 def embed_umap(key, label, data, model):
     embedding = model.transform(data)
     
-    label.track_0[:] = label.track_0.apply(normalise_labels)
+    # Need to re-label with a new dataframe since the categories in the normalised label
+    # set are different to those in the full set.
+    label = pd.DataFrame(label.track_0.apply(normalise_labels)).astype('category')
     
     fig, ax = pl.subplots(1, 1, figsize=(10, 10))
     

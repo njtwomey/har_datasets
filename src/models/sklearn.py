@@ -1,6 +1,5 @@
-import numpy as np
-
 from sklearn import clone
+
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.linear_model import LogisticRegressionCV

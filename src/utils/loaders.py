@@ -4,11 +4,44 @@ import pandas as pd
 import yaml
 
 __all__ = [
-    'load_activities', 'load_locations', 'load_modalities', 'load_datasets',
-    'load_csv_data', 'load_features', 'load_transformations', 'load_chains', 'load_yaml',
-    'dataset_importer', 'feature_importer', 'transformer_importer', 'load_metadata',
-    'build_path'
+    # Generic
+    'load_csv_data', 'load_yaml', 'load_metadata', 'build_path',
+    # Metadata loaders
+    'load_activities_metadata', 'load_locations_metadata',
+    'load_modalities_metadata', 'load_datasets_metadata',
+    'load_features_metadata', 'load_transformations_metadata',
+    'load_chains_metadata', 'load_visualisations_metadata',
+    'load_models_metadata',
+    # Module importers
+    'dataset_importer', 'transformer_importer', 'feature_importer',
+    'chain_importer', 'model_importer', 'visualisation_importer',
+
 ]
+
+"""
+Root directory of the project
+"""
+
+
+def get_root():
+    return os.environ['PROJECT_ROOT']
+
+
+"""
+For building file structure
+"""
+
+
+def build_path(*args):
+    return os.path.join(
+        get_root(),
+        *args
+    )
+
+
+"""
+Generic CSV loader
+"""
 
 
 def load_csv_data(fname, astype='list'):
@@ -26,17 +59,6 @@ def load_csv_data(fname, astype='list'):
         return df.values.ravel().tolist()
     
     raise ValueError
-
-
-def get_root():
-    return os.environ['PROJECT_ROOT']
-
-
-def build_path(*args):
-    return os.path.join(
-        get_root(),
-        *args
-    )
 
 
 """
@@ -57,19 +79,19 @@ Dataset metadata
 """
 
 
-def load_datasets():
+def load_datasets_metadata():
     return load_metadata('datasets.yaml')
 
 
-def load_activities():
+def load_activities_metadata():
     return load_metadata('activities.yaml')
 
 
-def load_locations():
+def load_locations_metadata():
     return load_metadata('locations.yaml')
 
 
-def load_modalities():
+def load_modalities_metadata():
     return load_metadata('modalities.yaml')
 
 
@@ -78,24 +100,28 @@ Coded metadata
 """
 
 
-def load_features():
+def load_features_metadata():
     return load_metadata('features.yaml')
 
 
-def load_chains():
+def load_chains_metadata():
     return load_metadata('chains.yaml')
 
 
-def load_transformations():
+def load_transformations_metadata():
     return load_metadata('transformers.yaml')
 
 
-def load_models():
+def load_models_metadata():
     return load_metadata('models.yaml')
 
 
-"""
+def load_visualisations_metadata():
+    return load_metadata('visualisations.yaml')
 
+
+"""
+Module importers
 """
 
 
@@ -124,6 +150,30 @@ def feature_importer(class_name, *args, **kwargs):
 def transformer_importer(class_name, *args, **kwargs):
     return module_importer(
         module_path='src.transformers',
+        class_name=class_name,
+        *args, **kwargs
+    )
+
+
+def chain_importer(class_name, *args, **kwargs):
+    return module_importer(
+        module_path='src.chains',
+        class_name=class_name,
+        *args, **kwargs
+    )
+
+
+def model_importer(class_name, *args, **kwargs):
+    return module_importer(
+        module_path='src.models',
+        class_name=class_name,
+        *args, **kwargs
+    )
+
+
+def visualisation_importer(class_name, *args, **kwargs):
+    return module_importer(
+        module_path='src.visualisations',
         class_name=class_name,
         *args, **kwargs
     )

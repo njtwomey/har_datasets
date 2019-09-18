@@ -1,4 +1,4 @@
-from ..base import Dataset
+from .base import Dataset
 from ..utils import index_decorator, label_decorator, fold_decorator, data_decorator
 
 __all__ = [
