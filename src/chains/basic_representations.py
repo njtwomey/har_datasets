@@ -7,8 +7,8 @@ __all__ = [
 
 def dataset_at_33hz_2s56_1s0(name):
     dataset = dataset_importer(name)
-    resampled = transformers.resample_33(parent=dataset)
-    filtered = transformers.body_grav_filter(parent=resampled)
+    # resampled = transformers.resample_33(parent=dataset)
+    filtered = transformers.body_grav_filter(parent=dataset)
     windowed = transformers.window_256_1(parent=filtered)
     return windowed
 

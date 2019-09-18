@@ -10,6 +10,8 @@ def main():
     models = load_models_metadata()
     
     for dataset_name in randomised_order(datasets.keys()):
+        if dataset_name == 'pamap2':
+            continue
         for chain_name in randomised_order(chains.keys()):
             chain = chain_importer(chain_name, name=dataset_name)
             for model_name in randomised_order(models.keys()):
