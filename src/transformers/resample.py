@@ -1,3 +1,11 @@
+import pandas as pd
+import numpy as np
+
+from sklearn.neighbors import NearestNeighbors
+
+from scipy import signal
+from scipy.interpolate import interp1d
+
 from .base import TransformerBase
 from .. import Partition
 
@@ -7,18 +15,34 @@ __all__ = [
 
 
 def resample_data(key, index, data, fs_old, fs_new):
-    print(key)
-    print()
+    n_samples = int(data.shape[0] * fs_new / fs_old)
+    return signal.resample(data, n_samples, axis=0)
 
 
 def resample_metadata(key, index, data, fs_old, fs_new):
-    print(key)
-    print()
+    n_samples = int(data.shape[0] * fs_new / fs_old)
+    t_old = index.time.values
+    t_new = np.linspace(t_old[0], t_old[-1], n_samples)
+    
+    assert t_old[0] == t_new[0]
+    assert t_old[-1] == t_new[-1]
+    
+    # Since metadata is discrete, we take a nearest-neighbour approach to resample.
+    knn1 = NearestNeighbors(1)
+    knn1.fit(t_old[:, None])
+    _, inds = knn1.kneighbors(t_new[:, None], 1)
+    inds = inds.ravel()
+
+    df = data.iloc[inds]
+    
+    return df
 
 
 class resampler(TransformerBase):
     def __init__(self, name, parent, fs_new):
-        super(Resampler, self).__init__(name=name, parent=parent)
+        super(resampler, self).__init__(
+            name=name, parent=parent
+        )
         
         kwargs = dict(
             fs_old=parent.get_ancestral_metadata('fs'),

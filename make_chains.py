@@ -1,9 +1,9 @@
-from src import dot_env_stuff, load_datasets, load_representations, load_representation
+from src import dot_env_stuff, load_datasets, load_chains, load_representation
 
 
 def main():
     datasets = load_datasets()
-    representations = load_representations()
+    representations = load_chains()
     for name in datasets.keys():
         for representation in representations:
             print(name, representation)

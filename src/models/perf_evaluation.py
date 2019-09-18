@@ -11,7 +11,7 @@ def get_class_names(model):
     raise TypeError(f'The classes member cannot be extracted from this object: {model}')
 
 
-def classification_perf_metrics(xx, yy, model, pp, y_hat):
+def classification_perf_metrics(yy, model, y_hat):
     cols = get_class_names(model)
     
     res = dict(

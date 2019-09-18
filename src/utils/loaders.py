@@ -5,7 +5,7 @@ import yaml
 
 __all__ = [
     'load_activities', 'load_locations', 'load_modalities', 'load_datasets',
-    'load_csv_data', 'load_features', 'load_transformations', 'load_representations', 'load_yaml',
+    'load_csv_data', 'load_features', 'load_transformations', 'load_chains', 'load_yaml',
     'dataset_importer', 'feature_importer', 'transformer_importer', 'load_metadata',
     'build_path'
 ]
@@ -39,12 +39,22 @@ def build_path(*args):
     )
 
 
+"""
+YAML file loaders
+"""
+
+
 def load_yaml(fname):
     return yaml.load(open(build_path(fname)))
 
 
 def load_metadata(fname):
     return load_yaml(os.path.join('metadata', fname))
+
+
+"""
+Dataset metadata
+"""
 
 
 def load_datasets():
@@ -63,12 +73,17 @@ def load_modalities():
     return load_metadata('modalities.yaml')
 
 
+"""
+Coded metadata
+"""
+
+
 def load_features():
     return load_metadata('features.yaml')
 
 
-def load_representations():
-    return load_metadata('representations.yaml')
+def load_chains():
+    return load_metadata('chains.yaml')
 
 
 def load_transformations():
@@ -77,6 +92,11 @@ def load_transformations():
 
 def load_models():
     return load_metadata('models.yaml')
+
+
+"""
+
+"""
 
 
 def module_importer(module_path, class_name, *args, **kwargs):

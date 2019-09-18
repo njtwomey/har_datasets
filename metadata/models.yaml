@@ -7,9 +7,53 @@ scale_log_reg:
     multi_class: multinomial
     verbose: 10
 
+
+
 random_forest:
   description:
     - https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html
-  params:
-    n_estimators: 50
-    verbose: 10
+  xval:
+    n_estimators:
+      - 10
+      - 50
+      - 100
+    verbose:
+      - true
+
+
+
+knn:
+  description:
+    - https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html
+    - https://scikit-learn.org/stable/modules/generated/sklearn.neighbors.KNeighborsClassifier.html
+  xval:
+    clf__n_neighbors:
+      - 8
+      - 16
+      - 32
+      - 64
+      - 128
+
+
+
+svm:
+  description:
+    - https://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.MinMaxScaler.html
+    - https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html
+  xval:
+    scale__feature_range:
+      - [-1, 1]
+    clf__probability:
+      - true
+    clf__verbose:
+      - 10
+    clf__kernel:
+      - rbf
+    clf__C:
+      - 1.0e-5
+      - 1.0e-3
+      - 1.0e-1
+      - 1.0
+      - 1.0e1
+      - 1.0e3
+      - 1.0e5

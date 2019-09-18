@@ -2,7 +2,7 @@ from .utils import load_metadata, build_path, check_activities
 
 __all__ = [
     'DatasetMeta', 'BaseMeta', 'ActivityMeta', 'LocationMeta', 'ModalityMeta', 'DatasetMeta',
-    'FeatureMeta', 'TransformerMeta', 'VisualisationMeta', 'RepresentationMeta', 'ModelMeta',
+    'FeatureMeta', 'TransformerMeta', 'VisualisationMeta', 'ChainMeta', 'ModelMeta',
     'PipelineMeta', 'EvaluationMeta',
 ]
 
@@ -115,10 +115,10 @@ class VisualisationMeta(BaseMeta):
         )
 
 
-class RepresentationMeta(BaseMeta):
+class ChainMeta(BaseMeta):
     def __init__(self, name, *args, **kwargs):
-        super(RepresentationMeta, self).__init__(
-            name=name, yaml_file='representations.yaml'
+        super(ChainMeta, self).__init__(
+            name=name, yaml_file='chains.yaml'
         )
 
 

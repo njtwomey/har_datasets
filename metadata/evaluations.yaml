@@ -1,3 +1,0 @@
-classification_metrics:
-  params:
-    averaging: macro
