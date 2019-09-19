@@ -16,9 +16,9 @@ def main():
             chain = pipeline_importer(chain_name, name=dataset_name)
             for visualisation_name in randomised_order(visualisations.keys()):
                 print(dataset_name, chain_name, visualisation_name)
-                # visualisation_importer(
-                #     visualisation_name, parent=chain
-                # ).evaluate_outputs()
+                visualisation_importer(
+                    visualisation_name, parent=chain
+                ).evaluate_outputs()
 
 
 if __name__ == '__main__':

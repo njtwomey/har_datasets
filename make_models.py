@@ -10,7 +10,7 @@ def main():
     models = load_models_metadata()
     
     for dataset_name in randomised_order(datasets.keys()):
-        if dataset_name == 'anguita2013':
+        if dataset_name != 'anguita2013':
             continue
         for chain_name in randomised_order(chains.keys()):
             chain = pipeline_importer(chain_name, name=dataset_name)
