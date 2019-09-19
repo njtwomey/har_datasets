@@ -13,7 +13,7 @@ from sklearn.externals import joblib
 from mldb import FileSystemBase
 
 __all__ = [
-    'PNGBackend', 'ScikitLearnBackend', 'NumpyBackend', 'PandasBackend'
+    'PNGBackend', 'ScikitLearnBackend', 'NumpyBackend', 'PandasBackend',
 ]
 
 

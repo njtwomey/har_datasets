@@ -1,10 +1,10 @@
-from collections import defaultdict
 from os.path import join
 
 from mldb import ComputationGraph, PickleBackend, VolatileBackend, JsonBackend
-from .utils.backends import PandasBackend, NumpyBackend
 
+from .meta import BaseMeta
 from .utils import build_path, get_logger, randomised_order
+from .utils.backends import PandasBackend, NumpyBackend
 
 logger = get_logger(__name__)
 
@@ -203,12 +203,19 @@ class BaseGraph(ComputationGraph):
     
     def __init__(self, name, parent=None, meta=None, default_backend='numpy'):
         super(BaseGraph, self).__init__(
-            name=name.lower(),
+            name=name,
         )
+        
+        if not isinstance(meta, BaseMeta):
+            msg = f"The metadata variable does not derive from `BaseMeta`"
+            logger.critical(msg)
+            raise TypeError(msg)
+        
+        self.meta = meta
         
         self.parent = parent
         
-        self.fs_root = build_path('data')
+        self.fs_root = build_path()
         
         self.add_backend('pickle', PickleBackend(self.fs_root))
         self.add_backend('pandas', PandasBackend(self.fs_root))
@@ -219,17 +226,25 @@ class BaseGraph(ComputationGraph):
         self.set_default_backend(default_backend)
         
         self.collections = ComputationalCollection(
-            index=IndexSet(graph=self, parent=parent),
-            outputs=ComputationalSet(graph=self, parent=parent),
+            index=IndexSet(
+                graph=self,
+                parent=parent
+            ),
+            outputs=ComputationalSet(
+                graph=self,
+                parent=parent
+            ),
         )
-        
-        self.meta = meta
     
     def build_path(self, *args):
         assert len(args) > 0
-        assert isinstance(args[0], str), f'The argument for `build_path` must be strings, but is {type(args[0])}'
-        path = build_path('data', 'build', self.identifier, '-'.join(args))
-        return path
+        if not isinstance(args[0], str):
+            raise ValueError(
+                f'The argument for `build_path` must be strings, '
+                f'but got the type: {type(args[0])}'
+            )
+        
+        return join(self.identifier, '-'.join(args))
     
     def evaluate_outputs(self):
         for key, output in self.collections.items():

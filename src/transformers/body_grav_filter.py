@@ -16,7 +16,7 @@ def filter_signal(data, filter_order, cutoff, fs, btype, axis=0):
         btype=btype
     )
     
-    mu = data.mean(0, keepdim=True)
+    mu = np.mean(data, axis=0, keepdims=True)
     
     dd = signal.filtfilt(ba[0], ba[1], data - mu, axis=axis) + mu
     

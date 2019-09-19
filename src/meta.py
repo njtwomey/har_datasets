@@ -1,3 +1,5 @@
+from os import environ
+from os.path import join
 from .utils import load_metadata, build_path, check_activities, get_logger
 
 logger = get_logger(__name__)
@@ -19,7 +21,7 @@ class BaseMeta(object):
         self.name = name
         self.meta = values[name]
         if self.meta is None:
-            logger.info(f'The content for module {name} is empty. Assigning empty dict')
+            logger.info(f'The content metadata module {name} is empty. Assigning empty dict')
             self.meta = dict()
     
     def __getitem__(self, item):
@@ -30,6 +32,9 @@ class BaseMeta(object):
     def __contains__(self, item):
         return item in self.meta
     
+    def __repr__(self):
+        return f'<{self.name} {self.meta.__repr__()}>'
+    
     def keys(self):
         return self.meta.keys()
     
@@ -38,9 +43,6 @@ class BaseMeta(object):
     
     def items(self):
         return self.meta.items()
-    
-    def __repr__(self):
-        return f'<{self.name} {self.meta.__repr__()}>'
     
     def insert(self, key, value):
         assert key not in self.meta
@@ -81,7 +83,9 @@ class DatasetMeta(BaseMeta):
         )
         
         if 'fs' not in self.meta:
-            raise KeyError(f'The metadata for {name} does not contain the required key "{fs}"')
+            err = f'The metadata for {name} does not contain the required key "fs"'
+            logger.critical(err)
+            raise KeyError(err)
         
         self.inv_act_lookup = check_activities(self.meta['activities'])
     
@@ -91,11 +95,7 @@ class DatasetMeta(BaseMeta):
     
     @property
     def zip_path(self):
-        return build_path('data', 'zip', self.name)
-    
-    @property
-    def build_path(self):
-        return build_path('data', 'build', self.name)
+        return join(environ['ZIP_ROOT'], self.name)
 
 
 class FeatureMeta(BaseMeta):

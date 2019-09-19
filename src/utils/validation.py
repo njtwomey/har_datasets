@@ -1,6 +1,6 @@
 from numpy import isfinite
 
-from .loaders import load_yaml, load_metadata
+from .loaders import load_metadata
 
 __all__ = [
     'check_yaml', 'check_modalities', 'check_locations', 'check_activities',

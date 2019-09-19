@@ -13,6 +13,7 @@ def infer_data_type(data):
         return 'numpy'
     elif isinstance(data, pd.DataFrame):
         return 'pandas'
+    raise TypeError
 
 
 class Partition(object):

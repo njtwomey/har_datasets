@@ -16,20 +16,18 @@ __all__ = [
 def window_data(key, index, data, fs, win_len, win_inc):
     win_len = int(win_len * fs)
     win_inc = int(win_inc * fs)
+    
     data_windowed = sliding_window_rect(
         np.atleast_2d(data), win_len, win_inc
     )
+    
     return np.atleast_3d(data_windowed)
 
 
 def window_index(key, index, data, fs, win_len, win_inc, slice_at='middle'):
     assert isinstance(data, pd.DataFrame)
     data_windowed = window_data(key, index, data.values, fs, win_len, win_inc)
-    ind = dict(
-        start=0,
-        middle=data_windowed.shape[1] // 2,
-        end=-1,
-    )[slice_at]
+    ind = dict(start=0, middle=data_windowed.shape[1] // 2, end=-1, )[slice_at]
     df = pd.DataFrame(data_windowed[:, ind, :], columns=data.columns)
     df = df.astype(data.dtypes)
     return df
@@ -38,13 +36,20 @@ def window_index(key, index, data, fs, win_len, win_inc, slice_at='middle'):
 class window(TransformerBase):
     def __init__(self, parent, win_len, win_inc):
         super(window, self).__init__(
-            name=self.__class__.__name__, parent=parent,
+            name=self.__class__.__name__,
+            parent=parent,
         )
         
         self.win_len = win_len
         self.win_inc = win_inc
+        
         fs = self.get_ancestral_metadata('fs')
-        kwargs = dict(fs=fs, win_len=self.win_len, win_inc=self.win_inc)
+        
+        kwargs = dict(
+            win_len=self.win_len,
+            win_inc=self.win_inc,
+            fs=fs,
+        )
         
         # Build index outputs
         for key, node in parent.index.items():

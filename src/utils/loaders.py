@@ -5,7 +5,7 @@ import yaml
 
 __all__ = [
     # Generic
-    'load_csv_data', 'load_yaml', 'load_metadata', 'build_path',
+    'load_csv_data', 'load_metadata', 'build_path',
     # Metadata loaders
     'load_activities_metadata', 'load_locations_metadata',
     'load_modalities_metadata', 'load_datasets_metadata',
@@ -34,7 +34,7 @@ For building file structure
 
 def build_path(*args):
     return os.path.join(
-        get_root(),
+        os.environ['BUILD_ROOT'],
         *args
     )
 
@@ -66,12 +66,12 @@ YAML file loaders
 """
 
 
-def load_yaml(fname):
-    return yaml.load(open(build_path(fname)))
-
-
 def load_metadata(fname):
-    return load_yaml(os.path.join('metadata', fname))
+    fname = os.path.join(
+        os.environ['PROJECT_ROOT'], 'metadata', fname
+    )
+    
+    return yaml.load(open(fname, 'r'))
 
 
 """
