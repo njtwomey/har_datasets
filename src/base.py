@@ -4,26 +4,13 @@ from os.path import join
 from mldb import ComputationGraph, PickleBackend, VolatileBackend, JsonBackend
 from .utils.backends import PandasBackend, NumpyBackend
 
-from .utils import build_path
+from .utils import build_path, get_logger, randomised_order
+
+logger = get_logger(__name__)
 
 __all__ = [
     'BaseGraph',
 ]
-
-
-def walk_dict(dict_var, path=None):
-    if path is None:
-        path = tuple()
-    for kk, vv in dict_var.items():
-        next_path = path
-        if isinstance(kk, tuple):
-            next_path += kk
-        else:
-            next_path += (kk,)
-        if isinstance(vv, (dict, defaultdict)):
-            yield from walk_dict(vv, next_path)
-        else:
-            yield next_path, vv
 
 
 def key_check(key):
@@ -44,8 +31,10 @@ def _get_ancestral_meta(graph, key):
 
 
 class ComputationalSet(object):
-    def __init__(self, graph):
+    def __init__(self, graph, parent, cat='outputs'):
+        self.cat = cat
         self.graph = graph
+        self.parent = parent
         self.output_dict = dict()
         
         self.index_keys = {
@@ -60,35 +49,55 @@ class ComputationalSet(object):
             key = key[0]
         return key in self.index_keys
     
+    @property
+    def parent_comp_set(self):
+        return self.parent.collections[self.cat]
+    
     def keys(self):
+        if len(self.output_dict) == 0:
+            return self.parent_comp_set.keys()
         return self.output_dict.keys()
     
     def items(self):
+        if len(self.output_dict) == 0:
+            return self.parent_comp_set.items()
         return self.output_dict.items()
     
     def __len__(self):
+        if len(self.output_dict) == 0:
+            return len(self.parent_comp_set)
         return len(self.output_dict)
     
     def __iter__(self):
+        if len(self.output_dict) == 0:
+            yield from self.parent_comp_set
         yield from self.output_dict
     
     def __repr__(self):
         return f"<{self.__class__.__name__} outputs={self.output_dict}/>"
     
     def __contains__(self, item):
+        if len(self.output_dict) == 0:
+            return item in self.parent_comp_set
         return item in self.output_dict
     
     def __getitem__(self, key):
         key = key_check(key)
-        if key not in self.output_dict:
-            raise ValueError(f'The key "{key}" not in {list(self.output_dict.keys())}')
-        return self.output_dict[key]
+        try:
+            return self.output_dict[key]
+        except KeyError:
+            assert self.parent is not None
+            return self.parent_comp_set[key]
     
     def evaluate_outputs(self, force=False):
-        for key, node in self.items():
-            # print(key, node)
+        for key in randomised_order(self.keys()):
+            node = self[key]
+            logger.info(f'Evaluating the node {node.name}')
             if not node.exists or force:
+                logger.info(f'Calculating {node.name}')
                 node.evaluate()
+            else:
+                logger.info(f'Loading {node.name}')
     
     def make_output(self, key, func, sources=None, backend=None, **kwargs):
         assert callable(func)
@@ -105,12 +114,16 @@ class ComputationalSet(object):
             kwargs=dict(key=key, **kwargs),
         )
         
+        logger.info(f'Created node {node.name}; backend: {backend}')
+        
         return node
     
     def append_output(self, key, node):
         key = key_check(key)
         assert key not in self.output_dict
         self.output_dict[key] = node
+        
+        logger.info(f'Node {node.name} added to outputs.')
     
     def add_output(self, key, func, sources=None, backend=None, **kwargs):
         node = self.make_output(
@@ -128,8 +141,11 @@ class ComputationalSet(object):
 
 class IndexSet(ComputationalSet):
     def __init__(self, graph, parent):
-        super(IndexSet, self).__init__(graph=graph)
-        self.parent = parent
+        super(IndexSet, self).__init__(
+            cat='index',
+            graph=graph,
+            parent=parent,
+        )
     
     def add_output(self, key, func, sources=None, backend=None, **kwargs):
         assert self.is_index_key(key)
@@ -145,39 +161,7 @@ class IndexSet(ComputationalSet):
         return super(IndexSet, self).make_output(
             key=key, func=func, sources=sources, backend=backend or 'pandas', **kwargs
         )
-    
-    def clone_all_from_parent(self, parent, **kwargs):
-        for key in self.index_keys:
-            self.clone_from_parent(key=key, parent=parent)
-    
-    def clone_from_parent(self, key, parent):
-        assert self.is_index_key(key)
         
-        def identity(key, index, data):
-            return data
-        
-        return self.add_output(
-            key=key,
-            func=identity,
-            sources=dict(
-                index=parent.index.index,
-                data=parent.index[key],
-            ),
-        )
-    
-    def __getitem__(self, key):
-        """
-        Overwrite to automatically inherit index values from the ancestry
-
-        :param key:
-        :return:
-        """
-        try:
-            return super(IndexSet, self).__getitem__(key)
-        except ValueError:
-            assert self.parent is not None
-            return self.parent.index[key]
-    
     @property
     def index(self):
         return self['index']
@@ -193,23 +177,24 @@ class IndexSet(ComputationalSet):
 
 class ComputationalCollection(object):
     def __init__(self, **kwargs):
-        self.items = kwargs
+        self._items = kwargs
         for kk, vv in kwargs.items():
             setattr(self, kk, vv)
     
     def iter_outputs(self):
-        yield from self.items.items()
-    
-    @property
-    def is_composed(self):
-        return all(vv.is_composed for kk, vv in self.iter_outputs())
-    
-    def compose(self):
-        for kk, vv in self.iter_outputs():
-            vv.compose()
+        yield from self._items.items()
     
     def __getitem__(self, key):
-        return self.items[key]
+        return self._items[key]
+    
+    def items(self):
+        yield from self._items.items()
+    
+    def keys(self):
+        yield from self._items.keys()
+    
+    def values(self):
+        yield from self._items.values()
 
 
 class BaseGraph(ComputationGraph):
@@ -236,7 +221,7 @@ class BaseGraph(ComputationGraph):
         
         self.collections = ComputationalCollection(
             index=IndexSet(graph=self, parent=parent),
-            outputs=ComputationalSet(graph=self),
+            outputs=ComputationalSet(graph=self, parent=parent),
         )
         
         self.meta = meta
@@ -248,10 +233,7 @@ class BaseGraph(ComputationGraph):
         return path
     
     def evaluate_outputs(self):
-        # warnings.warn(len(self.index), f'The index graph for {self} is empty')
         self.index.evaluate_outputs()
-        
-        # warnings.warn(len(self.outputs), f'The output graph for {self} is empty')
         self.outputs.evaluate_outputs()
     
     @property

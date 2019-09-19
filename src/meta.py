@@ -2,7 +2,7 @@ from .utils import load_metadata, build_path, check_activities
 
 __all__ = [
     'DatasetMeta', 'BaseMeta', 'ActivityMeta', 'LocationMeta', 'ModalityMeta', 'DatasetMeta',
-    'FeatureMeta', 'TransformerMeta', 'VisualisationMeta', 'ChainMeta', 'ModelMeta',
+    'FeatureMeta', 'TransformerMeta', 'VisualisationMeta', 'PipelineMeta', 'ModelMeta',
 ]
 
 
@@ -12,6 +12,8 @@ class BaseMeta(object):
         assert name in values, f'The function "{name}" is not in the set {{{values}}} found in {yaml_file}'
         self.name = name
         self.meta = values[name]
+        if self.meta is None:
+            self.meta = dict()
     
     def __getitem__(self, item):
         assert item in self.meta, f'{item} not found in {self.__class__.__name__}'
@@ -32,7 +34,7 @@ class BaseMeta(object):
     def __repr__(self):
         return f'<{self.name} {self.meta.__repr__()}>'
     
-    def add_category(self, key, value):
+    def insert(self, key, value):
         assert key not in self.meta
         self.meta[key] = value
 
@@ -107,10 +109,10 @@ class VisualisationMeta(BaseMeta):
         )
 
 
-class ChainMeta(BaseMeta):
+class PipelineMeta(BaseMeta):
     def __init__(self, name, *args, **kwargs):
-        super(ChainMeta, self).__init__(
-            name=name, yaml_file='chains.yaml'
+        super(PipelineMeta, self).__init__(
+            name=name, yaml_file='pipelines.yaml'
         )
 
 

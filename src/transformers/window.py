@@ -1,3 +1,5 @@
+from os.path import join
+
 import pandas as pd
 import numpy as np
 
@@ -6,7 +8,7 @@ from .base import TransformerBase
 from .. import transformer_decorator, sliding_window_rect, Partition
 
 __all__ = [
-    'window_256_1', 'window_128_1',
+    'window',
 ]
 
 
@@ -34,12 +36,15 @@ def window_index(key, index, data, fs, win_len, win_inc, slice_at='middle'):
 
 
 class window(TransformerBase):
-    def __init__(self, name, parent, win_len, win_inc, fs):
+    def __init__(self, parent, win_len, win_inc):
         super(window, self).__init__(
-            name=name, parent=parent,
+            name=self.__class__.__name__, parent=parent,
         )
         
-        kwargs = dict(fs=fs, win_len=win_len, win_inc=win_inc)
+        self.win_len = win_len
+        self.win_inc = win_inc
+        fs = self.get_ancestral_metadata('fs')
+        kwargs = dict(fs=fs, win_len=self.win_len, win_inc=self.win_inc)
         
         # Build index outputs
         for key, node in parent.index.items():
@@ -65,25 +70,32 @@ class window(TransformerBase):
                 backend='none',
                 **kwargs
             )
-
-
-class window_128_1(window):
-    def __init__(self, parent):
-        super(window_128_1, self).__init__(
-            name=self.__class__.__name__,
-            parent=parent,
-            win_len=1.28,
-            win_inc=1.0,
-            fs=parent.meta['fs']
+    
+    @property
+    def identifier(self):
+        win_len = f'{self.win_len:03.2f}'
+        win_inc = f'{self.win_inc:03.2f}'
+        return join(
+            self.parent.identifier,
+            f'{self.name}_{win_len}s_{win_inc}s'
         )
 
-
-class window_256_1(window):
-    def __init__(self, parent):
-        super(window_256_1, self).__init__(
-            name=self.__class__.__name__,
-            parent=parent,
-            win_len=2.56,
-            win_inc=1.0,
-            fs=parent.get_ancestral_metadata('fs'),
-        )
+# class window_128_1(window):
+#     def __init__(self, parent):
+#         super(window_128_1, self).__init__(
+#             name=self.__class__.__name__,
+#             parent=parent,
+#             win_len=1.28,
+#             win_inc=1.0,
+#             fs=parent.meta['fs']
+#         )
+#
+# class window_256_1(window):
+#     def __init__(self, parent):
+#         super(window_256_1, self).__init__(
+#             name=self.__class__.__name__,
+#             parent=parent,
+#             win_len=2.56,
+#             win_inc=1.0,
+#             fs=parent.get_ancestral_metadata('fs'),
+#         )

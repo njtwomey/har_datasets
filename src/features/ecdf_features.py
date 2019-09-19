@@ -1,3 +1,4 @@
+from os.path import join
 from collections import defaultdict
 
 import numpy as np
@@ -6,7 +7,7 @@ from .base import FeatureBase
 from .. import feature_decorator
 
 __all__ = [
-    'ecdf_11', 'ecdf_21',
+    'ecdf',
 ]
 
 
@@ -24,13 +25,15 @@ def calc_ecdf(key, index, data, n_components):
     return np.asarray([ecdf_rep(datum, n_components) for datum in data])
 
 
-class ecdf_features(FeatureBase):
-    def __init__(self, name, parent, n_components):
-        super(ecdf_features, self).__init__(
-            name=name, parent=parent,
+class ecdf(FeatureBase):
+    def __init__(self, parent, n_components):
+        super(ecdf, self).__init__(
+            name=self.__class__.__name__, parent=parent,
         )
         
         endpoints = defaultdict(dict)
+        
+        self.n_components = n_components
         
         for key, node in parent.outputs.items():
             self.pre_aggregate_output(
@@ -42,21 +45,10 @@ class ecdf_features(FeatureBase):
             )
         
         self.aggregate_outputs(endpoints)
-
-
-class ecdf_11(ecdf_features):
-    def __init__(self, parent):
-        super(ecdf_11, self).__init__(
-            name=self.__class__.__name__,
-            parent=parent,
-            n_components=11,
-        )
-
-
-class ecdf_21(ecdf_features):
-    def __init__(self, parent):
-        super(ecdf_21, self).__init__(
-            name=self.__class__.__name__,
-            parent=parent,
-            n_components=21,
+    
+    @property
+    def identifier(self):
+        return join(
+            self.parent.identifier,
+            f'{self.name}_{self.n_components}',
         )

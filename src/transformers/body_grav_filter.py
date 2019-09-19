@@ -52,8 +52,6 @@ class body_grav_filter(TransformerBase):
             parent=parent,
         )
         
-        self.index.clone_all_from_parent(parent=parent)
-        
         kwargs = dict(
             filter_order=3, cutoff=0.3,
             fs=self.get_ancestral_metadata('fs')
@@ -67,6 +65,7 @@ class body_grav_filter(TransformerBase):
                 backend='none',
                 **kwargs,
             )
+            
             self.outputs.add_output(
                 key=key + ('body', 'jerk',),
                 func=Partition(func=body_jerk_filt),
@@ -74,6 +73,7 @@ class body_grav_filter(TransformerBase):
                 backend='none',
                 **kwargs,
             )
+            
             if 'accel' in key:
                 self.outputs.add_output(
                     key=key + ('grav',),

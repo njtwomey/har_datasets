@@ -1,4 +1,4 @@
-from .. import BaseGraph, ChainMeta
+from .. import BaseGraph, PipelineMeta
 
 
 class ChainBase(BaseGraph):
@@ -6,5 +6,5 @@ class ChainBase(BaseGraph):
         super(ChainBase, self).__init__(
             name=name,
             parent=parent,
-            meta=ChainMeta(name)
+            meta=PipelineMeta(name)
         )

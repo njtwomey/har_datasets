@@ -10,11 +10,11 @@ __all__ = [
     'load_activities_metadata', 'load_locations_metadata',
     'load_modalities_metadata', 'load_datasets_metadata',
     'load_features_metadata', 'load_transformations_metadata',
-    'load_chains_metadata', 'load_visualisations_metadata',
+    'load_pipelines_metadata', 'load_visualisations_metadata',
     'load_models_metadata',
     # Module importers
     'dataset_importer', 'transformer_importer', 'feature_importer',
-    'chain_importer', 'model_importer', 'visualisation_importer',
+    'pipeline_importer', 'model_importer', 'visualisation_importer',
 
 ]
 
@@ -104,8 +104,8 @@ def load_features_metadata():
     return load_metadata('features.yaml')
 
 
-def load_chains_metadata():
-    return load_metadata('chains.yaml')
+def load_pipelines_metadata():
+    return load_metadata('pipelines.yaml')
 
 
 def load_transformations_metadata():
@@ -155,9 +155,9 @@ def transformer_importer(class_name, *args, **kwargs):
     )
 
 
-def chain_importer(class_name, *args, **kwargs):
+def pipeline_importer(class_name, *args, **kwargs):
     return module_importer(
-        module_path='src.chains',
+        module_path='src.pipelines',
         class_name=class_name,
         *args, **kwargs
     )

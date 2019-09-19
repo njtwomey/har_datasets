@@ -7,4 +7,4 @@ from .datasets import *
 from .features import *
 from .models import *
 from .transformers import *
-from .chains import *
+from .pipelines import *
