@@ -1,4 +1,6 @@
-from .utils import load_metadata, build_path, check_activities
+from .utils import load_metadata, build_path, check_activities, get_logger
+
+logger = get_logger(__name__)
 
 __all__ = [
     'DatasetMeta', 'BaseMeta', 'ActivityMeta', 'LocationMeta', 'ModalityMeta', 'DatasetMeta',
@@ -8,15 +10,21 @@ __all__ = [
 
 class BaseMeta(object):
     def __init__(self, name, yaml_file, *args, **kwargs):
+        logger.info(f'Loading metadata file {yaml_file} for {name}.')
         values = load_metadata(yaml_file)
-        assert name in values, f'The function "{name}" is not in the set {{{values}}} found in {yaml_file}'
+        if name not in values:
+            err = f'The function "{name}" is not in the set {{{values}}} found in {yaml_file}'
+            logger.critical(err)
+            raise KeyError(err)
         self.name = name
         self.meta = values[name]
         if self.meta is None:
+            logger.info(f'The content for module {name} is empty. Assigning empty dict')
             self.meta = dict()
     
     def __getitem__(self, item):
-        assert item in self.meta, f'{item} not found in {self.__class__.__name__}'
+        if item not in self.meta:
+            raise KeyError(f'{item} not found in {self.__class__.__name__}')
         return self.meta[item]
     
     def __contains__(self, item):
@@ -36,6 +44,7 @@ class BaseMeta(object):
     
     def insert(self, key, value):
         assert key not in self.meta
+        logger.info(f'The key "{key}" is being manually inserted to metadata {self.name}')
         self.meta[key] = value
 
 
@@ -71,7 +80,8 @@ class DatasetMeta(BaseMeta):
             name=name, yaml_file='datasets.yaml'
         )
         
-        assert 'fs' in self.meta
+        if 'fs' not in self.meta:
+            raise KeyError(f'The metadata for {name} does not contain the required key "{fs}"')
         
         self.inv_act_lookup = check_activities(self.meta['activities'])
     

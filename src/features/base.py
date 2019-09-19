@@ -1,6 +1,8 @@
 from numpy import concatenate
 
-from .. import BaseGraph, FeatureMeta
+from .. import BaseGraph, FeatureMeta, get_logger
+
+logger = get_logger(__name__)
 
 __all__ = [
     'FeatureBase',
@@ -41,6 +43,7 @@ class FeatureBase(BaseGraph):
     
     def aggregate_outputs(self, endpoints):
         for key, node_dict in endpoints.items():
+            logger.info(f'Aggregates for feature {key}: {{{node_dict.keys()}}}')
             self.outputs.add_output(
                 key=key,
                 func=concatenate_sources,

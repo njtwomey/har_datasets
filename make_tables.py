@@ -1,16 +1,17 @@
 # -*- coding: utf-8 -*-
 import os
 
-from src import DatasetMeta, load_datasets, dot_env_stuff
-from src.utils.loaders import load_yaml, build_path
+from src import DatasetMeta, load_datasets_metadata, dot_env_stuff
+from src.utils.loaders import load_metadata, build_path
+
+
+def make_links(links, desc='Link'):
+    return ', '.join(
+        '[{} {}]({})'.format(desc, ii, url) for ii, url in enumerate(links, start=1)
+    )
 
 
 def make_dataset_row(dataset):
-    def make_links(links, desc='Link'):
-        return ', '.join(
-            '[{} {}]({})'.format(desc, ii, url) for ii, url in enumerate(links, start=1)
-        )
-    
     # modalities = sorted(set([mn for ln, lm in self.meta['locations'].items() for mn, mv in lm.items() if mv]))
     
     data = [
@@ -48,7 +49,7 @@ def main():
     
     # Current list of datasets
     lines = []
-    datasets = load_datasets()
+    datasets = load_datasets_metadata()
     for dataset in datasets:
         dataset = DatasetMeta(dataset)
         head, space, line = make_dataset_row(dataset)
@@ -61,23 +62,20 @@ def main():
     
     # Iterate over the other data tables
     dims = [
-        'modalities', 'activities', 'locations', 'representations',
-        'features', 'models', 'transformers',
+        'activities', 'features', 'locations', 'models',
+        'pipelines', 'transformers', 'visualisations',
     ]
     
     for dim in dims:
         with open(build_path('tables', f'{dim}.md'), 'w') as fil:
-            data = load_yaml(f'{dim}.yaml')
-            fil.write(f'| Index | {dim[0].upper()}{dim[1:].lower()} | \n')
-            fil.write('| ----- | ----- | \n')
-            if not data or len(data) == 0:
-                continue
+            data = load_metadata(f'{dim}.yaml')
+            fil.write(f'| Index | {dim[0].upper()}{dim[1:].lower()} | value | \n')
+            fil.write(f'| ----- | ----- | ----- | \n')
             if isinstance(data, dict):
-                for ki, kv in data.items():
-                    fil.write(f'| {kv} | {ki} | \n')
-            elif isinstance(data, list):
-                for ki, kv in enumerate(data):
-                    fil.write(f'| {kv} | {ki} | \n')
+                for ki, (key, value) in enumerate(data.items()):
+                    if isinstance(value, dict) and 'description' in value:
+                        value = make_links(value['description'])
+                    fil.write(f'| {ki} | {key} | {value} | \n')
 
 
 if __name__ == '__main__':

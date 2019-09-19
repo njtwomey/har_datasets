@@ -23,6 +23,7 @@ __all__ = [
 
 def evaluate_performance(key, fold, label, data, models):
     res = dict()
+    
     for fold_id in fold.columns:
         res[fold_id] = dict()
         model = models[fold_id]
@@ -34,6 +35,7 @@ def evaluate_performance(key, fold, label, data, models):
             res[fold_id][tr_val_te] = classification_perf_metrics(
                 yy=yy, model=model, y_hat=y_hat
             )
+    
     return res
 
 
@@ -50,12 +52,15 @@ def learn_sklearn_model(key, index, label, fold, data, model):
     assert index.shape[0] == label.shape[0]
     assert index.shape[0] == fold.shape[0]
     assert index.shape[0] == data.shape[0]
+    
     models = dict()
+    
     for fold_id in fold.columns:
         models[fold_id] = _learn_sklearn_model(
-            key=key, index=index, fold=fold[fold_id], label=label,
-            data=data, model=model,
+            key=key, index=index, fold=fold[fold_id],
+            label=label, data=data, model=model,
         )
+    
     return models
 
 
@@ -80,7 +85,7 @@ class sklearn_model(ModelBase):
             )
         else:
             model = model(**self.meta['params'])
-            
+        
         kwargs = dict(
             model=model,
         )
@@ -140,7 +145,7 @@ class knn(sklearn_model):
             parent=parent,
             model=lambda **kwargs: Pipeline((
                 ('scale', StandardScaler()),
-                ('clf', KNeighborsClassifier(**kwargs))
+                ('clf', KNeighborsClassifier(**kwargs)),
             )),
             save_model=False,
         )
@@ -153,7 +158,7 @@ class svm(sklearn_model):
             parent=parent,
             model=lambda **kwargs: Pipeline((
                 ('scale', MinMaxScaler()),
-                ('clf', SVC(**kwargs))
+                ('clf', SVC(**kwargs)),
             )),
             save_model=False,
         )

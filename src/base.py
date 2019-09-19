@@ -43,12 +43,6 @@ class ComputationalSet(object):
             'fold'
         }
     
-    def is_index_key(self, key):
-        if isinstance(key, tuple):
-            assert len(key) == 1
-            key = key[0]
-        return key in self.index_keys
-    
     @property
     def parent_comp_set(self):
         return self.parent.collections[self.cat]
@@ -73,9 +67,6 @@ class ComputationalSet(object):
             yield from self.parent_comp_set
         yield from self.output_dict
     
-    def __repr__(self):
-        return f"<{self.__class__.__name__} outputs={self.output_dict}/>"
-    
     def __contains__(self, item):
         if len(self.output_dict) == 0:
             return item in self.parent_comp_set
@@ -88,6 +79,15 @@ class ComputationalSet(object):
         except KeyError:
             assert self.parent is not None
             return self.parent_comp_set[key]
+    
+    def __repr__(self):
+        return f"<{self.__class__.__name__} outputs={self.output_dict}/>"
+    
+    def is_index_key(self, key):
+        key = key_check(key)
+        if len(key) != 1:
+            return False
+        return key[0] in self.index_keys
     
     def evaluate_outputs(self, force=False):
         for key in randomised_order(self.keys()):
@@ -122,7 +122,6 @@ class ComputationalSet(object):
         key = key_check(key)
         assert key not in self.output_dict
         self.output_dict[key] = node
-        
         logger.info(f'Node {node.name} added to outputs.')
     
     def add_output(self, key, func, sources=None, backend=None, **kwargs):
@@ -161,7 +160,7 @@ class IndexSet(ComputationalSet):
         return super(IndexSet, self).make_output(
             key=key, func=func, sources=sources, backend=backend or 'pandas', **kwargs
         )
-        
+    
     @property
     def index(self):
         return self['index']
@@ -188,13 +187,13 @@ class ComputationalCollection(object):
         return self._items[key]
     
     def items(self):
-        yield from self._items.items()
+        return self._items.items()
     
     def keys(self):
-        yield from self._items.keys()
+        return self._items.keys()
     
     def values(self):
-        yield from self._items.values()
+        return self._items.values()
 
 
 class BaseGraph(ComputationGraph):
@@ -212,9 +211,9 @@ class BaseGraph(ComputationGraph):
         self.fs_root = build_path('data')
         
         self.add_backend('pickle', PickleBackend(self.fs_root))
-        self.add_backend('json', JsonBackend(self.fs_root))
         self.add_backend('pandas', PandasBackend(self.fs_root))
         self.add_backend('numpy', NumpyBackend(self.fs_root))
+        self.add_backend('json', JsonBackend(self.fs_root))
         self.add_backend('none', VolatileBackend())
         
         self.set_default_backend(default_backend)
@@ -233,8 +232,8 @@ class BaseGraph(ComputationGraph):
         return path
     
     def evaluate_outputs(self):
-        self.index.evaluate_outputs()
-        self.outputs.evaluate_outputs()
+        for key, output in self.collections.items():
+            output.evaluate_outputs()
     
     @property
     def index(self):

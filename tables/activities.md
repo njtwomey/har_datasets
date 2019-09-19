@@ -1,27 +1,27 @@
-| Index | Activities | 
-| ----- | ----- | 
-| 0 | walk | 
-| 1 | walk_up | 
-| 2 | walk_down | 
-| 3 | sit | 
-| 4 | stand | 
-| 5 | lie | 
-| 6 | run | 
-| 7 | cycle | 
-| 8 | walk_nordic | 
-| 9 | watch_tv | 
-| 10 | work_computer | 
-| 11 | drive_car | 
-| 12 | vacuum | 
-| 13 | iron | 
-| 14 | laundry | 
-| 15 | clean | 
-| 16 | soccer | 
-| 17 | rope_jump | 
-| 18 | other | 
-| 19 | walk_left | 
-| 20 | walk_right | 
-| 21 | jump | 
-| 22 | sleep | 
-| 23 | elevator_up | 
-| 24 | elevator_down | 
+| Index | Activities | value | 
+| ----- | ----- | ----- | 
+| 0 | walk | 0 | 
+| 1 | walk_up | 1 | 
+| 2 | walk_down | 2 | 
+| 3 | sit | 3 | 
+| 4 | stand | 4 | 
+| 5 | lie | 5 | 
+| 6 | run | 6 | 
+| 7 | cycle | 7 | 
+| 8 | walk_nordic | 8 | 
+| 9 | watch_tv | 9 | 
+| 10 | work_computer | 10 | 
+| 11 | drive_car | 11 | 
+| 12 | vacuum | 12 | 
+| 13 | iron | 13 | 
+| 14 | laundry | 14 | 
+| 15 | clean | 15 | 
+| 16 | soccer | 16 | 
+| 17 | rope_jump | 17 | 
+| 18 | other | 18 | 
+| 19 | walk_left | 19 | 
+| 20 | walk_right | 20 | 
+| 21 | jump | 21 | 
+| 22 | sleep | 22 | 
+| 23 | elevator_up | 23 | 
+| 24 | elevator_down | 24 | 

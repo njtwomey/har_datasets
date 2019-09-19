@@ -1,2 +1,5 @@
 umap_embedding:
+  description:
+    - https://arxiv.org/abs/1802.03426
+    - https://github.com/lmcinnes/umap
   n_components: 50

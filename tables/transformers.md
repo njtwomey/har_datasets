@@ -1,3 +1,5 @@
-| Index | Transformers | 
-| ----- | ----- | 
-| {'resamples': False, 'filter_order': 3, 'cutoff': 0.3} | body_grav | 
+| Index | Transformers | value | 
+| ----- | ----- | ----- | 
+| 0 | body_grav_filter | {'resamples': False} | 
+| 1 | resample | None | 
+| 2 | window | {'resamples': True} | 

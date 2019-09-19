@@ -79,23 +79,3 @@ class window(TransformerBase):
             self.parent.identifier,
             f'{self.name}_{win_len}s_{win_inc}s'
         )
-
-# class window_128_1(window):
-#     def __init__(self, parent):
-#         super(window_128_1, self).__init__(
-#             name=self.__class__.__name__,
-#             parent=parent,
-#             win_len=1.28,
-#             win_inc=1.0,
-#             fs=parent.meta['fs']
-#         )
-#
-# class window_256_1(window):
-#     def __init__(self, parent):
-#         super(window_256_1, self).__init__(
-#             name=self.__class__.__name__,
-#             parent=parent,
-#             win_len=2.56,
-#             win_inc=1.0,
-#             fs=parent.get_ancestral_metadata('fs'),
-#         )
