@@ -1,5 +1,10 @@
-from ..utils.backends import ScikitLearnBackend
-from .. import BaseGraph, ModelMeta
+from src.backends import ScikitLearnBackend
+from src.base import BaseGraph
+from src.meta import ModelMeta
+
+__all__ = [
+    "ModelBase"
+]
 
 
 class ModelBase(BaseGraph):

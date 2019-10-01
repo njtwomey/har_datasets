@@ -1,11 +1,9 @@
 import pandas as pd
-import numpy as np
 
 from functools import update_wrapper, partial
 
 __all__ = [
-    'index_decorator', 'fold_decorator', 'label_decorator', 'data_decorator',
-    'transformer_decorator', 'feature_decorator', 'model_decorator',
+    'index_decorator', 'fold_decorator', 'label_decorator'
 ]
 
 
@@ -73,43 +71,44 @@ class IndexDecorator(DecoratorBase):
         ))
 
 
-class DataDecorator(DecoratorBase):
-    def __init__(self, func):
-        super(DataDecorator, self).__init__(func)
-    
-    def __call__(self, *args, **kwargs):
-        data = super(DataDecorator, self).__call__(*args, **kwargs)
-        assert np.isfinite(data).all(), f'Error evaluating {self.func.__name__}: data not all finite'
-        return data
-
-
-class FunctionDecorator(DecoratorBase):
-    def __init__(self, func):
-        super(FunctionDecorator, self).__init__(func)
-    
-    def __call__(self, *args, **kwargs):
-        return self.func(*args, **kwargs)
-
-
-class TransformerDecorator(FunctionDecorator):
-    def __init__(self, func):
-        super(TransformerDecorator, self).__init__(func)
-
-
-class FeatureDecorator(FunctionDecorator):
-    def __init__(self, func):
-        super(FeatureDecorator, self).__init__(func)
-
-
-class ModelDecorator(FunctionDecorator):
-    def __init__(self, func):
-        super(ModelDecorator, self).__init__(func)
-
-
 label_decorator = LabelDecorator
 index_decorator = IndexDecorator
 fold_decorator = FoldDecorator
-data_decorator = DataDecorator
-transformer_decorator = TransformerDecorator
-feature_decorator = FeatureDecorator
-model_decorator = ModelDecorator
+
+# class DataDecorator(DecoratorBase):
+#     def __init__(self, func):
+#         super(DataDecorator, self).__init__(func)
+#
+#     def __call__(self, *args, **kwargs):
+#         data = super(DataDecorator, self).__call__(*args, **kwargs)
+#         assert np.isfinite(data).all(), f'Error evaluating {self.func.__name__}: data not all finite'
+#         return data
+#
+#
+# class FunctionDecorator(DecoratorBase):
+#     def __init__(self, func):
+#         super(FunctionDecorator, self).__init__(func)
+#
+#     def __call__(self, *args, **kwargs):
+#         return self.func(*args, **kwargs)
+#
+#
+# class TransformerDecorator(FunctionDecorator):
+#     def __init__(self, func):
+#         super(TransformerDecorator, self).__init__(func)
+#
+#
+# class FeatureDecorator(FunctionDecorator):
+#     def __init__(self, func):
+#         super(FeatureDecorator, self).__init__(func)
+#
+#
+# class ModelDecorator(FunctionDecorator):
+#     def __init__(self, func):
+#         super(ModelDecorator, self).__init__(func)
+#
+#
+# data_decorator = DataDecorator
+# transformer_decorator = TransformerDecorator
+# feature_decorator = FeatureDecorator
+# model_decorator = ModelDecorator

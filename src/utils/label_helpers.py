@@ -4,6 +4,14 @@ __all__ = [
 
 
 def normalise_labels(ll):
+    """
+    
+    Args:
+        ll:
+
+    Returns:
+
+    """
     if 'walk' in ll:
         return 'walk'
     elif 'elevator' in ll:

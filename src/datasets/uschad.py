@@ -7,43 +7,12 @@ from scipy.io import loadmat
 
 from tqdm import trange
 
-from ..utils import index_decorator, label_decorator, fold_decorator, data_decorator
-
-from .base import Dataset
+from src.utils.decorators import index_decorator, label_decorator, fold_decorator
+from src.datasets.base import Dataset
 
 __all__ = [
     'uschad'
 ]
-
-
-def uschad_iterator(path, columns=None, cols=None, callback=None, desc=None):
-    data_list = []
-    
-    ii = 0
-    
-    for sub_id in trange(1, 14 + 1, desc=desc):
-        for act_id in range(1, 12 + 1):
-            for trail_id in range(1, 5 + 1):
-                fname = join(
-                    path, f'Subject{sub_id}', f'a{act_id}t{trail_id}.mat'
-                )
-                
-                data = loadmat(fname)['sensor_readings']
-                
-                if callback:
-                    data = callback(ii, sub_id, act_id, trail_id, data)
-                elif cols:
-                    data = data[cols]
-                else:
-                    raise ValueError
-                
-                data_list.extend(data)
-                ii += 1
-    
-    df = pd.DataFrame(data_list)
-    if columns:
-        df.columns = columns
-    return df
 
 
 class uschad(Dataset):
@@ -82,7 +51,6 @@ class uschad(Dataset):
         return uschad_iterator(self.unzip_path, callback=callback, columns=['subject', 'trial', 'time'],
                                desc=f'{self.identifier} Index')
     
-    @data_decorator
     def build_data(self, key, *args, **kwargs):
         modality, location = key
         cols = dict(
@@ -101,3 +69,33 @@ class uschad(Dataset):
         data = uschad_iterator(self.unzip_path, callback=callback, desc=f'Data ({modality}-{location})')
         
         return data.values * scale[modality]
+
+
+def uschad_iterator(path, columns=None, cols=None, callback=None, desc=None):
+    data_list = []
+    
+    ii = 0
+    
+    for sub_id in trange(1, 14 + 1, desc=desc):
+        for act_id in range(1, 12 + 1):
+            for trail_id in range(1, 5 + 1):
+                fname = join(
+                    path, f'Subject{sub_id}', f'a{act_id}t{trail_id}.mat'
+                )
+                
+                data = loadmat(fname)['sensor_readings']
+                
+                if callback:
+                    data = callback(ii, sub_id, act_id, trail_id, data)
+                elif cols:
+                    data = data[cols]
+                else:
+                    raise ValueError
+                
+                data_list.extend(data)
+                ii += 1
+    
+    df = pd.DataFrame(data_list)
+    if columns:
+        df.columns = columns
+    return df

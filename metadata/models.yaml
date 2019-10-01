@@ -5,7 +5,7 @@ scale_log_reg:
   params:
     Cs: 10
     multi_class: multinomial
-    verbose: 10
+    verbose: 0
 
 
 
@@ -18,7 +18,7 @@ random_forest:
       - 50
       - 100
     verbose:
-      - true
+      - 0
 
 
 

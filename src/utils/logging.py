@@ -10,18 +10,38 @@ LOG_FILE = "logging.log"
 
 
 def get_console_handler():
+    """
+    
+    Returns:
+
+    """
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(FORMATTER)
     return console_handler
 
 
 def get_file_handler():
+    """
+    
+    Returns:
+
+    """
     file_handler = FileHandler(LOG_FILE)
     file_handler.setFormatter(FORMATTER)
     return file_handler
 
 
 def get_logger(logger_name, with_file=True, with_console=False):
+    """
+    
+    Args:
+        logger_name:
+        with_file:
+        with_console:
+
+    Returns:
+
+    """
     logger = logging.getLogger(logger_name)
     logger.setLevel(logging.DEBUG)
     if with_console:

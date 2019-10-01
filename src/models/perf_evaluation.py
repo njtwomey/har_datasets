@@ -26,8 +26,8 @@ def classification_perf_metrics(yy, model, y_hat):
         recall_macro=classification.recall_score(yy, y_hat, average='macro'),
         recall_micro=classification.recall_score(yy, y_hat, average='micro'),
         recall_weighted=classification.recall_score(yy, y_hat, average='weighted'),
-        confusion_matrix=classification.confusion_matrix(yy, y_hat).tolist(),
-        class_names=cols.tolist(),
+        confusion_matrix=classification.confusion_matrix(yy, y_hat),
+        class_names=cols,
         per_class=dict()
     )
     
@@ -43,8 +43,7 @@ def classification_perf_metrics(yy, model, y_hat):
                 f1=classification.f1_score(yy_i, y_hat_i),
                 precision=classification.precision_score(yy_i, y_hat_i),
                 recall=classification.recall_score(yy_i, y_hat_i),
-                confusion_matrix=classification.confusion_matrix(yy_i, y_hat_i).tolist(),
+                confusion_matrix=classification.confusion_matrix(yy_i, y_hat_i),
             )
     
     return res
-

@@ -3,6 +3,8 @@ from .utils import *
 from .base import *
 from .meta import *
 
+from .backends import *
+
 from .datasets import *
 from .features import *
 from .models import *

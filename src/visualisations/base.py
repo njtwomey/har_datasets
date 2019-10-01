@@ -1,5 +1,11 @@
-from .. import BaseGraph, VisualisationMeta
-from ..utils.backends import PNGBackend, ScikitLearnBackend
+from src.base import BaseGraph
+from src.meta import VisualisationMeta
+
+from src.backends import PNGBackend, ScikitLearnBackend
+
+__all__ = [
+    'VisualisationBase'
+]
 
 
 class VisualisationBase(BaseGraph):

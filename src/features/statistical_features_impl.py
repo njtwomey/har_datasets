@@ -5,8 +5,6 @@ import scipy.stats
 
 from spectrum import arburg
 
-from .. import feature_decorator
-
 __all__ = [
     'mad', 'sma', 'energy', 'autoreg', 'corr', 'td_entropy', 'fd_entropy', 'mean_freq', 'bands_energy',
     't_feat', 'f_feat'
@@ -126,7 +124,6 @@ Time and frequency feature interfaces
 """
 
 
-@feature_decorator
 def t_feat(key, index, data, fs):
     data = add_magnitude(data)
     features = [
@@ -148,7 +145,6 @@ def t_feat(key, index, data, fs):
     return np.concatenate(features, axis=1)
 
 
-@feature_decorator
 def f_feat(key, index, data, fs):
     data = add_magnitude(data)
     

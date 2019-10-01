@@ -5,34 +5,12 @@ from os.path import join
 
 from tqdm import tqdm
 
-from ..utils import index_decorator, label_decorator, fold_decorator, data_decorator
-
-from .base import Dataset
+from src.utils.decorators import index_decorator, label_decorator, fold_decorator
+from src.datasets.base import Dataset
 
 __all__ = [
     'pamap2',
 ]
-
-
-def iter_pamap2_subs(path, cols, desc, columns=None, callback=None, n_subjects=9):
-    data = []
-    
-    for sid in tqdm(range(1, n_subjects + 1), desc=desc):
-        datum = pd.read_csv(
-            join(path, f'subject10{sid}.dat'),
-            delim_whitespace=True,
-            header=None,
-            usecols=cols
-        ).fillna(method='ffill')
-        assert np.isfinite(datum.values).all()
-        if callback:
-            data.extend(callback(sid, datum.values))
-        else:
-            data.extend(datum.values)
-    df = pd.DataFrame(data)
-    if columns:
-        df.columns = columns
-    return df
 
 
 class pamap2(Dataset):
@@ -101,7 +79,6 @@ class pamap2(Dataset):
         
         return df
     
-    @data_decorator
     def build_data(self, key, *args, **kwargs):
         modality, location = key
         offset = dict(
@@ -130,3 +107,24 @@ class pamap2(Dataset):
             scale = 1
         
         return df.values / scale
+
+
+def iter_pamap2_subs(path, cols, desc, columns=None, callback=None, n_subjects=9):
+    data = []
+    
+    for sid in tqdm(range(1, n_subjects + 1), desc=desc):
+        datum = pd.read_csv(
+            join(path, f'subject10{sid}.dat'),
+            delim_whitespace=True,
+            header=None,
+            usecols=cols
+        ).fillna(method='ffill')
+        assert np.isfinite(datum.values).all()
+        if callback:
+            data.extend(callback(sid, datum.values))
+        else:
+            data.extend(datum.values)
+    df = pd.DataFrame(data)
+    if columns:
+        df.columns = columns
+    return df

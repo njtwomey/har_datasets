@@ -1,4 +1,6 @@
-from src import dataset_importer, transformers, features, resample
+from src import dataset_importer
+from src import features
+from src import transformers
 
 __all__ = [
     'stat_feat', 'ecdf_11', 'ecdf_21',

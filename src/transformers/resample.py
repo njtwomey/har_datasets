@@ -2,12 +2,10 @@ from os.path import join
 
 import numpy as np
 
-from sklearn.neighbors import NearestNeighbors
-
 from scipy import signal
 
-from .base import TransformerBase
-from .. import Partition
+from src.transformers.base import TransformerBase
+from src.utils.func_helpers import Partition
 
 __all__ = [
     'resample',

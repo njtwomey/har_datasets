@@ -8,8 +8,8 @@ import seaborn as sns
 
 from umap import UMAP
 
-from .base import VisualisationBase
-from .. import normalise_labels
+from src.visualisations.base import VisualisationBase
+from src.utils.label_helpers import normalise_labels
 
 sns.set_style('darkgrid')
 sns.set_context('paper')

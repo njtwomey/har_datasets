@@ -6,18 +6,16 @@ from src import randomised_order
 
 def main():
     datasets = load_datasets_metadata()
-    chains = load_pipelines_metadata()
+    pipelines = load_pipelines_metadata()
     models = load_models_metadata()
     
     for dataset_name in randomised_order(datasets.keys()):
-        if dataset_name != 'anguita2013':
-            continue
-        for chain_name in randomised_order(chains.keys()):
-            chain = pipeline_importer(chain_name, name=dataset_name)
+        for pipeline_name in randomised_order(pipelines.keys()):
+            pipeline = pipeline_importer(pipeline_name, name=dataset_name)
             for model_name in randomised_order(models.keys()):
-                print(dataset_name, chain_name, model_name)
+                print(dataset_name, pipeline_name, model_name)
                 model_importer(
-                    model_name, parent=chain
+                    model_name, parent=pipeline
                 ).evaluate_outputs()
 
 

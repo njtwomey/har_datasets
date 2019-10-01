@@ -1,8 +1,8 @@
 import numpy as np
 from scipy import signal
 
-from .base import TransformerBase
-from ..utils import transformer_decorator, Partition
+from src.transformers.base import TransformerBase
+from src.utils.func_helpers import Partition
 
 __all__ = [
     'body_grav_filter',
@@ -23,21 +23,18 @@ def filter_signal(data, filter_order, cutoff, fs, btype, axis=0):
     return dd
 
 
-@transformer_decorator
 def body_filt(key, index, data, **kwargs):
     filt = filter_signal(data, btype='high', **kwargs)
     assert np.isfinite(filt).all()
     return filt
 
 
-@transformer_decorator
 def grav_filt(key, index, data, **kwargs):
     filt = filter_signal(data, btype='low', **kwargs)
     assert np.isfinite(filt).all()
     return filt
 
 
-@transformer_decorator
 def body_jerk_filt(key, index, data, **kwargs):
     filt = body_filt(key, index, data, **kwargs)
     jerk = np.empty(filt.shape, dtype=filt.dtype)

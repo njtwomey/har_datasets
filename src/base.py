@@ -2,9 +2,11 @@ from os.path import join
 
 from mldb import ComputationGraph, PickleBackend, VolatileBackend, JsonBackend
 
-from .meta import BaseMeta
-from .utils import build_path, get_logger, randomised_order
-from .utils.backends import PandasBackend, NumpyBackend
+from src.meta import BaseMeta
+from src.backends import PandasBackend, NumpyBackend
+from src.utils.misc import NumpyEncoder, randomised_order
+from src.utils.logging import get_logger
+from src.utils.loaders import build_path
 
 logger = get_logger(__name__)
 
@@ -13,7 +15,17 @@ __all__ = [
 ]
 
 
-def key_check(key):
+# TODO/FIXME: may be worth defining a key type
+
+def make_key(key):
+    """
+    
+    Args:
+        key:
+
+    Returns:
+
+    """
     if key is None:
         key = tuple()
     if isinstance(key, str):
@@ -23,15 +35,37 @@ def key_check(key):
 
 
 def _get_ancestral_meta(graph, key):
-    assert graph.meta is not None, f'The key "{key}" cannot be found in "{graph}"'
+    """
+    
+    Args:
+        graph:
+        key:
+
+    Returns:
+
+    """
+    if graph.meta is None:
+        msg = f'The key "{key}" cannot be found in "{graph}"'
+        logger.critical(msg)
+        raise TypeError(msg)
     if key in graph.meta:
         return graph.meta[key]
-    assert graph.parent is not None, f'The key "{key}" cannot be found in the ancestry of "{graph}"'
+    if graph.parent is None:
+        msg = f'The key "{key}" cannot be found in the ancestry of "{graph}"'
+        logger.critical(msg)
+        raise TypeError(msg)
     return _get_ancestral_meta(graph.parent, key)
 
 
 class ComputationalSet(object):
     def __init__(self, graph, parent, cat='outputs'):
+        """
+        
+        Args:
+            graph:
+            parent:
+            cat:
+        """
         self.cat = cat
         self.graph = graph
         self.parent = parent
@@ -44,55 +78,108 @@ class ComputationalSet(object):
         }
     
     @property
-    def parent_comp_set(self):
-        return self.parent.collections[self.cat]
+    def active_comp_set(self):
+        """
+        
+        Returns:
+
+        """
+        if len(self.output_dict) == 0:
+            return self.parent.collections[self.cat]
+        return self.output_dict
     
     def keys(self):
-        if len(self.output_dict) == 0:
-            return self.parent_comp_set.keys()
-        return self.output_dict.keys()
+        """
+        
+        Returns:
+
+        """
+        return self.active_comp_set.keys()
     
     def items(self):
-        if len(self.output_dict) == 0:
-            return self.parent_comp_set.items()
-        return self.output_dict.items()
+        """
+        
+        Returns:
+
+        """
+        return self.active_comp_set.items()
     
     def __len__(self):
-        if len(self.output_dict) == 0:
-            return len(self.parent_comp_set)
-        return len(self.output_dict)
+        """
+        
+        Returns:
+
+        """
+        return len(self.active_comp_set)
     
     def __iter__(self):
-        if len(self.output_dict) == 0:
-            yield from self.parent_comp_set
-        yield from self.output_dict
+        """
+        
+        Returns:
+
+        """
+        yield from self.active_comp_set
     
     def __contains__(self, item):
-        if len(self.output_dict) == 0:
-            return item in self.parent_comp_set
-        return item in self.output_dict
+        """
+        
+        Args:
+            item:
+
+        Returns:
+
+        """
+        return item in self.active_comp_set
     
     def __getitem__(self, key):
-        key = key_check(key)
+        """
+        
+        Args:
+            key:
+
+        Returns:
+
+        """
+        key = make_key(key)
         try:
             return self.output_dict[key]
         except KeyError:
             assert self.parent is not None
-            return self.parent_comp_set[key]
+            return self.parent.collections[self.cat][key]
     
     def __repr__(self):
+        """
+        
+        Returns:
+
+        """
         return f"<{self.__class__.__name__} outputs={self.output_dict}/>"
     
     def is_index_key(self, key):
-        key = key_check(key)
+        """
+        
+        Args:
+            key:
+
+        Returns:
+
+        """
+        key = make_key(key)
         if len(key) != 1:
             return False
         return key[0] in self.index_keys
     
     def evaluate_outputs(self, force=False):
+        """
+        
+        Args:
+            force:
+
+        Returns:
+
+        """
         for key in randomised_order(self.keys()):
             node = self[key]
-            logger.info(f'Evaluating the node {node.name}')
             if not node.exists or force:
                 logger.info(f'Calculating {node.name}')
                 node.evaluate()
@@ -100,14 +187,26 @@ class ComputationalSet(object):
                 logger.info(f'Loading {node.name}')
     
     def make_output(self, key, func, sources=None, backend=None, **kwargs):
+        """
+        
+        Args:
+            key:
+            func:
+            sources:
+            backend:
+            **kwargs:
+
+        Returns:
+
+        """
         assert callable(func)
         
-        key = key_check(key)
+        key = make_key(key)
         
         assert key not in self.output_dict
         
         node = self.graph.node(
-            node_name=self.graph.build_path(*key),
+            name=self.graph.build_path(*key),
             func=func,
             sources=sources,
             backend=backend,
@@ -119,12 +218,33 @@ class ComputationalSet(object):
         return node
     
     def append_output(self, key, node):
-        key = key_check(key)
+        """
+        
+        Args:
+            key:
+            node:
+
+        Returns:
+
+        """
+        key = make_key(key)
         assert key not in self.output_dict
         self.output_dict[key] = node
-        logger.info(f'Node {node.name} added to outputs.')
+        logger.info(f'Node {node.name} added to outputs: {self.output_dict.keys()}.')
     
     def add_output(self, key, func, sources=None, backend=None, **kwargs):
+        """
+        
+        Args:
+            key:
+            func:
+            sources:
+            backend:
+            **kwargs:
+
+        Returns:
+
+        """
         node = self.make_output(
             key=key,
             func=func,
@@ -140,6 +260,12 @@ class ComputationalSet(object):
 
 class IndexSet(ComputationalSet):
     def __init__(self, graph, parent):
+        """
+        
+        Args:
+            graph:
+            parent:
+        """
         super(IndexSet, self).__init__(
             cat='index',
             graph=graph,
@@ -147,53 +273,133 @@ class IndexSet(ComputationalSet):
         )
     
     def add_output(self, key, func, sources=None, backend=None, **kwargs):
-        assert self.is_index_key(key)
+        """
+        
+        Args:
+            key:
+            func:
+            sources:
+            backend:
+            **kwargs:
+
+        Returns:
+
+        """
+        if not self.is_index_key(key):
+            msg = f"A non-index key was used for the index computation: {key} not in {self.index_keys}"
+            logger.critical(msg)
+            raise ValueError(msg)
         return super(IndexSet, self).add_output(
             key=key,
             func=func,
             sources=sources,
-            backend=backend or 'pandas',
+            backend=backend or 'pandas',  # Indexes default to pandas backend
             **kwargs
         )
     
     def make_output(self, key, func, sources=None, backend=None, **kwargs):
+        """
+        
+        Args:
+            key:
+            func:
+            sources:
+            backend:
+            **kwargs:
+
+        Returns:
+
+        """
         return super(IndexSet, self).make_output(
             key=key, func=func, sources=sources, backend=backend or 'pandas', **kwargs
         )
     
     @property
     def index(self):
+        """
+        
+        Returns:
+
+        """
         return self['index']
     
     @property
     def label(self):
+        """
+        
+        Returns:
+
+        """
         return self['label']
     
     @property
     def fold(self):
+        """
+        
+        Returns:
+
+        """
         return self['fold']
 
 
 class ComputationalCollection(object):
     def __init__(self, **kwargs):
-        self._items = kwargs
+        """
+        
+        Args:
+            **kwargs:
+        """
+        self.comp_dict = dict()
         for kk, vv in kwargs.items():
-            setattr(self, kk, vv)
+            self.append(kk, vv)
     
-    def iter_outputs(self):
-        yield from self._items.items()
+    def append(self, name, node):
+        """
+        
+        Args:
+            name:
+            node:
+
+        Returns:
+
+        """
+        self.comp_dict[name] = node
+        setattr(self, name, node)
     
     def __getitem__(self, key):
-        return self._items[key]
+        """
+        
+        Args:
+            key:
+
+        Returns:
+
+        """
+        return self.comp_dict[key]
     
     def items(self):
-        return self._items.items()
+        """
+        
+        Returns:
+
+        """
+        return self.comp_dict.items()
     
     def keys(self):
-        return self._items.keys()
+        """
+        
+        Returns:
+
+        """
+        return self.comp_dict.keys()
     
     def values(self):
-        return self._items.values()
+        """
+        
+        Returns:
+
+        """
+        return self.comp_dict.values()
 
 
 class BaseGraph(ComputationGraph):
@@ -202,12 +408,20 @@ class BaseGraph(ComputationGraph):
     """
     
     def __init__(self, name, parent=None, meta=None, default_backend='numpy'):
+        """
+        
+        Args:
+            name:
+            parent:
+            meta:
+            default_backend:
+        """
         super(BaseGraph, self).__init__(
             name=name,
         )
         
         if not isinstance(meta, BaseMeta):
-            msg = f"The metadata variable does not derive from `BaseMeta`"
+            msg = f"The metadata variable does not derive from `BaseMeta` but is of type {type(meta)}"
             logger.critical(msg)
             raise TypeError(msg)
         
@@ -220,7 +434,7 @@ class BaseGraph(ComputationGraph):
         self.add_backend('pickle', PickleBackend(self.fs_root))
         self.add_backend('pandas', PandasBackend(self.fs_root))
         self.add_backend('numpy', NumpyBackend(self.fs_root))
-        self.add_backend('json', JsonBackend(self.fs_root))
+        self.add_backend('json', JsonBackend(self.fs_root, cls=NumpyEncoder))
         self.add_backend('none', VolatileBackend())
         
         self.set_default_backend(default_backend)
@@ -237,6 +451,14 @@ class BaseGraph(ComputationGraph):
         )
     
     def build_path(self, *args):
+        """
+        
+        Args:
+            *args:
+
+        Returns:
+
+        """
         assert len(args) > 0
         if not isinstance(args[0], str):
             raise ValueError(
@@ -247,19 +469,39 @@ class BaseGraph(ComputationGraph):
         return join(self.identifier, '-'.join(args))
     
     def evaluate_outputs(self):
+        """
+        
+        Returns:
+
+        """
         for key, output in self.collections.items():
             output.evaluate_outputs()
     
     @property
     def index(self):
+        """
+        
+        Returns:
+
+        """
         return self.collections['index']
     
     @property
     def outputs(self):
+        """
+        
+        Returns:
+
+        """
         return self.collections['outputs']
     
     @property
     def identifier(self):
+        """
+        
+        Returns:
+
+        """
         if self.parent is None:
             return self.name
         return join(
@@ -268,4 +510,12 @@ class BaseGraph(ComputationGraph):
         )
     
     def get_ancestral_metadata(self, key):
+        """
+        
+        Args:
+            key:
+
+        Returns:
+
+        """
         return _get_ancestral_meta(self, key)

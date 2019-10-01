@@ -22,20 +22,28 @@ endif
 #################################################################################
 
 ## Install Python Dependencies
-requirements: test_environment
+docs:
+ifeq (True,$(HAS_CONDA))
+	conda install --file requirements.txt
+else
 	pip install -r requirements.txt
+endif
+
+## Install Python Dependencies
+requirements:
+ifeq (True,$(HAS_CONDA))
+	conda install --file requirements.txt
+else
+	pip install -r requirements.txt
+endif
 
 ## Make Dataset Table
 tables:
 	$(PYTHON_INTERPRETER) make_tables.py
 
-## Make Dataset
+## Download the raw data
 download:
 	$(PYTHON_INTERPRETER) make_download.py
-
-## Make Makefiles
-makefiles:
-	$(PYTHON_INTERPRETER) make_makefiles.py
 
 ## Delete all compiled Python files
 clean:
@@ -43,7 +51,13 @@ clean:
 
 ## Lint using flake8
 lint:
-	flake8 --exclude=lib/,bin/,docs/conf.py .
+	## F401 	module imported but unused
+	## F403 	‘from module import *’ used; unable to detect undefined names
+	## W293 	blank line contains whitespace
+	flake8 . \
+		--exclude=data/,docs/,*__init__.py \
+		--ignore=W293,F401,F403 \
+		--max-line-length=120
 
 ## Upload Data to S3
 sync_data_to_s3:

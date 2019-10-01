@@ -10,8 +10,8 @@ from sklearn.model_selection import GridSearchCV
 
 from sklearn.ensemble import RandomForestClassifier
 
-from .base import ModelBase
-from .perf_evaluation import classification_perf_metrics
+from src.models.base import ModelBase
+from src.models.perf_evaluation import classification_perf_metrics
 
 __all__ = [
     'scale_log_reg',
@@ -23,7 +23,6 @@ __all__ = [
 
 def evaluate_performance(key, fold, label, data, models):
     res = dict()
-    
     for fold_id in fold.columns:
         res[fold_id] = dict()
         model = models[fold_id]
@@ -35,7 +34,9 @@ def evaluate_performance(key, fold, label, data, models):
             res[fold_id][tr_val_te] = classification_perf_metrics(
                 yy=yy, model=model, y_hat=y_hat
             )
-    
+            print(model)
+            if hasattr(model, 'cv_results_'):
+                res[fold_id][tr_val_te]['xval'] = model.cv_results_
     return res
 
 

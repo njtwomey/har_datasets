@@ -1,19 +1,11 @@
 from collections import defaultdict
-from numpy import concatenate
 
-from .base import FeatureBase
-from .statistical_features_impl import t_feat, f_feat
+from src.features.base import FeatureBase
+from src.features.statistical_features_impl import t_feat, f_feat
 
 __all__ = [
     'statistical_features'
 ]
-
-
-def concatenate_sources(key, **datas):
-    assert len(set([type(i) for i in datas.values()])) == 1
-    return concatenate([
-        datas[kk] for kk in sorted(datas.keys())
-    ], axis=1)
 
 
 class statistical_features(FeatureBase):
@@ -30,6 +22,34 @@ class statistical_features(FeatureBase):
         endpoints = defaultdict(dict)
         feats = ('td', 'fd')
         
+        # There are two feature categories defined here:
+        #   1. Time domain
+        #   2. Frequency domain
+        #
+        # And these get mapped from transformed data from two sources:
+        #   1. Acceleration
+        #   2. Gyroscope
+        #
+        # Assuming these two sources have gone through some body/gravity
+        # transformations (eg from src.transformations.body_grav_filt) there
+        # will actually be several more sources, eg:
+        #   1. accel-body
+        #   2. accel-body-jerk
+        #   3. accel-body-jerk
+        #   4. accel-grav
+        #   5. gyro-body
+        #   6. gyro-body-jerk
+        #   7. gyro-body-jerk
+        #
+        # The feature types (time and frequency domain) are mapped to the transformed
+        # sources in a particular way. For example, the frequency domain features are
+        # *not* calculated on the gravity data sources. The loop below iterates through
+        # all of the outputs of the previous node in the graph, and the logic within
+        # the loop manages the correct mapping of functions to sources.
+        #
+        # Consult with the dataset table (tables/datasets.md) and see anguita2013 for
+        # details.
+        
         index = self.parent.index['index']
         for key, node in self.parent.outputs.items():
             sources = dict(index=index, data=node)
@@ -38,7 +58,7 @@ class statistical_features(FeatureBase):
             key_fd = key + ('fd',)
             
             if 'accel' in key:
-                self.pre_aggregate_output(
+                self.prepare_outputs(
                     endpoints=endpoints,
                     key=key_td,
                     func=t_feat,
@@ -48,7 +68,7 @@ class statistical_features(FeatureBase):
                 )
                 
                 if 'grav' not in key:
-                    self.pre_aggregate_output(
+                    self.prepare_outputs(
                         endpoints=endpoints,
                         key=key_fd,
                         func=f_feat,
@@ -58,7 +78,7 @@ class statistical_features(FeatureBase):
                     )
             
             if 'gyro' in key:
-                self.pre_aggregate_output(
+                self.prepare_outputs(
                     endpoints=endpoints,
                     key=key_td,
                     func=f_feat,
@@ -67,7 +87,7 @@ class statistical_features(FeatureBase):
                     **kwargs
                 )
                 
-                self.pre_aggregate_output(
+                self.prepare_outputs(
                     endpoints=endpoints,
                     key=key_fd,
                     func=f_feat,
@@ -76,4 +96,4 @@ class statistical_features(FeatureBase):
                     **kwargs
                 )
         
-        self.aggregate_outputs(endpoints)
+        self.assign_outputs(endpoints)

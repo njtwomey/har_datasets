@@ -9,6 +9,14 @@ __all__ = [
 
 
 def infer_data_type(data):
+    """
+    
+    Args:
+        data:
+
+    Returns:
+
+    """
     if isinstance(data, np.ndarray):
         return 'numpy'
     elif isinstance(data, pd.DataFrame):
@@ -17,11 +25,32 @@ def infer_data_type(data):
 
 
 class Partition(object):
+    """
+    
+    """
+    
     def __init__(self, func):
+        """
+        
+        Args:
+            func:
+        """
         self.func = func
         setattr(self, '__name__', func.__name__)
     
     def __call__(self, key, index, data, *args, **kwargs):
+        """
+        
+        Args:
+            key:
+            index:
+            data:
+            *args:
+            **kwargs:
+
+        Returns:
+
+        """
         assert index.shape[0] == data.shape[0]
         output = []
         trials = index.trial.unique()
@@ -53,63 +82,3 @@ class Partition(object):
         else:
             raise ValueError
         return df
-        # if all(df_output):
-        #     df = pd.concat(output, axis=0)
-        # else:
-        #     try:
-        #         df = pd.DataFrame(
-        #             np.concatenate(output, axis=0)
-        #         )
-        #     except ValueError:
-        #         return np.concatenate(output, axis=0)
-
-# from . import sliding_window_rect
-#
-# class PartitionAndWindow(Partition):
-#     def __init__(self, func, win_len, win_inc):
-#         def windowed_func(key, index, data, *args, **kwargs):
-#             win_len_ = int(win_len * kwargs['fs'])
-#             win_inc_ = int(win_inc * kwargs['fs'])
-#
-#             index_ = sliding_window_rect(
-#                 index.values, win_len_, win_inc_
-#             )
-#
-#             data_ = sliding_window_rect(
-#                 data.values, win_len_, win_inc_
-#             )
-#
-#             assert index_.shape[0] == data_.shape[0]
-#             assert index_.shape[1] == data_.shape[1]
-#
-#             ret = func(
-#                 key=key,
-#                 index=index_,
-#                 data=data_,
-#                 *args,
-#                 **kwargs
-#             )
-#
-#             return ret
-#
-#         super(PartitionAndWindow, self).__init__(
-#             windowed_func
-#         )
-#
-#
-# class PartitionAndWindowMetadata(PartitionAndWindow):
-#     def __init__(self, win_len, win_inc):
-#         def median_filter(key, index, data, *args, **kwargs):
-#             assert key in {'label', 'index', 'fold'}
-#             if key == 'label':
-#                 vals, transformed = np.unique(data, return_inverse=True)
-#                 transformed = transformed.reshape(data.shape)
-#                 med = np.median(transformed, axis=1).astype(int)
-#                 return vals[med]
-#             return np.median(data, axis=1)
-#
-#         super(PartitionAndWindowMetadata, self).__init__(
-#             func=median_filter,
-#             win_len=win_len,
-#             win_inc=win_inc,
-#         )

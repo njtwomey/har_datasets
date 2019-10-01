@@ -3,26 +3,11 @@ from collections import defaultdict
 
 import numpy as np
 
-from .base import FeatureBase
-from .. import feature_decorator
+from src.features.base import FeatureBase
 
 __all__ = [
     'ecdf',
 ]
-
-
-def ecdf_rep(data, components):
-    # Taken from: https://github.com/nhammerla/ecdfRepresentation/blob/master/python/ecdfRep.py
-    m = data.mean(0)
-    data = np.sort(data, axis=0)
-    data = data[np.int32(np.around(np.linspace(0, data.shape[0] - 1, num=components))), :]
-    data = data.flatten(1)
-    return np.hstack((data, m))
-
-
-@feature_decorator
-def calc_ecdf(key, index, data, n_components):
-    return np.asarray([ecdf_rep(datum, n_components) for datum in data])
 
 
 class ecdf(FeatureBase):
@@ -36,15 +21,15 @@ class ecdf(FeatureBase):
         self.n_components = n_components
         
         for key, node in parent.outputs.items():
-            self.pre_aggregate_output(
+            self.prepare_outputs(
                 endpoints=endpoints,
                 key=key + ('ecdf',),
                 func=calc_ecdf,
-                sources=dict(index=parent.index['index'], data=node, ),
+                sources=dict(index=parent.index['index'], data=node),
                 n_components=n_components
             )
         
-        self.aggregate_outputs(endpoints)
+        self.assign_outputs(endpoints)
     
     @property
     def identifier(self):
@@ -52,3 +37,36 @@ class ecdf(FeatureBase):
             self.parent.identifier,
             f'{self.name}_{self.n_components}',
         )
+
+
+def calc_ecdf(key, index, data, n_components):
+    """
+
+    Args:
+        key:
+        index:
+        data:
+        n_components:
+
+    Returns:
+
+    """
+    return np.asarray([ecdf_rep(datum, n_components) for datum in data])
+
+
+def ecdf_rep(data, components):
+    """
+    Taken from: https://github.com/nhammerla/ecdfRepresentation/blob/master/python/ecdfRep.py
+
+    Args:
+        data:
+        components:
+
+    Returns:
+
+    """
+    m = data.mean(0)
+    data = np.sort(data, axis=0)
+    data = data[np.int32(np.around(np.linspace(0, data.shape[0] - 1, num=components))), :]
+    data = data.flatten(1)
+    return np.hstack((data, m))

@@ -2,7 +2,16 @@
 
 This repository aims to provide a unified interface to wearable-based Human Activity Recognition (HAR) datasets. The philosophy is to acquire many datasets from a wide variety of recording conditions and to translate these into a consistent data format in order to more easily address open questions on feature extraction/representation learning, meta/transfer learning, active learning amongst other tasks. Ultimately, I am to create a home for the easier understanding of the stability, strengths and weaknesses of the state-of-the-art in HAR. 
 
+# Setup
 
+## dotenv 
+
+```bash 
+export PROJECT_ROOT = "/users/username/workspace/har_datasets"
+export ZIP_ROOT = "/users/username/workspace/har_datasets/data/zip"
+export BUILD_ROOT = "/users/username/workspace/har_datasets/data/build"
+
+```
 
 # Data Format
 

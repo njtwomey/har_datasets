@@ -1,4 +1,9 @@
-from .. import BaseGraph, TransformerMeta
+from src.base import BaseGraph
+from src.meta import TransformerMeta
+
+__all__ = [
+    'TransformerBase'
+]
 
 
 class TransformerBase(BaseGraph):
