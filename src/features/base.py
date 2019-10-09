@@ -29,7 +29,7 @@ class FeatureBase(BaseGraph):
         self.locations_set = set(self.get_ancestral_metadata('locations').keys())
         self.modality_set = set(self.get_ancestral_metadata('modalities'))
     
-    def prepare_outputs(self, endpoints, key, func, sources, feats=None, **kwargs):
+    def prepare_outputs(self, endpoints, key, func, feats=None, **kwargs):
         """
         Since the feature extraction function is applied to all of the input sources individually and it is not
         (necessarily) desirable to perform classification analysis on features from each stream individually, this
@@ -43,30 +43,35 @@ class FeatureBase(BaseGraph):
         Args:
             endpoints: defaultdict(dict)
                 This
-            key:
+            key: tuple(str)
             func:
-            sources:
             feats: None, or list(tuple(str))
                 This defines the types of outputs that the user can define to be outputted. If all features that
                 arose from the accelerometer on the wrist should be aggregated, feats should be specified as:
                 ```python
                 feats = [('accel', 'wrist'),]
                 ```
-                where 'accel' and 'wrist' are defined in modality and location metadata files. Only when all items of
-                the feats tuple are found in the 'key' argument to this function is the
+                Here 'accel' and 'wrist' are defined in modality and location metadata files, but in general the
+                intersection of the key (a tuple of strings) and the elements of feats are compared. When the size of
+                the intersection matches the length of the elements of feat, this element is added.
+                
             **kwargs:
 
         Returns:
 
         """
+        key = make_key(key)
+        
         node = self.outputs.make_output(
-            key=key, func=func, sources=sources, **kwargs
+            key=key, func=func, **kwargs
         )
         
+        logger.info(f"Adding {node.name} to complete feature set")
         endpoints[make_key('all')][node.name] = node
         for feat in feats or []:
             feat = make_key(feat)
-            if len(set(feat) & set(key)) == len(feat):
+            if set(feat).issubset(set(key)):
+                logger.info(f"Building feature {feat}/{node.name}")
                 endpoints[feat][node.name] = node
     
     def assign_outputs(self, endpoints):
@@ -83,6 +88,6 @@ class FeatureBase(BaseGraph):
             self.outputs.add_output(
                 key=key,
                 func=concatenate_sources,
-                sources=node_dict,
                 backend='none',
+                **node_dict
             )

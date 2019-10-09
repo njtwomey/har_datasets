@@ -66,20 +66,16 @@ class umap_embedding(VisualisationBase):
             model = self.outputs.make_output(
                 key=key + ('umap',),
                 func=learn_umap,
-                sources=dict(
-                    label=label,
-                    data=node
-                ),
-                backend='none'
+                backend='none',
+                label=label,
+                data=node,
             )
             
             self.outputs.add_output(
                 key=('viz',) + key,
                 func=embed_umap,
-                sources=dict(
-                    label=label,
-                    data=node,
-                    model=model
-                ),
-                backend='png'
+                label=label,
+                backend='png',
+                data=node,
+                model=model,
             )

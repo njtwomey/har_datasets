@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 
 from src.transformers.base import TransformerBase
-from src.utils.func_helpers import Partition
+from src.utils.decorators import Partition
 
 __all__ = [
     'window',
@@ -81,10 +81,8 @@ class window(TransformerBase):
             self.index.add_output(
                 key=key,
                 func=Partition(window_index),
-                sources=dict(
-                    index=parent.index['index'],
-                    data=node,
-                ),
+                index=parent.index['index'],
+                data=node,
                 **kwargs
             )
         
@@ -93,10 +91,8 @@ class window(TransformerBase):
             self.outputs.add_output(
                 key=key,
                 func=Partition(window_data),
-                sources=dict(
-                    index=parent.index['index'],
-                    data=node,
-                ),
+                index=parent.index['index'],
+                data=node,
                 backend='none',
                 **kwargs
             )

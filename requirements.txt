@@ -1,3 +1,4 @@
+joblib
 umap-learn
 scikit-learn
 matplotlib

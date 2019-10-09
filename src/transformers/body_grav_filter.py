@@ -2,7 +2,7 @@ import numpy as np
 from scipy import signal
 
 from src.transformers.base import TransformerBase
-from src.utils.func_helpers import Partition
+from src.utils.decorators import Partition
 
 __all__ = [
     'body_grav_filter',
@@ -52,15 +52,17 @@ class body_grav_filter(TransformerBase):
         )
         
         kwargs = dict(
-            filter_order=3, cutoff=0.3,
-            fs=self.get_ancestral_metadata('fs')
+            fs=self.get_ancestral_metadata('fs'),
+            filter_order=3,
+            cutoff=0.3,
         )
         
         for key, node in parent.outputs.items():
             self.outputs.add_output(
                 key=key + ('body',),
                 func=Partition(func=body_filt),
-                sources=dict(data=node, index=parent.index.index),
+                data=node,
+                index=parent.index.index,
                 backend='none',
                 **kwargs,
             )
@@ -68,7 +70,8 @@ class body_grav_filter(TransformerBase):
             self.outputs.add_output(
                 key=key + ('body', 'jerk',),
                 func=Partition(func=body_jerk_filt),
-                sources=dict(data=node, index=parent.index.index),
+                data=node,
+                index=parent.index.index,
                 backend='none',
                 **kwargs,
             )
@@ -77,7 +80,8 @@ class body_grav_filter(TransformerBase):
                 self.outputs.add_output(
                     key=key + ('grav',),
                     func=Partition(func=grav_filt),
-                    sources=dict(data=node, index=parent.index.index),
+                    data=node,
+                    index=parent.index.index,
                     backend='none',
                     **kwargs,
                 )

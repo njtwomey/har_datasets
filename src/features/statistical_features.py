@@ -20,7 +20,6 @@ class statistical_features(FeatureBase):
         )
         
         endpoints = defaultdict(dict)
-        feats = ('td', 'fd')
         
         # There are two feature categories defined here:
         #   1. Time domain
@@ -30,9 +29,9 @@ class statistical_features(FeatureBase):
         #   1. Acceleration
         #   2. Gyroscope
         #
-        # Assuming these two sources have gone through some body/gravity
-        # transformations (eg from src.transformations.body_grav_filt) there
-        # will actually be several more sources, eg:
+        # Assuming these two sources have gone through some body/gravity transformations
+        # (eg from src.transformations.body_grav_filt) there will actually be several
+        # more sources, eg:
         #   1. accel-body
         #   2. accel-body-jerk
         #   3. accel-body-jerk
@@ -40,6 +39,8 @@ class statistical_features(FeatureBase):
         #   5. gyro-body
         #   6. gyro-body-jerk
         #   7. gyro-body-jerk
+        #
+        # With more data sources this list will grows quickly.
         #
         # The feature types (time and frequency domain) are mapped to the transformed
         # sources in a particular way. For example, the frequency domain features are
@@ -49,11 +50,10 @@ class statistical_features(FeatureBase):
         #
         # Consult with the dataset table (tables/datasets.md) and see anguita2013 for
         # details.
-        
+
+        feats = tuple()  # ('td', 'fd')
         index = self.parent.index['index']
         for key, node in self.parent.outputs.items():
-            sources = dict(index=index, data=node)
-            
             key_td = key + ('td',)
             key_fd = key + ('fd',)
             
@@ -62,8 +62,9 @@ class statistical_features(FeatureBase):
                     endpoints=endpoints,
                     key=key_td,
                     func=t_feat,
-                    sources=sources,
                     feats=feats,
+                    index=index,
+                    data=node,
                     **kwargs
                 )
                 
@@ -72,8 +73,9 @@ class statistical_features(FeatureBase):
                         endpoints=endpoints,
                         key=key_fd,
                         func=f_feat,
-                        sources=sources,
                         feats=feats,
+                        index=index,
+                        data=node,
                         **kwargs
                     )
             
@@ -82,8 +84,9 @@ class statistical_features(FeatureBase):
                     endpoints=endpoints,
                     key=key_td,
                     func=f_feat,
-                    sources=sources,
                     feats=feats,
+                    index=index,
+                    data=node,
                     **kwargs
                 )
                 
@@ -91,8 +94,9 @@ class statistical_features(FeatureBase):
                     endpoints=endpoints,
                     key=key_fd,
                     func=f_feat,
-                    sources=sources,
                     feats=feats,
+                    index=index,
+                    data=node,
                     **kwargs
                 )
         

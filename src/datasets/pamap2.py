@@ -98,13 +98,11 @@ class pamap2(Dataset):
             columns=['x', 'y', 'z']
         ).astype(float)
         
-        scale = 1
-        if 'accel' in key:
-            scale = 9.80665
-        elif 'gyro' in key:
-            scale = np.pi * 2
-        elif 'mag' in key:
-            scale = 1
+        scale = dict(
+            accel=9.80665,
+            gyro=np.pi * 2.0,
+            mag=1.0
+        )
         
         return df.values / scale
 

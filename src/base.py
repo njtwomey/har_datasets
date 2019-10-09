@@ -186,7 +186,7 @@ class ComputationalSet(object):
             else:
                 logger.info(f'Loading {node.name}')
     
-    def make_output(self, key, func, sources=None, backend=None, **kwargs):
+    def make_output(self, key, func, backend=None, **kwargs):
         """
         
         Args:
@@ -208,9 +208,8 @@ class ComputationalSet(object):
         node = self.graph.node(
             name=self.graph.build_path(*key),
             func=func,
-            sources=sources,
             backend=backend,
-            kwargs=dict(key=key, **kwargs),
+            **dict(key=key, **kwargs),
         )
         
         logger.info(f'Created node {node.name}; backend: {backend}')
@@ -227,18 +226,18 @@ class ComputationalSet(object):
         Returns:
 
         """
+        
         key = make_key(key)
         assert key not in self.output_dict
         self.output_dict[key] = node
         logger.info(f'Node {node.name} added to outputs: {self.output_dict.keys()}.')
     
-    def add_output(self, key, func, sources=None, backend=None, **kwargs):
+    def add_output(self, key, func, backend=None, **kwargs):
         """
         
         Args:
             key:
             func:
-            sources:
             backend:
             **kwargs:
 
@@ -248,7 +247,6 @@ class ComputationalSet(object):
         node = self.make_output(
             key=key,
             func=func,
-            sources=sources,
             backend=backend,
             **kwargs
         )
@@ -272,13 +270,12 @@ class IndexSet(ComputationalSet):
             parent=parent,
         )
     
-    def add_output(self, key, func, sources=None, backend=None, **kwargs):
+    def add_output(self, key, func, backend=None, **kwargs):
         """
         
         Args:
             key:
             func:
-            sources:
             backend:
             **kwargs:
 
@@ -292,18 +289,16 @@ class IndexSet(ComputationalSet):
         return super(IndexSet, self).add_output(
             key=key,
             func=func,
-            sources=sources,
             backend=backend or 'pandas',  # Indexes default to pandas backend
             **kwargs
         )
     
-    def make_output(self, key, func, sources=None, backend=None, **kwargs):
+    def make_output(self, key, func, backend=None, **kwargs):
         """
         
         Args:
             key:
             func:
-            sources:
             backend:
             **kwargs:
 
@@ -311,7 +306,7 @@ class IndexSet(ComputationalSet):
 
         """
         return super(IndexSet, self).make_output(
-            key=key, func=func, sources=sources, backend=backend or 'pandas', **kwargs
+            key=key, func=func, backend=backend or 'pandas', **kwargs
         )
     
     @property
@@ -435,7 +430,6 @@ class BaseGraph(ComputationGraph):
         self.add_backend('pandas', PandasBackend(self.fs_root))
         self.add_backend('numpy', NumpyBackend(self.fs_root))
         self.add_backend('json', JsonBackend(self.fs_root, cls=NumpyEncoder))
-        self.add_backend('none', VolatileBackend())
         
         self.set_default_backend(default_backend)
         

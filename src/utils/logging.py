@@ -26,12 +26,12 @@ def get_file_handler():
     Returns:
 
     """
-    file_handler = FileHandler(LOG_FILE)
+    file_handler = FileHandler(LOG_FILE, mode="w")
     file_handler.setFormatter(FORMATTER)
     return file_handler
 
 
-def get_logger(logger_name, with_file=True, with_console=False):
+def get_logger(logger_name, with_file=True, with_console=True):
     """
     
     Args:

@@ -1,9 +1,13 @@
 import pandas as pd
+import numpy as np
+
+from tqdm import tqdm
 
 from functools import update_wrapper, partial
 
 __all__ = [
-    'index_decorator', 'fold_decorator', 'label_decorator'
+    'index_decorator', 'fold_decorator', 'label_decorator',
+    'Partition', 'partition',
 ]
 
 
@@ -71,44 +75,87 @@ class IndexDecorator(DecoratorBase):
         ))
 
 
+def infer_data_type(data):
+    """
+
+    Args:
+        data:
+
+    Returns:
+
+    """
+    if isinstance(data, np.ndarray):
+        return 'numpy'
+    elif isinstance(data, pd.DataFrame):
+        return 'pandas'
+    raise TypeError
+
+
+class Partition(object):
+    """
+
+    """
+    
+    def __init__(self, func):
+        """
+
+        Args:
+            func:
+        """
+        self.func = func
+        update_wrapper(self, func)
+        setattr(self, '__name__', func.__name__)
+    
+    def __get__(self, obj, objtype):
+        return partial(self.__call__, obj)
+    
+    def __call__(self, key, index, data, *args, **kwargs):
+        """
+
+        Args:
+            key:
+            index:
+            data:
+            *args:
+            **kwargs:
+
+        Returns:
+
+        """
+        assert index.shape[0] == data.shape[0]
+        output = []
+        trials = index.trial.unique()
+        data_type = infer_data_type(data)
+        for trial in tqdm(trials):
+            inds = index.trial == trial
+            index_ = index.loc[inds]
+            if data_type == 'numpy':
+                data_ = data[inds]
+            elif data_type == 'pandas':
+                data_ = data.loc[inds]
+            else:
+                raise ValueError
+            assert index_.shape[0] == data_.shape[0]
+            vals = self.func(
+                key=key,
+                index=index_,
+                data=data_,
+                *args,
+                **kwargs
+            )
+            assert infer_data_type(vals) == data_type
+            output.append(vals)
+        if data_type == 'numpy':
+            df = np.concatenate(output, axis=0)
+        elif data_type == 'pandas':
+            df = pd.concat(output, axis=0)
+            df = df.reset_index(drop=True)
+        else:
+            raise ValueError
+        return df
+
+
 label_decorator = LabelDecorator
 index_decorator = IndexDecorator
 fold_decorator = FoldDecorator
-
-# class DataDecorator(DecoratorBase):
-#     def __init__(self, func):
-#         super(DataDecorator, self).__init__(func)
-#
-#     def __call__(self, *args, **kwargs):
-#         data = super(DataDecorator, self).__call__(*args, **kwargs)
-#         assert np.isfinite(data).all(), f'Error evaluating {self.func.__name__}: data not all finite'
-#         return data
-#
-#
-# class FunctionDecorator(DecoratorBase):
-#     def __init__(self, func):
-#         super(FunctionDecorator, self).__init__(func)
-#
-#     def __call__(self, *args, **kwargs):
-#         return self.func(*args, **kwargs)
-#
-#
-# class TransformerDecorator(FunctionDecorator):
-#     def __init__(self, func):
-#         super(TransformerDecorator, self).__init__(func)
-#
-#
-# class FeatureDecorator(FunctionDecorator):
-#     def __init__(self, func):
-#         super(FeatureDecorator, self).__init__(func)
-#
-#
-# class ModelDecorator(FunctionDecorator):
-#     def __init__(self, func):
-#         super(ModelDecorator, self).__init__(func)
-#
-#
-# data_decorator = DataDecorator
-# transformer_decorator = TransformerDecorator
-# feature_decorator = FeatureDecorator
-# model_decorator = ModelDecorator
+partition = Partition

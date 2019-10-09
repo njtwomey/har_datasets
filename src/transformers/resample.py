@@ -5,7 +5,7 @@ import numpy as np
 from scipy import signal
 
 from src.transformers.base import TransformerBase
-from src.utils.func_helpers import Partition
+from src.utils.decorators import Partition
 
 __all__ = [
     'resample',
@@ -84,10 +84,8 @@ class resample(TransformerBase):
                 self.index.add_output(
                     key=key,
                     func=Partition(resample_metadata),
-                    sources=dict(
-                        index=parent.index['index'],
-                        data=node,
-                    ),
+                    index=parent.index['index'],
+                    data=node,
                     **kwargs
                 )
             
@@ -95,10 +93,8 @@ class resample(TransformerBase):
                 self.outputs.add_output(
                     key=key,
                     func=Partition(resample_data),
-                    sources=dict(
-                        index=parent.index['index'],
-                        data=node,
-                    ),
+                    index=parent.index['index'],
+                    data=node,
                     **kwargs
                 )
     

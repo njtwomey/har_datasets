@@ -7,27 +7,62 @@ from numpy import ndarray
 from pandas import DataFrame
 from pandas import read_pickle as pd_load
 
+# For matplotlib serialisation
+from matplotlib.pyplot import Figure
+
 # For sklearn serialisation
+from sklearn.base import ClassifierMixin, TransformerMixin, BaseEstimator
 import joblib
 
 from mldb import FileSystemBase
+from src.utils import get_logger
+
+logger = get_logger(__name__)
 
 __all__ = [
-    'PNGBackend', 'ScikitLearnBackend', 'NumpyBackend', 'PandasBackend',
+    'PNGBackend', 'PDFBackend', 'ScikitLearnBackend', 'NumpyBackend', 'PandasBackend',
 ]
 
 
-class PNGBackend(FileSystemBase):
-    def __init__(self, path):
-        super(PNGBackend, self).__init__(path, 'png')
+def validate_dtype(obj, dtypes):
+    """
+    
+    Args:
+        obj: input object
+        dtypes: data type, or list of data types
+
+    Returns: True if the type of obj is in the allowable set
+    Raises: TypeError if obj is not
+    """
+    if isinstance(obj, dtypes):
+        return
+    msg = f"The object {obj} is of the wrong type {type(object)} is not in {dtypes}"
+    logger.critical(msg)
+    raise TypeError(msg)
+
+
+class MatPlotLibBackend(FileSystemBase):
+    def __init__(self, path, ext):
+        super(MatPlotLibBackend, self).__init__(path, ext)
     
     def load_data(self, name):
         return True
     
     def save_data(self, name, data):
         fig = data
+        validate_dtype(fig, Figure)
         fig.savefig(self.node_path(name))
         fig.clf()
+
+
+class PNGBackend(MatPlotLibBackend):
+    def __init__(self, path):
+        super(PNGBackend, self).__init__(path, 'png')
+
+
+class PDFBackend(MatPlotLibBackend):
+    def __init__(self, path):
+        super(PDFBackend, self).__init__(path, 'pdf')
 
 
 class PandasBackend(FileSystemBase):
@@ -40,11 +75,11 @@ class PandasBackend(FileSystemBase):
             path=self.node_path(name),
             compression=self.compression,
         )
-        assert isinstance(data, DataFrame)
+        validate_dtype(data, DataFrame)
         return data
     
     def save_data(self, name, data):
-        assert isinstance(data, DataFrame)
+        validate_dtype(data, DataFrame)
         data.to_pickle(
             path=self.node_path(name),
             compression=self.compression,
@@ -61,11 +96,11 @@ class NumpyBackend(FileSystemBase):
             file=self.node_path(name),
             allow_pickle=self.allow_pickle,
         )
-        assert isinstance(data, ndarray)
+        validate_dtype(data, ndarray)
         return data
     
     def save_data(self, name, data):
-        assert isinstance(data, ndarray)
+        validate_dtype(data, ndarray)
         np_save(
             file=self.node_path(name),
             arr=data,
@@ -79,7 +114,9 @@ class ScikitLearnBackend(FileSystemBase):
     
     def load_data(self, name):
         model = joblib.load(self.node_path(name))
+        # validate_dtype(model, (ClassifierMixin, TransformerMixin, BaseEstimator))
         return model
     
     def save_data(self, name, data):
+        # validate_dtype(data, (ClassifierMixin, TransformerMixin, BaseEstimator))
         joblib.dump(data, self.node_path(name))

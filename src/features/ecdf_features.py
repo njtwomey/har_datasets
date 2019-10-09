@@ -25,8 +25,9 @@ class ecdf(FeatureBase):
                 endpoints=endpoints,
                 key=key + ('ecdf',),
                 func=calc_ecdf,
-                sources=dict(index=parent.index['index'], data=node),
-                n_components=n_components
+                n_components=n_components,
+                index=parent.index['index'],
+                data=node,
             )
         
         self.assign_outputs(endpoints)
