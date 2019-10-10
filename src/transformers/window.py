@@ -5,6 +5,9 @@ import numpy as np
 
 from src.transformers.base import TransformerBase
 from src.utils.decorators import Partition
+from src.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 __all__ = [
     'window',
@@ -130,7 +133,8 @@ def norm_shape(shape):
         # shape was not iterable
         pass
     
-    raise TypeError('shape must be an int, or a tuple of ints')
+    logger.exception('shape must be an int, or a tuple of ints')
+    raise TypeError
 
 
 def sliding_window(a, ws, ss=None, flatten=True):
@@ -168,13 +172,18 @@ def sliding_window(a, ws, ss=None, flatten=True):
     # ensure that ws, ss, and a.shape all have the same number of dimensions
     ls = [len(shape), len(ws), len(ss)]
     if 1 != len(set(ls)):
-        raise ValueError(
-            'a.shape, ws and ss must all have the same length. They were %s' % str(ls))
+        logger.exception(
+            f'a.shape, ws and ss must all have the same length. They were {ls}'
+        )
+        raise ValueError
     
     # ensure that ws is smaller than a in every dimension
     if np.any(ws > shape):
-        raise ValueError(
-            'ws cannot be larger than a in any dimension. a.shape was %s and ws was %s' % (str(a.shape), str(ws)))
+        logger.exception(
+            f'ws cannot be larger than a in any dimension. a.shape was %s and '
+            'ws was {(str(a.shape), str(ws))}'
+        )
+        raise ValueError
     
     # how many slices will there be in each dimension?
     newshape = norm_shape(((shape - ws) // ss) + 1)

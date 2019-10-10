@@ -1,4 +1,4 @@
-from .base import *
+from src.features.base import *
 
-from .statistical_features import *
-from .ecdf_features import *
+from src.features.statistical_features import *
+from src.features.ecdf_features import *

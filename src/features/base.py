@@ -2,7 +2,7 @@ from numpy import concatenate
 
 from src.base import BaseGraph, make_key
 from src.meta import FeatureMeta
-from src.utils.logging import get_logger
+from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
 

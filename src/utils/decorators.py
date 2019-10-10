@@ -5,6 +5,10 @@ from tqdm import tqdm
 
 from functools import update_wrapper, partial
 
+from src.utils.logger import get_logger
+
+logger = get_logger(__name__)
+
 __all__ = [
     'index_decorator', 'fold_decorator', 'label_decorator',
     'Partition', 'partition',
@@ -88,6 +92,7 @@ def infer_data_type(data):
         return 'numpy'
     elif isinstance(data, pd.DataFrame):
         return 'pandas'
+    logger.exception(f"Unsupported data type ({type(data)}), currently only {{numpy, pandas}}")
     raise TypeError
 
 
@@ -133,8 +138,6 @@ class Partition(object):
                 data_ = data[inds]
             elif data_type == 'pandas':
                 data_ = data.loc[inds]
-            else:
-                raise ValueError
             assert index_.shape[0] == data_.shape[0]
             vals = self.func(
                 key=key,
@@ -150,8 +153,6 @@ class Partition(object):
         elif data_type == 'pandas':
             df = pd.concat(output, axis=0)
             df = df.reset_index(drop=True)
-        else:
-            raise ValueError
         return df
 
 

@@ -5,7 +5,7 @@ from mldb import ComputationGraph, PickleBackend, VolatileBackend, JsonBackend
 from src.meta import BaseMeta
 from src.backends import PandasBackend, NumpyBackend
 from src.utils.misc import NumpyEncoder, randomised_order
-from src.utils.logging import get_logger
+from src.utils.logger import get_logger
 from src.utils.loaders import build_path
 
 logger = get_logger(__name__)
@@ -45,15 +45,13 @@ def _get_ancestral_meta(graph, key):
 
     """
     if graph.meta is None:
-        msg = f'The key "{key}" cannot be found in "{graph}"'
-        logger.critical(msg)
-        raise TypeError(msg)
+        logger.exception(f'The key "{key}" cannot be found in "{graph}"')
+        raise TypeError
     if key in graph.meta:
         return graph.meta[key]
     if graph.parent is None:
-        msg = f'The key "{key}" cannot be found in the ancestry of "{graph}"'
-        logger.critical(msg)
-        raise TypeError(msg)
+        logger.exception(f'The key "{key}" cannot be found in the ancestry of "{graph}"')
+        raise TypeError
     return _get_ancestral_meta(graph.parent, key)
 
 
@@ -209,7 +207,8 @@ class ComputationalSet(object):
             name=self.graph.build_path(*key),
             func=func,
             backend=backend,
-            **dict(key=key, **kwargs),
+            key=key,
+            **kwargs,
         )
         
         logger.info(f'Created node {node.name}; backend: {backend}')
@@ -283,9 +282,8 @@ class IndexSet(ComputationalSet):
 
         """
         if not self.is_index_key(key):
-            msg = f"A non-index key was used for the index computation: {key} not in {self.index_keys}"
-            logger.critical(msg)
-            raise ValueError(msg)
+            logger.exception(f"A non-index key was used for the index computation: {key} not in {self.index_keys}")
+            raise ValueError
         return super(IndexSet, self).add_output(
             key=key,
             func=func,
@@ -416,9 +414,8 @@ class BaseGraph(ComputationGraph):
         )
         
         if not isinstance(meta, BaseMeta):
-            msg = f"The metadata variable does not derive from `BaseMeta` but is of type {type(meta)}"
-            logger.critical(msg)
-            raise TypeError(msg)
+            logger.exception(f"The metadata variable does not derive from `BaseMeta` but is of type {type(meta)}")
+            raise TypeError
         
         self.meta = meta
         
@@ -455,10 +452,10 @@ class BaseGraph(ComputationGraph):
         """
         assert len(args) > 0
         if not isinstance(args[0], str):
-            raise ValueError(
-                f'The argument for `build_path` must be strings, '
-                f'but got the type: {type(args[0])}'
+            logger.exception(
+                f'The argument for `build_path` must be strings, but got the type: {type(args[0])}'
             )
+            raise ValueError
         
         return join(self.identifier, '-'.join(args))
     

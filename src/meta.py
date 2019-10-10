@@ -14,7 +14,8 @@ def check_yaml(name, values):
     value_set = load_metadata(name)
     for value in values:
         if value not in value_set:
-            raise ValueError(f'{value} is not yet in `{name}.yaml`')
+            logger.exception(f'{value} is not yet in `{name}.yaml`')
+            raise ValueError
     if isinstance(values, dict):
         return {vv: kk for kk, vv in values.items()}
 
@@ -36,9 +37,8 @@ class BaseMeta(object):
         logger.info(f'Loading metadata file {yaml_file} for {name}.')
         values = load_metadata(yaml_file)
         if name not in values:
-            msg = f'The function "{name}" is not in the set {{{values}}} that is listed in {yaml_file}'
-            logger.critical(msg)
-            raise KeyError(msg)
+            logger.exception(f'The function "{name}" is not in the set {{{values}}} that is listed in {yaml_file}')
+            raise KeyError
         self.name = name
         self.meta = values[name]
         if self.meta is None:
@@ -47,7 +47,8 @@ class BaseMeta(object):
     
     def __getitem__(self, item):
         if item not in self.meta:
-            raise KeyError(f'{item} not found in {self.__class__.__name__}')
+            logger.exception(f'{item} not found in {self.__class__.__name__}')
+            raise KeyError
         return self.meta[item]
     
     def __contains__(self, item):
@@ -104,9 +105,8 @@ class DatasetMeta(BaseMeta):
         )
         
         if 'fs' not in self.meta:
-            err = f'The metadata for {name} does not contain the required key "fs"'
-            logger.critical(err)
-            raise KeyError(err)
+            logger.exception(f'The metadata for {name} does not contain the required key "fs"')
+            raise KeyError
         
         self.inv_act_lookup = check_activities(self.meta['activities'])
     

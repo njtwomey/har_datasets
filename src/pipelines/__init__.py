@@ -1,1 +1,1 @@
-from .basic_representations import *
+from src.pipelines.basic_representations import *

@@ -1,1 +1,1 @@
-from .sklearn import *
+from src.models.sklearn import *

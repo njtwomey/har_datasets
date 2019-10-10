@@ -1,6 +1,6 @@
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
-from sklearn.linear_model import LogisticRegression, SGDClassifier
+from sklearn.linear_model import LogisticRegression, LogisticRegressionCV, SGDClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 
@@ -9,13 +9,13 @@ from sklearn.ensemble import RandomForestClassifier
 from src.models.sklearn.base import sklearn_model
 
 __all__ = [
-    'scale_log_reg', 'scale_sgd_clf', 'random_forest'
+    'logistic_regression', 'logistic_regression_cv', 'sgd_classifier'
 ]
 
 
-class scale_log_reg(sklearn_model):
+class logistic_regression(sklearn_model):
     def __init__(self, parent):
-        super(scale_log_reg, self).__init__(
+        super(logistic_regression, self).__init__(
             name=self.__class__.__name__,
             parent=parent,
             model=Pipeline((
@@ -25,9 +25,21 @@ class scale_log_reg(sklearn_model):
         )
 
 
-class scale_sgd_clf(sklearn_model):
+class logistic_regression_cv(sklearn_model):
     def __init__(self, parent):
-        super(scale_sgd_clf, self).__init__(
+        super(logistic_regression_cv, self).__init__(
+            name=self.__class__.__name__,
+            parent=parent,
+            model=Pipeline((
+                ('scale', StandardScaler()),
+                ('clf', LogisticRegressionCV())
+            ))
+        )
+
+
+class sgd_classifier(sklearn_model):
+    def __init__(self, parent):
+        super(sgd_classifier, self).__init__(
             name=self.__class__.__name__,
             parent=parent,
             model=Pipeline((

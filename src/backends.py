@@ -15,7 +15,7 @@ from sklearn.base import ClassifierMixin, TransformerMixin, BaseEstimator
 import joblib
 
 from mldb import FileSystemBase
-from src.utils import get_logger
+from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
@@ -36,9 +36,8 @@ def validate_dtype(obj, dtypes):
     """
     if isinstance(obj, dtypes):
         return
-    msg = f"The object {obj} is of the wrong type {type(object)} is not in {dtypes}"
-    logger.critical(msg)
-    raise TypeError(msg)
+    logger.exception(f"The object {obj} is of the wrong type {type(object)} is not in {dtypes}")
+    raise TypeError
 
 
 class MatPlotLibBackend(FileSystemBase):

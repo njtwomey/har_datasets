@@ -3,6 +3,10 @@ import pandas as pd
 
 import yaml
 
+from src.utils.logger import get_logger
+
+logger = get_logger(__name__)
+
 __all__ = [
     # Generic
     'load_csv_data', 'load_metadata', 'build_path',
@@ -75,6 +79,7 @@ def load_csv_data(fname, astype='list'):
     if astype == 'list':
         return df.values.ravel().tolist()
     
+    logger.exception(f"Un-implemented type specification: {astype}")
     raise ValueError
 
 

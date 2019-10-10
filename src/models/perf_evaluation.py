@@ -1,5 +1,9 @@
 from sklearn.metrics import classification
 
+from src.utils.logger import get_logger
+
+logger = get_logger(__name__)
+
 __all__ = [
     'classification_perf_metrics'
 ]
@@ -8,7 +12,8 @@ __all__ = [
 def get_class_names(model):
     if hasattr(model, 'classes_'):
         return model.classes_
-    raise TypeError(f'The classes member cannot be extracted from this object: {model}')
+    logger.exception(f'The classes member cannot be extracted from this object: {model}')
+    raise TypeError
 
 
 def classification_perf_metrics(yy, model, y_hat):
