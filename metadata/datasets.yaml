@@ -16,6 +16,10 @@ anguita2013:
     - accel
     - gyro
     - mag
+  tracks:
+    - activity
+  splits:
+    -
   locations:
     waist:
       accel: true

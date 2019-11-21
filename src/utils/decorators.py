@@ -11,7 +11,7 @@ logger = get_logger(__name__)
 
 __all__ = [
     'index_decorator', 'fold_decorator', 'label_decorator',
-    'Partition', 'partition',
+    'Partition', 'partitioning_decorator',
 ]
 
 
@@ -24,11 +24,7 @@ class DecoratorBase(object):
         return partial(self.__call__, obj)
     
     def __call__(self, *args, **kwargs):
-        df = self.func(*args, **kwargs)
-        if isinstance(df, tuple):
-            assert len(df) == 2
-            return df
-        return df
+        return self.func(*args, **kwargs)
 
 
 class LabelDecorator(DecoratorBase):
@@ -92,27 +88,50 @@ def infer_data_type(data):
         return 'numpy'
     elif isinstance(data, pd.DataFrame):
         return 'pandas'
-    logger.exception(f"Unsupported data type ({type(data)}), currently only {{numpy, pandas}}")
+    
+    logger.exception(
+        f"Unsupported data type in infer_data_type ({type(data)}), currently only {{numpy, pandas}}"
+    )
+    
     raise TypeError
 
 
-class Partition(object):
+def slice_data_type(data, inds, data_type_name):
+    if data_type_name == 'numpy':
+        return data[inds]
+    elif data_type_name == 'pandas':
+        return data.loc[inds]
+    
+    logger.exception(
+        f"Unsupported data type in slice_data_type ({type(data)}), currently only {{numpy, pandas}}"
+    )
+    
+    raise TypeError
+
+
+def concat_data_type(datas, data_type_name):
+    if data_type_name == 'numpy':
+        return np.concatenate(datas, axis=0)
+    elif data_type_name == 'pandas':
+        df = pd.concat(datas, axis=0)
+        return df.reset_index(drop=True)
+    
+    logger.exception(
+        f"Unsupported data type in concat_data_type ({type(datas)}), currently only {{numpy, pandas}}"
+    )
+    
+    raise TypeError
+
+
+class Partition(DecoratorBase):
     """
 
     """
     
     def __init__(self, func):
-        """
-
-        Args:
-            func:
-        """
-        self.func = func
-        update_wrapper(self, func)
-        setattr(self, '__name__', func.__name__)
-    
-    def __get__(self, obj, objtype):
-        return partial(self.__call__, obj)
+        super(Partition, self).__init__(
+            func=func
+        )
     
     def __call__(self, key, index, data, *args, **kwargs):
         """
@@ -127,18 +146,19 @@ class Partition(object):
         Returns:
 
         """
-        assert index.shape[0] == data.shape[0]
+        if index.shape[0] != data.shape[0]:
+            logger.exception(
+                f"The data and index of {key} should have the same length "
+                "with index: {index.shape}; and data: {data.shape}"
+            )
+            raise ValueError
         output = []
         trials = index.trial.unique()
         data_type = infer_data_type(data)
         for trial in tqdm(trials):
             inds = index.trial == trial
             index_ = index.loc[inds]
-            if data_type == 'numpy':
-                data_ = data[inds]
-            elif data_type == 'pandas':
-                data_ = data.loc[inds]
-            assert index_.shape[0] == data_.shape[0]
+            data_ = slice_data_type(data, inds, data_type)
             vals = self.func(
                 key=key,
                 index=index_,
@@ -146,17 +166,18 @@ class Partition(object):
                 *args,
                 **kwargs
             )
-            assert infer_data_type(vals) == data_type
+            opdt = infer_data_type(vals)
+            if opdt != data_type:
+                logger.exception(
+                    f"The data type of {self.func} should be the same as the input {data_type} "
+                    f"but instead got {opdt}"
+                )
+                raise ValueError
             output.append(vals)
-        if data_type == 'numpy':
-            df = np.concatenate(output, axis=0)
-        elif data_type == 'pandas':
-            df = pd.concat(output, axis=0)
-            df = df.reset_index(drop=True)
-        return df
+        return concat_data_type(output, data_type)
 
 
 label_decorator = LabelDecorator
 index_decorator = IndexDecorator
 fold_decorator = FoldDecorator
-partition = Partition
+partitioning_decorator = Partition

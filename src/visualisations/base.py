@@ -1,7 +1,8 @@
 from src.base import BaseGraph
 from src.meta import VisualisationMeta
 
-from src.backends import PNGBackend, ScikitLearnBackend
+from mldb.backends import PNGBackend
+from src.backends import ScikitLearnBackend
 
 __all__ = [
     'VisualisationBase'

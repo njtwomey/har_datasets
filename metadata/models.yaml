@@ -29,8 +29,6 @@ logistic_regression_cv:
   xval:
     clf__penalty:
       - "l2"
-    clf__Cs:
-      - 10
     clf__multi_class:
       - "multinomial"
     clf__solver:

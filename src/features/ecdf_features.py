@@ -28,6 +28,7 @@ class ecdf(FeatureBase):
                 n_components=n_components,
                 index=parent.index['index'],
                 data=node,
+                feats=[('body',), ('grav',)]
             )
         
         self.assign_outputs(endpoints)

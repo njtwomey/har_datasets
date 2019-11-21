@@ -116,7 +116,7 @@ def bands_energy(freq, spec, axis):
 
 def add_magnitude(data):
     assert isinstance(data, np.ndarray)
-    return np.concatenate((data, np.sqrt(np.sum(data ** 2, axis=2, keepdims=True))), axis=2)
+    return np.concatenate((data, np.sqrt(np.sum(data ** 2, axis=2, keepdims=True) - 1)), axis=2)
 
 
 """

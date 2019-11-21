@@ -1,9 +1,8 @@
 from os.path import join
 
-from mldb import ComputationGraph, PickleBackend, VolatileBackend, JsonBackend
+from mldb import ComputationGraph, PickleBackend, JsonBackend, PandasBackend, NumpyBackend
 
 from src.meta import BaseMeta
-from src.backends import PandasBackend, NumpyBackend
 from src.utils.misc import NumpyEncoder, randomised_order
 from src.utils.logger import get_logger
 from src.utils.loaders import build_path
@@ -190,7 +189,6 @@ class ComputationalSet(object):
         Args:
             key:
             func:
-            sources:
             backend:
             **kwargs:
 
@@ -268,6 +266,11 @@ class IndexSet(ComputationalSet):
             graph=graph,
             parent=parent,
         )
+        
+    def validate_key(self, key):
+        if not self.is_index_key(key):
+            logger.exception(f"A non-index key was used for the index computation: {key} not in {self.index_keys}")
+            raise ValueError
     
     def add_output(self, key, func, backend=None, **kwargs):
         """
@@ -281,9 +284,7 @@ class IndexSet(ComputationalSet):
         Returns:
 
         """
-        if not self.is_index_key(key):
-            logger.exception(f"A non-index key was used for the index computation: {key} not in {self.index_keys}")
-            raise ValueError
+        self.validate_key(key)
         return super(IndexSet, self).add_output(
             key=key,
             func=func,
@@ -303,6 +304,7 @@ class IndexSet(ComputationalSet):
         Returns:
 
         """
+        self.validate_key(key)
         return super(IndexSet, self).make_output(
             key=key, func=func, backend=backend or 'pandas', **kwargs
         )
@@ -457,7 +459,7 @@ class BaseGraph(ComputationGraph):
             )
             raise ValueError
         
-        return join(self.identifier, '-'.join(args))
+        return build_path(join(self.identifier, '-'.join(args)))
     
     def evaluate_outputs(self):
         """

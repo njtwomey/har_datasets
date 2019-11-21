@@ -1,3 +1,4 @@
+filelock
 joblib
 umap-learn
 scikit-learn

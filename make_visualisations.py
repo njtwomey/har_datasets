@@ -10,6 +10,8 @@ def main():
     visualisations = load_visualisations_metadata()
     
     for dataset_name in randomised_order(datasets.keys()):
+        if dataset_name != 'anguita2013':
+            continue
         for chain_name in randomised_order(chains.keys()):
             chain = pipeline_importer(chain_name, name=dataset_name)
             for visualisation_name in randomised_order(visualisations.keys()):
