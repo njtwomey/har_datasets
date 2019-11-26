@@ -1,0 +1,17 @@
+# Wearable modalities
+accel:                  0
+gyro:                   1
+mag:                    2
+
+# Ambient sensor modalities
+humidity:               3
+temperature:            4
+pir:                    5
+light:                  6
+electricity:            7
+rssi:                   8
+
+# RGBD modalities
+rgbd_kitchen:           9
+rgbd_hall:              10
+rgbd_lr:                11

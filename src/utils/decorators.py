@@ -1,17 +1,23 @@
 import pandas as pd
+from pandas.api.types import is_categorical_dtype
+
 import numpy as np
 
 from tqdm import tqdm
 
-from functools import update_wrapper, partial
+from dotenv import find_dotenv, load_dotenv
 
+from functools import wraps, update_wrapper, partial
+
+from src.utils import dataset_importer
+from src.utils.exceptions import ModalityNotPresentError
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
 __all__ = [
     'index_decorator', 'fold_decorator', 'label_decorator',
-    'Partition', 'partitioning_decorator',
+    'Partition', 'partitioning_decorator', 'dot_env_decorator',
 ]
 
 
@@ -43,9 +49,13 @@ class LabelDecorator(DecoratorBase):
                     lambda ll: inv_lookup[ll]
                 )
         
+        assert len(df.columns) == 1
+        
         df = pd.DataFrame(df)
-        df.columns = [f'track_{fi}' for fi in range(len(df.columns))]
-        df = df.astype({col: 'category' for col in df.columns})
+        df.columns = [f'target' for _ in range(len(df.columns))]
+        if is_categorical_dtype(df['target']):
+            df = df.astype(dict(target='category'))
+        
         return df
 
 
@@ -89,11 +99,9 @@ def infer_data_type(data):
     elif isinstance(data, pd.DataFrame):
         return 'pandas'
     
-    logger.exception(
+    logger.exception(TypeError(
         f"Unsupported data type in infer_data_type ({type(data)}), currently only {{numpy, pandas}}"
-    )
-    
-    raise TypeError
+    ))
 
 
 def slice_data_type(data, inds, data_type_name):
@@ -102,11 +110,9 @@ def slice_data_type(data, inds, data_type_name):
     elif data_type_name == 'pandas':
         return data.loc[inds]
     
-    logger.exception(
+    logger.exception(TypeError(
         f"Unsupported data type in slice_data_type ({type(data)}), currently only {{numpy, pandas}}"
-    )
-    
-    raise TypeError
+    ))
 
 
 def concat_data_type(datas, data_type_name):
@@ -116,11 +122,9 @@ def concat_data_type(datas, data_type_name):
         df = pd.concat(datas, axis=0)
         return df.reset_index(drop=True)
     
-    logger.exception(
+    logger.exception(TypeError(
         f"Unsupported data type in concat_data_type ({type(datas)}), currently only {{numpy, pandas}}"
-    )
-    
-    raise TypeError
+    ))
 
 
 class Partition(DecoratorBase):
@@ -147,15 +151,14 @@ class Partition(DecoratorBase):
 
         """
         if index.shape[0] != data.shape[0]:
-            logger.exception(
+            logger.exception(ValueError(
                 f"The data and index of {key} should have the same length "
                 "with index: {index.shape}; and data: {data.shape}"
-            )
-            raise ValueError
+            ))
         output = []
         trials = index.trial.unique()
         data_type = infer_data_type(data)
-        for trial in tqdm(trials):
+        for trial in tqdm(trials, desc=str(key)):
             inds = index.trial == trial
             index_ = index.loc[inds]
             data_ = slice_data_type(data, inds, data_type)
@@ -168,13 +171,44 @@ class Partition(DecoratorBase):
             )
             opdt = infer_data_type(vals)
             if opdt != data_type:
-                logger.exception(
+                logger.exception(ValueError(
                     f"The data type of {self.func} should be the same as the input {data_type} "
                     f"but instead got {opdt}"
-                )
-                raise ValueError
+                ))
             output.append(vals)
         return concat_data_type(output, data_type)
+
+
+class RequiredModalities(DecoratorBase):
+    def __init__(self, func, *modalities):
+        super(RequiredModalities, self).__init__(
+            func=func
+        )
+        
+        self.required_modalities = set(modalities)
+    
+    def __call__(self, dataset, *args, **kwargs):
+        dataset = dataset_importer(dataset)
+        dataset_modalities = dataset.meta.modalities
+        for required_modality in self.required_modalities:
+            if required_modality not in dataset_modalities:
+                logger.exception(ModalityNotPresentError(
+                    f'The modality {required_modality} is required by the function {self.func}. '
+                    f'However, the dataset {dataset} does not have {required_modality}. The '
+                    f'availabile modalities are: {dataset_modalities})'
+                ))
+
+
+required_modalities = RequiredModalities
+
+
+def dot_env_decorator(func):
+    @wraps(func)
+    def _dot_env_decorator(*args, **kwargs):
+        load_dotenv(find_dotenv())
+        return func(*args, **kwargs)
+    
+    return _dot_env_decorator
 
 
 label_decorator = LabelDecorator

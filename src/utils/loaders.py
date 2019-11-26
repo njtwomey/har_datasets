@@ -1,4 +1,6 @@
-import os
+from os.path import join
+from os import environ, listdir
+
 import pandas as pd
 
 import yaml
@@ -9,13 +11,11 @@ logger = get_logger(__name__)
 
 __all__ = [
     # Generic
-    'load_csv_data', 'load_metadata', 'build_path',
+    'load_csv_data', 'load_metadata', 'build_path', 'get_yaml_file_list',
+    'iter_datasets', 'iter_tasks',
     # Metadata loaders
-    'load_activities_metadata', 'load_locations_metadata',
-    'load_modalities_metadata', 'load_datasets_metadata',
-    'load_features_metadata', 'load_transformations_metadata',
-    'load_pipelines_metadata', 'load_visualisations_metadata',
-    'load_models_metadata',
+    'load_task_metadata', 'load_modality_metadata', 'load_placement_metadata',
+    'load_split_metadata',
     # Module importers
     'dataset_importer', 'transformer_importer', 'feature_importer',
     'pipeline_importer', 'model_importer', 'visualisation_importer',
@@ -25,47 +25,29 @@ __all__ = [
 
 # Root directory of the project
 
-
-def get_root():
-    """
-    
-    Returns:
-
-    """
-    return os.environ['PROJECT_ROOT']
+def get_project_root():
+    return environ['PROJECT_ROOT']
 
 
 # For building file structure
 
-
 def build_path(*args):
-    """
-    
-    Args:
-        *args:
-
-    Returns:
-
-    """
-    return os.path.join(
-        os.environ['BUILD_ROOT'],
+    return join(
+        environ['BUILD_ROOT'],
         *args
+    )
+
+
+def metadata_path():
+    return join(
+        get_project_root(),
+        'metadata'
     )
 
 
 # Generic CSV loader
 
-
 def load_csv_data(fname, astype='list'):
-    """
-    
-    Args:
-        fname:
-        astype:
-
-    Returns:
-
-    """
     df = pd.read_csv(
         fname,
         delim_whitespace=True,
@@ -79,114 +61,61 @@ def load_csv_data(fname, astype='list'):
     if astype == 'list':
         return df.values.ravel().tolist()
     
-    logger.exception(f"Un-implemented type specification: {astype}")
-    raise ValueError
+    logger.exception(ValueError(
+        f"Un-implemented type specification: {astype}"
+    ))
 
 
 # YAML file loaders
+def iter_files(path, ext, strip_ext=False):
+    fil_iter = filter(lambda fil: fil.endswith(ext), listdir(path))
+    if strip_ext:
+        return map(lambda fil: fil[:-len(ext)], fil_iter)
+    return fil_iter
 
 
-def load_metadata(fname):
-    """
-    
-    Args:
-        fname:
-
-    Returns:
-
-    """
-    fname = os.path.join(
-        os.environ['PROJECT_ROOT'], 'metadata', fname
+def iter_datasets():
+    return iter_files(
+        path=join(metadata_path(), 'datasets'),
+        ext='.yaml', strip_ext=True
     )
-    
-    return yaml.load(open(fname, 'r'))
+
+
+def iter_tasks():
+    return iter_files(
+        path=join(metadata_path(), 'tasks'),
+        ext='.yaml', strip_ext=True
+    )
+
+
+# Metadata
+def load_metadata(fname):
+    return yaml.load(open(join(metadata_path(), fname), 'r'))
+
+
+def load_task_metadata(task_name):
+    return load_metadata(join('tasks', f'{task_name}.yaml'))
 
 
 # Dataset metadata
+def load_split_metadata():
+    return load_metadata('split.yaml')
 
 
-def load_datasets_metadata():
-    """
-    
-    Returns:
-
-    """
-    return load_metadata('datasets.yaml')
+def load_placement_metadata():
+    return load_metadata('placement.yaml')
 
 
-def load_activities_metadata():
-    """
-    
-    Returns:
-
-    """
-    return load_metadata('activities.yaml')
+def load_modality_metadata():
+    return load_metadata('modality.yaml')
 
 
-def load_locations_metadata():
-    """
-    
-    Returns:
+#
 
-    """
-    return load_metadata('locations.yaml')
-
-
-def load_modalities_metadata():
-    """
-    
-    Returns:
-
-    """
-    return load_metadata('modalities.yaml')
-
-
-# Coded metadata
-
-
-def load_features_metadata():
-    """
-    
-    Returns:
-
-    """
-    return load_metadata('features.yaml')
-
-
-def load_pipelines_metadata():
-    """
-    
-    Returns:
-
-    """
-    return load_metadata('pipelines.yaml')
-
-
-def load_transformations_metadata():
-    """
-    
-    Returns:
-
-    """
-    return load_metadata('transformers.yaml')
-
-
-def load_models_metadata():
-    """
-    
-    Returns:
-
-    """
-    return load_metadata('models.yaml')
-
-
-def load_visualisations_metadata():
-    """
-    
-    Returns:
-
-    """
-    return load_metadata('visualisations.yaml')
+def get_yaml_file_list(*args, strip_ext=False):
+    path = join(metadata_path(), *args)
+    fil_iter = iter_files(path=path, ext='.yaml', strip_ext=strip_ext)
+    return list(fil_iter)
 
 
 # Module importers

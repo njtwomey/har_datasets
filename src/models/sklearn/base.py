@@ -1,72 +1,68 @@
 from sklearn import clone
 from sklearn.model_selection import GridSearchCV, GroupKFold
 
+import pandas as pd
+import numpy as np
+
+from os.path import join
+
 from src.models.base import ModelBase
-from src.models.perf_evaluation import classification_perf_metrics
+from src.utils.logger import get_logger
+from src.utils.misc import randomised_order
+from src.evaluation.classification import evaluate_fold
+
+logger = get_logger(__name__)
 
 __all__ = [
     'sklearn_model',
 ]
 
 
-def evaluate_performance(key, fold, label, data, models):
-    res = dict()
-    for fold_id in fold.columns:
-        res[fold_id] = dict()
-        model = models[fold_id]
-        for tr_val_te in fold[fold_id].unique():
-            inds = fold[fold_id] == tr_val_te
-            xx, yy = data[inds], label.track_0[inds].values.ravel()
-            y_hat = model.predict(xx)
-            res[fold_id][tr_val_te] = classification_perf_metrics(
-                yy=yy, model=model, y_hat=y_hat
-            )
-            if hasattr(model, 'cv_results_'):
-                res[fold_id][tr_val_te]['xval'] = model.cv_results_
-    return res
+def select_fold(key, folds, fold_id):
+    assert fold_id in folds
+    fold_def = folds[fold_id]
+    fold_vals = set(np.unique(fold_def.values))
+    assert fold_vals.issubset({'train', 'val', 'test'})
+    return fold_def
 
 
-def _learn_sklearn_model(key, index, label, fold, data, model, n_splits):
-    # TODO/FIXME: currently only using one track. Revisit later.
-    tr_inds = fold == 'train'
-    x_train, y_train = data[tr_inds], label.track_0[tr_inds].values.ravel()
+def learn_sklearn_model(key, index, features, targets, fold_def, model, n_splits):
+    assert index.shape[0] == features.shape[0]
+    assert index.shape[0] == targets.shape[0]
+    assert index.shape[0] == fold_def.shape[0]
+    
+    tr_inds = fold_def == 'train'
+    
+    x_train, y_train = features[tr_inds], targets['target'][tr_inds].values.ravel()
+    
     model = clone(model)
-    if isinstance(model, GridSearchCV):
-        cv = GroupKFold(n_splits=n_splits).split(x_train, y_train, index.trial.values[tr_inds])
-        model.cv = list(cv)
+    
+    if 'val' in fold_def:
+        raise NotImplementedError
+    
+    else:
+        if isinstance(model, GridSearchCV):
+            cv = GroupKFold(n_splits=n_splits).split(x_train, y_train, index.trial.values[tr_inds])
+            model.cv = list(cv)
+            
     model.fit(x_train, y_train)
+    
     return model
 
 
-def learn_sklearn_model(key, index, label, fold, data, model, n_splits):
-    assert index.shape[0] == label.shape[0]
-    assert index.shape[0] == fold.shape[0]
-    assert index.shape[0] == data.shape[0]
-    
-    models = dict()
-    
-    for fold_id in fold.columns:
-        models[fold_id] = _learn_sklearn_model(
-            key=key, index=index, fold=fold[fold_id],
-            label=label, data=data, model=model,
-            n_splits=n_splits,
-        )
-    
-    return models
+def sklearn_preds(key, model, features):
+    return model.predict(features)
+
+
+def sklearn_probs(key, model, features):
+    return model.predict_proba(features)
 
 
 class sklearn_model(ModelBase):
-    def __init__(self, name, parent, model, n_splits=5, save_model=True):
+    def __init__(self, name, parent, model, xval, features, targets, split, fold_id, fold_name, n_splits=5):
         super(sklearn_model, self).__init__(
-            name=name,
-            parent=parent,
-            model=model,
+            name=name, parent=parent, model=model,
         )
-        
-        label = self.index['label']
-        index = self.index['index']
-        fold = self.index['fold']
-        xval = self.meta['xval']
         
         if not isinstance(model, GridSearchCV):
             model = GridSearchCV(
@@ -76,29 +72,85 @@ class sklearn_model(ModelBase):
                 verbose=10,
             )
         
-        kwargs = dict(
-            model=model,
-            n_splits=n_splits,
+        fold_def = self.outputs.add_output(
+            key=join(fold_name, 'fold'),
+            func=select_fold,
+            backend='none',
+            folds=split,
+            fold_id=fold_id,
         )
         
-        for key, node in self.parent.outputs.items():
-            clf = self.outputs.add_output(
-                key=key,
-                func=learn_sklearn_model,
-                label=label,
-                index=index,
-                fold=fold,
-                data=node,
-                backend=['none', 'sklearn'][save_model],
-                **kwargs,
+        model = self.outputs.add_output(
+            key=join(fold_name, 'model'),
+            func=learn_sklearn_model,
+            index=self.index['index'],
+            features=features,
+            targets=targets,
+            fold_def=fold_def,
+            model=model,
+            n_splits=n_splits,
+            backend='sklearn',
+        )
+        
+        predictions = self.outputs.add_output(
+            key=join(fold_name, 'preds'),
+            func=sklearn_preds,
+            backend='numpy',
+            features=features,
+            model=model,
+        )
+        
+        self.outputs.add_output(
+            key=join(fold_name, 'probs'),
+            func=sklearn_probs,
+            backend='numpy',
+            features=features,
+            model=model,
+        )
+        
+        self.outputs.add_output(
+            key=join(fold_name, 'results'),
+            func=evaluate_fold,
+            backend='json',
+            fold=fold_def,
+            targets=targets,
+            predictions=predictions,
+            model=model,
+        )
+        
+        # self.evaluate_outputs()
+
+
+class sklearn_model_factory(ModelBase):
+    def __init__(self, name, parent, data, model, xval, n_splits=5):
+        super(sklearn_model_factory, self).__init__(
+            name=name, parent=parent, model=model,
+        )
+        
+        del parent
+        
+        self.models = {}
+        
+        def append_model(fold_id):
+            s_fold_id = fold_id
+            if isinstance(s_fold_id, int):
+                s_fold_id = f'fold_{fold_id}'
+            
+            clf = sklearn_model(
+                name=name,
+                parent=self.parent,
+                model=model,
+                xval=xval,
+                fold_id=fold_id,
+                fold_name=s_fold_id,
+                features=data.outputs['all'],
+                targets=self.index['target'],
+                split=self.index['split'],
+                n_splits=n_splits,
             )
             
-            self.outputs.add_output(
-                key=('results',) + key,
-                func=evaluate_performance,
-                fold=fold,
-                label=label,
-                data=node,
-                models=clf,
-                backend='json',
-            )
+            self.models[fold_id] = clf
+            self.outputs.acquire(clf.outputs)
+        
+        for fold_id in randomised_order(self.index['split'].evaluate()):
+            append_model(fold_id=fold_id)

@@ -23,12 +23,12 @@ class anguita2013(Dataset):
         self.win_len = 128
     
     @label_decorator
-    def build_label(self, *args, **kwargs):
+    def build_label(self, task, *args, **kwargs):
         labels = []
         for fold in ('train', 'test'):
             fold_labels = load_csv_data(join(self.unzip_path, fold, f'y_{fold}.txt'))
             labels.extend([l for l in fold_labels for _ in range(self.win_len)])
-        return self.meta.inv_act_lookup, pd.DataFrame(dict(labels=labels))
+        return self.meta.inv_lookup[task], pd.DataFrame(dict(labels=labels))
     
     @fold_decorator
     def build_fold(self, *args, **kwargs):
@@ -56,7 +56,7 @@ class anguita2013(Dataset):
         return index
     
     def build_data(self, key, *args, **kwargs):
-        modality, location = key
+        modality, placement = key
         x_data = []
         y_data = []
         z_data = []

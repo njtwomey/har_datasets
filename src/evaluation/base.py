@@ -1,13 +1,13 @@
 from src.base import BaseGraph
 
 __all__ = [
-    'PipelineBase'
+    "EvaluationBase"
 ]
 
 
-class PipelineBase(BaseGraph):
+class EvaluationBase(BaseGraph):
     def __init__(self, name, parent, *args, **kwargs):
-        super(PipelineBase, self).__init__(
+        super(EvaluationBase, self).__init__(
             name=name,
             parent=parent,
         )

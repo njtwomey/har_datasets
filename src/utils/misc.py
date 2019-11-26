@@ -1,30 +1,13 @@
-from dotenv import find_dotenv, load_dotenv
 import random
 import json
 
 from numpy import ndarray
 
+from src.utils.decorators import DecoratorBase
 
 __all__ = [
-    'dot_env_stuff', 'randomised_order', 'NumpyEncoder'
+    'randomised_order', 'NumpyEncoder'
 ]
-
-
-def dot_env_stuff(func):
-    """
-    
-    Args:
-        func:
-
-    Returns:
-
-    """
-    # log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    # logging.basicConfig(level=logging.INFO, format=log_fmt)
-    # project_dir = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir)
-    load_dotenv(find_dotenv())
-    
-    func()
 
 
 def randomised_order(iterable):

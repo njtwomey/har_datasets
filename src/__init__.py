@@ -1,12 +1,12 @@
-from .utils import *
+from src.utils import *
 
-from .base import *
-from .meta import *
+from src.base import *
+from src.meta import *
 
-from .backends import *
-
-from .datasets import *
-from .features import *
-from .models import *
-from .transformers import *
-from .pipelines import *
+from src.datasets import *
+from src.features import *
+from src.models import *
+from src.transformers import *
+from src.pipelines import *
+from src.evaluation import *
+from src.selectors import *

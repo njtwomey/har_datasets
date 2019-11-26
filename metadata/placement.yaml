@@ -1,0 +1,25 @@
+# On-body sensor positions
+wrist:                  0
+chest:                  1
+ankle:                  2
+waist:                  3
+arm:                    4
+head:                   5
+back:                   6
+leg_lower:              7
+leg_upper:              8
+hip:                    9
+
+# In-home sensor positions
+living_1:               10
+living_2:               11
+study:                  12
+kitchen:                13
+bath:                   14
+bed_1:                  15
+bed_2:                  16
+toilet:                 17
+dining:                 18
+hall_down:              19
+stairs:                 20
+hall_up:                21

@@ -1,0 +1,42 @@
+#name: "sphere_challenge"
+#author: "Twomey"
+#paper_name: "The SPHERE challenge: Activity recognition with multimodal sensor data"
+#venue: "arXiv preprint arXiv:1603.00797"
+#bibtex:
+#  - "@article{twomey2016sphere,title={The SPHERE challenge: Activity recognition with multimodal sensor data},author={Twomey, Niall and Diethe, Tom and Kull, Meelis and Song, Hao and Camplani, Massimo and Hannuna, Sion and Fafoutis, Xenofon and Zhu, Ni and Woznowski, Pete and Flach, Peter and Craddock, Ian},journal={arXiv preprint arXiv:1603.00797},year={2016}}"
+#paper_urls:
+#  - "https://arxiv.org/pdf/1603.00797"
+#year: 2016
+#description_urls:
+#  - "https://www.irc-sphere.ac.uk/sphere-challenge/home"
+#  - "https://arxiv.org/abs/1603.00797"
+#download_urls:
+#  - "https://data.bris.ac.uk/datasets/8gccwpx47rav19vk8x4xapcog/8gccwpx47rav19vk8x4xapcog.zip"
+#fs: 20
+#num_subjects: 9
+#num_activities: 12
+#missing: true
+#tasks:
+#  har:
+#    target_transform:
+#      lie: 1
+#      sit: 2
+#      stand: 3
+#      walk: 4
+#      run: 5
+#      cycle: 6
+#      walk_nordic: 7
+#      watch_tv: 9
+#      work_computer: 10
+#      drive_car: 11
+#      walk_up: 12
+#      walk_down: 13
+#      vacuum: 16
+#      iron: 17
+#      laundry: 18
+#      clean: 19
+#      soccer: 20
+#      rope_jump: 24
+#      other: 0
+#    evaluation:
+#      - "probabilistic_targets"

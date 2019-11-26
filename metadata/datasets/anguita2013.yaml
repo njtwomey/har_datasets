@@ -1,0 +1,42 @@
+name: "anguita2013"
+author: "Anguita"
+paper_name: "A Public Domain Dataset for Human Activity Recognition Using Smartphones"
+venue: "European Symposium on Artificial Neural Networks, Computational Intelligence and Machine Learning"
+bibtex:
+  - "@inproceedings{anguita2013public,title={A public domain dataset for human activity recognition using smartphones.},author={Anguita, Davide and Ghio, Alessandro and Oneto, Luca and Parra, Xavier and Reyes-Ortiz, Jorge Luis},booktitle={Esann},year={2013}}"
+paper_urls:
+  - "https://pdfs.semanticscholar.org/83de/43bc849ad3d9579ccf540e6fe566ef90a58e.pdf"
+year: 2013
+description_urls:
+  - "http://archive.ics.uci.edu/ml/datasets/Human+Activity+Recognition+Using+Smartphones"
+download_urls:
+  - "http://archive.ics.uci.edu/ml/machine-learning-databases/00240/UCI%20HAR%20Dataset.zip"
+  - "http://archive.ics.uci.edu/ml/machine-learning-databases/00240/UCI%20HAR%20Dataset.names"
+fs: 50
+missing: null
+num_subjects: 30
+num_activities: 6
+splits:
+  - predefined
+#  - loso
+modalities:
+  - accel
+  - gyro
+placements:
+  - waist
+sources:
+  - placement: waist
+    modality: accel
+  - placement: waist
+    modality: gyro
+tasks:
+  har:
+    evaluation:
+      - classification
+    target_transform:
+      walk: 1
+      walk_up: 2
+      walk_down: 3
+      sit: 4
+      stand: 5
+      lie: 6

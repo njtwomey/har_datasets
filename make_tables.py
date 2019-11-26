@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 
-from src import DatasetMeta, load_datasets_metadata, dot_env_stuff
+from src import DatasetMeta, load_datasets_metadata, dot_env_decorator
 from src.utils.loaders import load_metadata, build_path
 
 
@@ -41,6 +41,7 @@ def make_dataset_row(dataset):
     )
 
 
+@dot_env_decorator
 def main():
     # Ensure the paths exist
     root = build_path('tables')
@@ -79,4 +80,4 @@ def main():
 
 
 if __name__ == '__main__':
-    dot_env_stuff(main)
+    main()

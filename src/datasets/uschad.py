@@ -22,11 +22,11 @@ class uschad(Dataset):
         )
     
     @label_decorator
-    def build_label(self, *args, **kwargs):
+    def build_label(self, task, *args, **kwargs):
         def callback(ii, sub_id, act_id, trial_id, data):
             return np.zeros((data.shape[0], 1)) + act_id
         
-        return self.meta.inv_act_lookup, uschad_iterator(
+        return self.meta.inv_lookup[task], uschad_iterator(
             self.unzip_path, callback=callback, desc=f'{self.identifier} Labels')
     
     @fold_decorator
@@ -52,7 +52,7 @@ class uschad(Dataset):
                                desc=f'{self.identifier} Index')
     
     def build_data(self, key, *args, **kwargs):
-        modality, location = key
+        modality, placement = key
         cols = dict(
             accel=[0, 1, 2],
             gyro=[3, 4, 5]
@@ -66,7 +66,7 @@ class uschad(Dataset):
             gyro=2 * np.pi / 360
         )
         
-        data = uschad_iterator(self.unzip_path, callback=callback, desc=f'Data ({modality}-{location})')
+        data = uschad_iterator(self.unzip_path, callback=callback, desc=f'Data ({modality}-{placement})')
         
         return data.values * scale[modality]
 

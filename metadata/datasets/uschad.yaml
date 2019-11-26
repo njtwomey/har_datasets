@@ -1,0 +1,43 @@
+name: "uschad"
+author: "Zhang"
+paper_name: "USC-HAD: A Daily Activity Dataset for Ubiquitous Activity Recognition Using Wearable Sensors"
+venue: "Proceedings of the 2012 ACM Conference on Ubiquitous Computing"
+bibtex:
+  - "@inproceedings{zhang2012usc,title={USC-HAD: a daily activity dataset for ubiquitous activity recognition using wearable sensors},author={Zhang, Mi and Sawchuk, Alexander A},booktitle={Proceedings of the 2012 ACM Conference on Ubiquitous Computing},pages={1036--1043},year={2012},organization={ACM}}"
+paper_urls:
+  - "http://sipi.usc.edu/had/mi_ubicomp_sagaware12.pdf"
+year: 2012
+description_urls:
+  - "http://sipi.usc.edu/had/"
+download_urls:
+  - "http://sipi.usc.edu/had/USC-HAD.zip"
+fs: 100
+num_subjects: 14
+num_activities: 12
+missing: null
+modalities:
+  - accel
+  - gyro
+placements:
+  - waist
+sources:
+  - placement: waist
+    modality: accel
+  - placement: waist
+    modality: gyro
+tasks:
+  har:
+    evaluation: classification
+    target_transform:
+      walk: 1
+      walk_left: 2
+      walk_right: 3
+      walk_up: 4
+      walk_down: 5
+      run: 6
+      jump: 7
+      sit: 8
+      stand: 9
+      sleep: 10
+      elevator_up: 11
+      elevator_down: 12

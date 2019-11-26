@@ -1,6 +1,4 @@
-from src.backends import ScikitLearnBackend
-from src.base import BaseGraph
-from src.meta import ModelMeta
+from src.base import BaseGraph, PredictionSet
 
 __all__ = [
     "ModelBase"
@@ -12,9 +10,20 @@ class ModelBase(BaseGraph):
         super(ModelBase, self).__init__(
             name=name,
             parent=parent,
-            meta=ModelMeta(name)
         )
-        
-        self.model = model
-        
-        self.add_backend('sklearn', ScikitLearnBackend(self.fs_root))
+    
+    @property
+    def model(self):
+        return self.outputs['model']
+    
+    @property
+    def results(self):
+        return self.outputs['results']
+    
+    @property
+    def preds(self):
+        return self.outputs['preds']
+    
+    @property
+    def probs(self):
+        return self.outputs['probs']

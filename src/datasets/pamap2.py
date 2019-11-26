@@ -21,14 +21,14 @@ class pamap2(Dataset):
         )
     
     @label_decorator
-    def build_label(self, *args, **kwargs):
+    def build_label(self, task, *args, **kwargs):
         df = pd.DataFrame(iter_pamap2_subs(
             path=self.unzip_path,
             cols=[1],
             desc=f'{self.identifier} Labels'
         ))
         
-        return self.meta.inv_act_lookup, df
+        return self.meta.inv_lookup[task], df
     
     @fold_decorator
     def build_fold(self, *args, **kwargs):
@@ -80,12 +80,12 @@ class pamap2(Dataset):
         return df
     
     def build_data(self, key, *args, **kwargs):
-        modality, location = key
+        modality, placement = key
         offset = dict(
             wrist=3,
             chest=20,
             ankle=37
-        )[location] + dict(
+        )[placement] + dict(
             accel=1,
             gyro=7,
             mag=10
@@ -94,7 +94,7 @@ class pamap2(Dataset):
         df = iter_pamap2_subs(
             path=self.unzip_path,
             cols=list(range(offset, offset + 3)),
-            desc=f'Parsing {modality} at {location}',
+            desc=f'Parsing {modality} at {placement}',
             columns=['x', 'y', 'z']
         ).astype(float)
         
@@ -102,7 +102,7 @@ class pamap2(Dataset):
             accel=9.80665,
             gyro=np.pi * 2.0,
             mag=1.0
-        )
+        )[modality]
         
         return df.values / scale
 

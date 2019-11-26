@@ -11,9 +11,10 @@ __all__ = [
 
 
 class ecdf(FeatureBase):
-    def __init__(self, parent, n_components):
+    def __init__(self, parent, n_components, source_filter, source_name):
         super(ecdf, self).__init__(
-            name=self.__class__.__name__, parent=parent,
+            name=f'ecdf_{n_components}', parent=parent,
+            source_filter=source_filter, source_name=source_name,
         )
         
         endpoints = defaultdict(dict)
@@ -28,17 +29,9 @@ class ecdf(FeatureBase):
                 n_components=n_components,
                 index=parent.index['index'],
                 data=node,
-                feats=[('body',), ('grav',)]
             )
         
         self.assign_outputs(endpoints)
-    
-    @property
-    def identifier(self):
-        return join(
-            self.parent.identifier,
-            f'{self.name}_{self.n_components}',
-        )
 
 
 def calc_ecdf(key, index, data, n_components):

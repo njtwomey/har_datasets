@@ -133,8 +133,7 @@ def norm_shape(shape):
         # shape was not iterable
         pass
     
-    logger.exception('shape must be an int, or a tuple of ints')
-    raise TypeError
+    logger.exception(TypeError('shape must be an int, or a tuple of ints'))
 
 
 def sliding_window(a, ws, ss=None, flatten=True):
@@ -172,18 +171,16 @@ def sliding_window(a, ws, ss=None, flatten=True):
     # ensure that ws, ss, and a.shape all have the same number of dimensions
     ls = [len(shape), len(ws), len(ss)]
     if 1 != len(set(ls)):
-        logger.exception(
+        logger.exception(ValueError(
             f'a.shape, ws and ss must all have the same length. They were {ls}'
-        )
-        raise ValueError
+        ))
     
     # ensure that ws is smaller than a in every dimension
     if np.any(ws > shape):
-        logger.exception(
+        logger.exception(ValueError(
             f'ws cannot be larger than a in any dimension. a.shape was %s and '
             'ws was {(str(a.shape), str(ws))}'
-        )
-        raise ValueError
+        ))
     
     # how many slices will there be in each dimension?
     newshape = norm_shape(((shape - ws) // ss) + 1)

@@ -1,0 +1,2 @@
+class ModalityNotPresentError(KeyError):
+    pass

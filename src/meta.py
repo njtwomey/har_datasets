@@ -5,8 +5,7 @@ from .utils import load_metadata, get_logger
 logger = get_logger(__name__)
 
 __all__ = [
-    'DatasetMeta', 'BaseMeta', 'ActivityMeta', 'LocationMeta', 'ModalityMeta', 'DatasetMeta',
-    'FeatureMeta', 'TransformerMeta', 'VisualisationMeta', 'PipelineMeta', 'ModelMeta',
+    'DatasetMeta', 'BaseMeta', 'HARMeta', 'PlacementMeta', 'ModalityMeta', 'DatasetMeta',
 ]
 
 
@@ -14,41 +13,61 @@ def check_yaml(name, values):
     value_set = load_metadata(name)
     for value in values:
         if value not in value_set:
-            logger.exception(f'{value} is not yet in `{name}.yaml`')
-            raise ValueError
+            logger.exception(ValueError(
+                f'{value} is not yet in `{name}.yaml`'
+            ))
     if isinstance(values, dict):
         return {vv: kk for kk, vv in values.items()}
 
 
-def check_activities(values):
-    return check_yaml('activities.yaml', values)
+def check_activity(values):
+    return check_yaml(join('tasks', 'har.yaml'), values)
 
 
-def check_locations(values):
-    return check_yaml('locations.yaml', values)
+def check_localisation(values):
+    return check_yaml(join('tasks', 'localisation.yaml'), values)
 
 
-def check_modalities(values):
-    return check_yaml('modalities.yaml', values)
+def check_modality(values):
+    return check_yaml('modality.yaml', values)
+
+
+def check_placement(values):
+    return check_yaml('placement.yaml', values)
 
 
 class BaseMeta(object):
-    def __init__(self, name, yaml_file, *args, **kwargs):
-        logger.info(f'Loading metadata file {yaml_file} for {name}.')
-        values = load_metadata(yaml_file)
-        if name not in values:
-            logger.exception(f'The function "{name}" is not in the set {{{values}}} that is listed in {yaml_file}')
-            raise KeyError
+    def __init__(self, name, yaml_file=None, is_sub_cat=False, *args, **kwargs):
         self.name = name
-        self.meta = values[name]
-        if self.meta is None:
-            logger.info(f'The content metadata module {name} is empty. Assigning empty dict')
-            self.meta = dict()
+        self.meta = dict()
+        
+        if yaml_file:
+            logger.info(f'Loading metadata file {yaml_file} for {name}.')
+            
+            try:
+                meta = load_metadata(yaml_file)
+                
+                if is_sub_cat:
+                    if name not in meta:
+                        logger.exception(KeyError(
+                            f'The function "{name}" is not in the set {{{meta}}} that is listed in {yaml_file}'
+                        ))
+                    meta = meta[name]
+                
+                if meta is None:
+                    logger.info(f'The content metadata module {name} is empty. Assigning empty dict')
+                else:
+                    assert isinstance(meta, dict)
+                    self.meta = meta
+            
+            except FileNotFoundError:
+                logger.warn(f'The metadata file for {name} was not found.')
     
     def __getitem__(self, item):
         if item not in self.meta:
-            logger.exception(f'{item} not found in {self.__class__.__name__}')
-            raise KeyError
+            logger.exception(KeyError(
+                f'{item} not found in {self.__class__.__name__}'
+            ))
         return self.meta[item]
     
     def __contains__(self, item):
@@ -77,38 +96,50 @@ Non-functional metadata
 """
 
 
-class ActivityMeta(BaseMeta):
+class HARMeta(BaseMeta):
     def __init__(self, name, *args, **kwargs):
-        super(ActivityMeta, self).__init__(
-            name=name, yaml_file='activities.yaml', *args, **kwargs
+        super(HARMeta, self).__init__(
+            name=name, yaml_file=join('tasks', 'har.yaml'), *args, **kwargs
         )
 
 
-class LocationMeta(BaseMeta):
+class LocalisationMeta(BaseMeta):
     def __init__(self, name, *args, **kwargs):
-        super(LocationMeta, self).__init__(
-            name=name, yaml_file='locations.yaml', *args, **kwargs
+        super(LocalisationMeta, self).__init__(
+            name=name, yaml_file=join('tasks', 'localisation.yaml'), *args, **kwargs
+        )
+
+
+class PlacementMeta(BaseMeta):
+    def __init__(self, name, *args, **kwargs):
+        super(PlacementMeta, self).__init__(
+            name=name, yaml_file='placement.yaml', *args, **kwargs
         )
 
 
 class ModalityMeta(BaseMeta):
     def __init__(self, name, *args, **kwargs):
         super(ModalityMeta, self).__init__(
-            name=name, yaml_file='modalities.yaml', *args, **kwargs
+            name=name, yaml_file='modality.yaml', *args, **kwargs
         )
 
 
 class DatasetMeta(BaseMeta):
     def __init__(self, name, *args, **kwargs):
         super(DatasetMeta, self).__init__(
-            name=name, yaml_file='datasets.yaml', *args, **kwargs
+            name=name, yaml_file=join('datasets', f'{name}.yaml'), *args, **kwargs
         )
         
         if 'fs' not in self.meta:
-            logger.exception(f'The metadata for {name} does not contain the required key "fs"')
-            raise KeyError
+            logger.exception(KeyError(
+                f'The metadata for {name} does not contain the required key "fs"'
+            ))
         
-        self.inv_act_lookup = check_activities(self.meta['activities'])
+        self.inv_lookup = dict()
+        for task_name in self.meta['tasks'].keys():
+            self.inv_lookup[task_name] = check_activity(
+                self.meta['tasks'][task_name]['target_transform']
+            )
     
     @property
     def fs(self):
@@ -117,38 +148,3 @@ class DatasetMeta(BaseMeta):
     @property
     def zip_path(self):
         return join(environ['ZIP_ROOT'], self.name)
-
-
-class FeatureMeta(BaseMeta):
-    def __init__(self, name, *args, **kwargs):
-        super(FeatureMeta, self).__init__(
-            name=name, yaml_file='features.yaml', *args, **kwargs
-        )
-
-
-class TransformerMeta(BaseMeta):
-    def __init__(self, name, *args, **kwargs):
-        super(TransformerMeta, self).__init__(
-            name=name, yaml_file='transformers.yaml', *args, **kwargs
-        )
-
-
-class VisualisationMeta(BaseMeta):
-    def __init__(self, name, *args, **kwargs):
-        super(VisualisationMeta, self).__init__(
-            name=name, yaml_file='visualisations.yaml', *args, **kwargs
-        )
-
-
-class PipelineMeta(BaseMeta):
-    def __init__(self, name, *args, **kwargs):
-        super(PipelineMeta, self).__init__(
-            name=name, yaml_file='pipelines.yaml', *args, **kwargs
-        )
-
-
-class ModelMeta(BaseMeta):
-    def __init__(self, name, *args, **kwargs):
-        super(ModelMeta, self).__init__(
-            name=name, yaml_file='models.yaml', *args, **kwargs
-        )

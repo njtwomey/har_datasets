@@ -1,7 +1,8 @@
+from os.path import join
+
 from numpy import concatenate
 
 from src.base import BaseGraph, make_key
-from src.meta import FeatureMeta
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -19,17 +20,20 @@ def concatenate_sources(key, **datas):
 
 
 class FeatureBase(BaseGraph):
-    def __init__(self, name, parent, *args, **kwargs):
+    def __init__(self, name, parent, source_filter, source_name, *args, **kwargs):
         super(FeatureBase, self).__init__(
-            name=name,
-            parent=parent,
-            meta=FeatureMeta(name),
+            name=join(name, source_name), parent=parent,
         )
         
-        self.locations_set = set(self.get_ancestral_metadata('locations').keys())
+        assert source_filter is None or callable(source_filter)
+        
+        self.source_filter = source_filter
+        self.source_name = source_name
+        
+        self.locations_set = set(self.get_ancestral_metadata('placements'))
         self.modality_set = set(self.get_ancestral_metadata('modalities'))
     
-    def prepare_outputs(self, endpoints, key, func, feats=None, **kwargs):
+    def prepare_outputs(self, endpoints, key, func, **kwargs):
         """
         Since the feature extraction function is applied to all of the input sources individually and it is not
         (necessarily) desirable to perform classification analysis on features from each stream individually, this
@@ -61,18 +65,25 @@ class FeatureBase(BaseGraph):
 
         """
         key = make_key(key)
-        
         node = self.outputs.make_output(
             key=key, func=func, **kwargs
         )
         
         logger.info(f"Adding {node.name} to complete feature set")
-        endpoints[make_key('all')][node.name] = node
-        for feat in feats or []:
-            feat = make_key(feat)
-            if set(feat).issubset(set(key)):
-                logger.info(f"Building feature {feat}/{node.name}")
-                endpoints[feat][node.name] = node
+        all_key = make_key('all')
+        
+        if self.source_filter(key):
+            endpoints[all_key][node.name] = node
+        
+        # elif isinstance(self.source_filter, list):
+        #     for feat in self.source_filter:
+        #         feat = make_key(feat)
+        #         if set(feat).issubset(set(key)):
+        #             logger.info(f"Building feature {feat}/{node.name}")
+        #             endpoints[feat][node.name] = node
+        #
+        # else:
+        #     endpoints[all_key][node.name] = node
     
     def assign_outputs(self, endpoints):
         """

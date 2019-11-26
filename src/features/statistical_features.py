@@ -9,10 +9,10 @@ __all__ = [
 
 
 class statistical_features(FeatureBase):
-    def __init__(self, parent):
+    def __init__(self, parent, source_filter, source_name):
         super(statistical_features, self).__init__(
-            name=self.__class__.__name__,
-            parent=parent,
+            name=self.__class__.__name__, parent=parent,
+            source_filter=source_filter, source_name=source_name,
         )
         
         kwargs = dict(
@@ -50,8 +50,7 @@ class statistical_features(FeatureBase):
         #
         # Consult with the dataset table (tables/datasets.md) and see anguita2013 for
         # details.
-
-        feats = tuple()  # ('td', 'fd')
+        
         index = self.parent.index['index']
         for key, node in self.parent.outputs.items():
             key_td = key + ('td',)
@@ -62,7 +61,6 @@ class statistical_features(FeatureBase):
                     endpoints=endpoints,
                     key=key_td,
                     func=t_feat,
-                    feats=feats,
                     index=index,
                     data=node,
                     **kwargs
@@ -73,7 +71,6 @@ class statistical_features(FeatureBase):
                         endpoints=endpoints,
                         key=key_fd,
                         func=f_feat,
-                        feats=feats,
                         index=index,
                         data=node,
                         **kwargs
@@ -84,7 +81,6 @@ class statistical_features(FeatureBase):
                     endpoints=endpoints,
                     key=key_td,
                     func=f_feat,
-                    feats=feats,
                     index=index,
                     data=node,
                     **kwargs
@@ -94,7 +90,6 @@ class statistical_features(FeatureBase):
                     endpoints=endpoints,
                     key=key_fd,
                     func=f_feat,
-                    feats=feats,
                     index=index,
                     data=node,
                     **kwargs

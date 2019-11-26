@@ -1,5 +1,5 @@
 import zipfile
-from src import load_datasets_metadata, dot_env_stuff
+from src import load_datasets_metadata, dot_env_decorator
 from os.path import basename, join, split, exists, splitext
 from os import makedirs
 from tqdm import tqdm
@@ -47,6 +47,7 @@ def download_dataset(meta):
         )
 
 
+@dot_env_decorator
 def main():
     for name in load_datasets_metadata().keys():
         print('Downloading {}'.format(name))
@@ -54,4 +55,4 @@ def main():
 
 
 if __name__ == '__main__':
-    dot_env_stuff(main)
+    main()

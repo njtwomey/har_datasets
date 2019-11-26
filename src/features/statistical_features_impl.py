@@ -60,11 +60,8 @@ def td_entropy(data, axis, bins=16):
     def _td_entropy(datum):
         ent = []
         for ci in range(datum.shape[1]):
-            try:
-                pp, bb = np.histogram(datum[:, ci], bins, density=True)
-                ent.append(scipy.stats.entropy(pp * (bb[1:] - bb[:-1]), base=2))
-            except ValueError as ex:
-                raise ex
+            pp, bb = np.histogram(datum[:, ci], bins, density=True)
+            ent.append(scipy.stats.entropy(pp * (bb[1:] - bb[:-1]), base=2))
         return ent
     
     H = np.asarray([
@@ -116,7 +113,9 @@ def bands_energy(freq, spec, axis):
 
 def add_magnitude(data):
     assert isinstance(data, np.ndarray)
-    return np.concatenate((data, np.sqrt(np.sum(data ** 2, axis=2, keepdims=True) - 1)), axis=2)
+    return np.concatenate((
+        data, np.sqrt(np.power(data, 2).sum(axis=2, keepdims=True)) - 1
+    ), axis=-1)
 
 
 """
@@ -142,7 +141,8 @@ def t_feat(key, index, data, fs):
         ]
     ]
     
-    return np.concatenate(features, axis=1)
+    feats = np.concatenate(features, axis=1)
+    return feats
 
 
 def f_feat(key, index, data, fs):
@@ -173,4 +173,5 @@ def f_feat(key, index, data, fs):
         bands_energy(freq, spec_normed, axis=1),  # 42 (cumsum: 79) (not on mag)
     ]
     
-    return np.concatenate(features, axis=1)
+    feats = np.concatenate(features, axis=1)
+    return feats
