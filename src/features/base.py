@@ -3,6 +3,7 @@ from os.path import join
 from numpy import concatenate
 
 from src.base import BaseGraph, make_key
+from src.selectors import select_feats
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -22,7 +23,7 @@ def concatenate_sources(key, **datas):
 class FeatureBase(BaseGraph):
     def __init__(self, name, parent, source_filter, source_name, *args, **kwargs):
         super(FeatureBase, self).__init__(
-            name=join(name, source_name), parent=parent,
+            name=name, parent=parent,
         )
         
         assert source_filter is None or callable(source_filter)
@@ -32,6 +33,8 @@ class FeatureBase(BaseGraph):
         
         self.locations_set = set(self.get_ancestral_metadata('placements'))
         self.modality_set = set(self.get_ancestral_metadata('modalities'))
+        
+        self.key = make_key(source_name)
     
     def prepare_outputs(self, endpoints, key, func, **kwargs):
         """
@@ -70,20 +73,12 @@ class FeatureBase(BaseGraph):
         )
         
         logger.info(f"Adding {node.name} to complete feature set")
-        all_key = make_key('all')
         
         if self.source_filter(key):
-            endpoints[all_key][node.name] = node
+            endpoints[node.name] = node
         
-        # elif isinstance(self.source_filter, list):
-        #     for feat in self.source_filter:
-        #         feat = make_key(feat)
-        #         if set(feat).issubset(set(key)):
-        #             logger.info(f"Building feature {feat}/{node.name}")
-        #             endpoints[feat][node.name] = node
-        #
-        # else:
-        #     endpoints[all_key][node.name] = node
+        else:
+            raise NotImplementedError
     
     def assign_outputs(self, endpoints):
         """
@@ -94,11 +89,16 @@ class FeatureBase(BaseGraph):
         Returns:
 
         """
-        for key, node_dict in endpoints.items():
-            logger.info(f'Aggregates for feature {key}: {{{node_dict.keys()}}}')
-            self.outputs.add_output(
-                key=key,
-                func=concatenate_sources,
-                backend='none',
-                **node_dict
-            )
+        
+        logger.info(f'Aggregates for feature {self.key}')
+        
+        feats = select_feats(
+            parent=self, name='-'.join(self.key), **endpoints
+        )
+        
+        self.outputs.acquire(feats.outputs)
+        self.name = join(self.name, feats.name)
+
+    @property
+    def features(self):
+        return self.outputs['features']

@@ -19,7 +19,7 @@ class statistical_features(FeatureBase):
             fs=self.get_ancestral_metadata('fs')
         )
         
-        endpoints = defaultdict(dict)
+        endpoints = dict()
         
         # There are two feature categories defined here:
         #   1. Time domain

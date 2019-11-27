@@ -44,7 +44,7 @@ def learn_sklearn_model(key, index, features, targets, fold_def, model, n_splits
         if isinstance(model, GridSearchCV):
             cv = GroupKFold(n_splits=n_splits).split(x_train, y_train, index.trial.values[tr_inds])
             model.cv = list(cv)
-            
+    
     model.fit(x_train, y_train)
     
     return model
@@ -95,7 +95,7 @@ class sklearn_model(ModelBase):
         predictions = self.outputs.add_output(
             key=join(fold_name, 'preds'),
             func=sklearn_preds,
-            backend='numpy',
+            backend='none',
             features=features,
             model=model,
         )
@@ -103,7 +103,7 @@ class sklearn_model(ModelBase):
         self.outputs.add_output(
             key=join(fold_name, 'probs'),
             func=sklearn_probs,
-            backend='numpy',
+            backend='none',
             features=features,
             model=model,
         )
@@ -117,8 +117,6 @@ class sklearn_model(ModelBase):
             predictions=predictions,
             model=model,
         )
-        
-        # self.evaluate_outputs()
 
 
 class sklearn_model_factory(ModelBase):
@@ -143,7 +141,7 @@ class sklearn_model_factory(ModelBase):
                 xval=xval,
                 fold_id=fold_id,
                 fold_name=s_fold_id,
-                features=data.outputs['all'],
+                features=data.outputs['features'],
                 targets=self.index['target'],
                 split=self.index['split'],
                 n_splits=n_splits,

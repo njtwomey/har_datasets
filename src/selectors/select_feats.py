@@ -14,21 +14,15 @@ def do_select_feats(key, **nodes):
 
 
 class select_feats(SelectorBase):
-    def __init__(self, parent, source_filter, source_name):
-        assert source_filter and source_name
-        
+    def __init__(self, parent, name, **features):
         super(select_feats, self).__init__(
-            name=source_name, parent=parent
+            name=name, parent=parent
         )
-        
-        nodes = dict()
-        for key, node in parent.outputs.items():
-            if source_filter(key):
-                nodes[key] = node
         
         self.outputs.add_output(
-            key=source_name, backend='none',
+            key='features', backend='none',
             func=do_select_feats,
-            data=parent,
-            **nodes
+            **features
         )
+        
+        self.evaluate_outputs()

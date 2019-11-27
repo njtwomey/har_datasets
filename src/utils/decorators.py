@@ -195,8 +195,12 @@ class RequiredModalities(DecoratorBase):
                 logger.exception(ModalityNotPresentError(
                     f'The modality {required_modality} is required by the function {self.func}. '
                     f'However, the dataset {dataset} does not have {required_modality}. The '
-                    f'availabile modalities are: {dataset_modalities})'
+                    f'available modalities are: {dataset_modalities})'
                 ))
+                
+        super(self, RequiredModalities).__call__(
+            dataset, *args, **kwargs
+        )
 
 
 required_modalities = RequiredModalities

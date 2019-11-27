@@ -3,7 +3,7 @@ from os.path import join
 from mldb import ComputationGraph, FileLockExistsException
 from mldb.backends import (
     PickleBackend, JsonBackend, PandasBackend, NumpyBackend,
-    ScikitLearnBackend, PNGBackend
+    ScikitLearnBackend, PNGBackend, VolatileBackend
 )
 
 from src.meta import BaseMeta
@@ -154,14 +154,17 @@ class ComputationalSet(object):
         for key in randomised_order(self.keys()):
             node = self[key]
             if not node.exists or force:
-                logger.info(f'Calculating {node.name}')
+                if isinstance(node.backend, VolatileBackend):
+                    logger.info(f'Not evaluating {key} by default since it is of a volatile backend: {node.name}')
+                    continue
                 
                 try:
+                    logger.info(f'Calculating {node.name}')
                     node.evaluate()
-                    
+                
                 except FileLockExistsException as ex:
                     logger.warn(
-                        f'The file {key} is currently being evaluated by a different process. '
+                        f'The file {node.name} is currently being evaluated by a different process. '
                         f'Continuing to next available process: {ex}'
                     )
             
