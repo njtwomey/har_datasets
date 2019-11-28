@@ -18,6 +18,12 @@ def predefined_split(key, split):
     return as_tr_vl_te(split)
 
 
+def deployable_split(key, split):
+    return pd.DataFrame(
+        {'fold_0': ['train'] * len(split)}, dtype='category'
+    )
+
+
 def loso_split(key, split):
     trials = sorted(split.subject.unique().astype(int))
     return as_tr_vl_te(pd.DataFrame(
@@ -34,14 +40,14 @@ class select_split(SelectorBase):
         assert split_type in self.meta['supported']
         
         self.index.add_output(
-            key='split',
+            key='split', backend='pandas',
             func=dict(
                 predefined=predefined_split,
+                deployable=deployable_split,
                 loso=loso_split,
             )[split_type],
-            split=dict(
-                predefined=parent.index.fold,
-                loso=parent.index.index,
-            )[split_type],
-            backend='pandas',
+            split=(
+                parent.index.fold if split_type == 'predefined' else
+                parent.index.index
+            )
         )

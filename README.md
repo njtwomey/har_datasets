@@ -4,13 +4,26 @@ This repository aims to provide a unified interface to wearable-based Human Acti
 
 # Setup
 
+## Virtual environment
+
+It is good practise to use virtual environments when using this. I have recently been using [miniconda](https://docs.conda.io/en/latest/miniconda.html) as my python management system. It works exactly like anaconda. The following commands create a new environment, activates it and installs the requirements to that environment.
+
+```bash 
+conda create python=3.7 --name har_datasets
+conda activat har_datasets
+conda install --file requirements.txt 
+```
+
+These are packaged into the `make environment` command. 
+
 ## dotenv 
+
+Several global variables are required for this library to work. I set these up with the [dotenv](https://pypi.org/project/python-dotenv/) library. This searches for a file called `.env` that should be found in the project root. It then loads environment variables called `PROJECT_ROOT`, `ZIP_ROOT` and `BUILD_ROOT`. In my system, these are set up roughly as follows. 
 
 ```bash 
 export PROJECT_ROOT = "/users/username/workspace/har_datasets"
 export ZIP_ROOT = "/users/username/workspace/har_datasets/data/zip"
 export BUILD_ROOT = "/users/username/workspace/har_datasets/data/build"
-
 ```
 
 # Data Format
@@ -36,17 +49,15 @@ subject, trail, time
 
 This file must have three columns only. 
 
-## Label File
+## Task Files
 
-The following structure is required for the label files
+The following structure is required for the task files
 
 ```
-track_1, track_2, 
+label_vals
 ```
 
-Many datasets are single-track and multi-class, but this format allows for multiple label learning. 
-
-This file must have at least one column. 
+This file must have at least one column. In general, it is expected that the column will be a list of strings (where the string corresponds to the target). This is not a requirement, however, and the label values may be vector-valued. It is important that the correct model and evaluation criteria are associated with the task. 
 
 ## Data File
 
@@ -81,29 +92,34 @@ The behaviour of these folds is based on scikit-learn's [PredefinedSplit](https:
 
 This file must have at least one column. 
 
+Several special fold definitions are also supported. `LOSO` performs leave one subject out cross validation, and `deployable` learns models on all of the data with the expectation that this model is to be deployed outside of the scope of the pipeline that created it. 
+
 # Contributing
 
 I hope to receive pull requests for new datasets, processing methods, features, and models to this repository. Requests are likely to be accepted once the exact data format, feature extraction, modelling and evaluation interfaces are relatively stable. 
 
 ## Contributing Datasets
 
-1. Add a new entry to the file `datasets.yaml` and fill out the information as accurately as possible. Follow the styles and detail given in the entries named `anguita2013`, `pamap2` and `uschad`. The entry of accurate metadata will be heavily strictly moderated before a submission is accepted. Note:
-    - The dataset name must be lower case.
-    - If the dataset introduces a new activity label add it to the end of `activities.yaml`. 
-    - If the wearable has been placed on a new location add it to the end of `locations.yaml`. 
-    - If the dataset contains new modalities add it to the end of `modalities.yaml`. 
-    - Add new entries to the **end** of the `yaml` files since label indexes are immutabe across commits. 
+1. Create a new [yaml](https://en.m.wikipedia.org/wiki/YAML) file in the `metadata/datasets` directory and fill out the information as accurately as possible. Follow the styles and detail given in the entries named `anguita2013`, `pamap2` and `uschad`. The entry of accurate metadata will be heavily strictly moderated before a submission is accepted. Note:
+    - The name of the file and the `name` filed in the yaml file dataset name must be lower case.
+    - List all sensor modalities in the dataset in the `modalities` field. The modality names should be consistent with the values found in `metadata/modality.yaml`.
+    - List all sensor placements in the dataset in the `placements` field  The placement names should be consistent with the values found in `metadata/placement.yaml`.
+    - List all outputs in the dataset in the `sources` field. For example, if a data source arrives from an accelerometer placed on the wrist, a dict entry like `{"placement": "wrist", "modality": "accel"}`. This can be tedious, but there is great value in doing this. 
+    - If the dataset introduces a new task, add a new file to the `metadata/tasks/<task-name>.yaml` file. List all new target names in this file (see `metadata/tasks/har.yaml` for example). 
+    - If the dataset introduces a new target to an existing task, add it to the end of `tasks/<task-name>.yaml`. 
+    - If the sensor has been placed on a new location add it to the end of `metadata/placement.yaml`. 
+    - If the sensor is of a new modality, add it to the end of `metadata/modality.yaml`. 
 2. Run `make table`. This will update the dataset table in the `tables` directory. Ensure this command executes successully and verify that the entered information is accurate.
 3. Run `make data`. This will download the archive automatically based on the URLs provided in the `download_urls` field from step 1 above. 
-4. Copy the file `src/datasets/__new__.py` to `src/datasets/<dataset_name>.py` (`<dataset_name>` is specified in #1 above). The prupose of this file is to translate the data to the expected format described in the sections above. In particular, separate files with the wearable data, annotated labels, pre-defined folds, and index files are required. Use the existing examples of the aforementioned datasets (`anguita2013`, `pamap2` and `uschad`) that can be found in `src/datasets` as examples of how this has been achieved. 
+4. Copy the file `src/datasets/__new__.py` to `src/datasets/<dataset-name>.py` (`<dataset-name>` is defined by #1 above). The prupose of this file is to translate the data to the expected format described in the sections above. In particular, separate files with the wearable data, annotated labels, pre-defined folds, and index files are required. Use the existing examples of the aforementioned datasets (`anguita2013`, `pamap2` and `uschad`) that can be found in `src/datasets` as examples of how this has been achieved. 
 
-## Contributing Representations
+## Contributing Pipelines
 
-(Under construction.)
+(Under construction. See `examples/basic_har.py` for basic examples.)
 
 ## Contributing Models
 
-(Under construction.)
+(Under construction. See `src/models/sklearn/basic.py` for basic examples.)
 
 
 # Datasets

@@ -11,6 +11,8 @@ class ModelBase(BaseGraph):
             name=name,
             parent=parent,
         )
+        
+        self.models = {}
     
     @property
     def model(self):
@@ -27,3 +29,8 @@ class ModelBase(BaseGraph):
     @property
     def probs(self):
         return self.outputs['probs']
+    
+    @property
+    def deployed(self):
+        assert self.parent.name == 'deployable'
+        return self.models[0].model
