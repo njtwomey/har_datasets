@@ -2,7 +2,7 @@ import numpy as np
 from scipy import signal
 
 from src.transformers.base import TransformerBase
-from src.utils.decorators import Partition
+from src.utils.decorators import PartitionByTrial
 
 __all__ = [
     'body_grav_filter',
@@ -60,7 +60,7 @@ class body_grav_filter(TransformerBase):
         for key, node in parent.outputs.items():
             self.outputs.add_output(
                 key=key + ('body',),
-                func=Partition(func=body_filt),
+                func=PartitionByTrial(func=body_filt),
                 data=node,
                 index=parent.index.index,
                 backend='none',
@@ -69,7 +69,7 @@ class body_grav_filter(TransformerBase):
             
             self.outputs.add_output(
                 key=key + ('body', 'jerk',),
-                func=Partition(func=body_jerk_filt),
+                func=PartitionByTrial(func=body_jerk_filt),
                 data=node,
                 index=parent.index.index,
                 backend='none',
@@ -79,7 +79,7 @@ class body_grav_filter(TransformerBase):
             if 'accel' in key:
                 self.outputs.add_output(
                     key=key + ('grav',),
-                    func=Partition(func=grav_filt),
+                    func=PartitionByTrial(func=grav_filt),
                     data=node,
                     index=parent.index.index,
                     backend='none',

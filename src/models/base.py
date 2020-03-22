@@ -1,4 +1,4 @@
-from src.base import BaseGraph, PredictionSet
+from src.base import BaseGraph
 
 __all__ = [
     "ModelBase"
@@ -13,24 +13,24 @@ class ModelBase(BaseGraph):
         )
         
         self.models = {}
-    
-    @property
-    def model(self):
-        return self.outputs['model']
-    
-    @property
-    def results(self):
-        return self.outputs['results']
-    
-    @property
-    def preds(self):
-        return self.outputs['preds']
-    
-    @property
-    def probs(self):
-        return self.outputs['probs']
-    
-    @property
-    def deployed(self):
-        assert self.parent.name == 'deployable'
-        return self.models[0].model
+
+    # @property
+    # def model(self):
+    #     return self.outputs['model']
+    #
+    # @property
+    # def results(self):
+    #     return self.outputs['results']
+    #
+    # @property
+    # def preds(self):
+    #     return self.outputs['preds']
+    #
+    # @property
+    # def probs(self):
+    #     return self.outputs['probs']
+    #
+    # @property
+    # def deployed(self):
+    #     assert self.parent.name == 'deployable'
+    #     return self.models[0].model

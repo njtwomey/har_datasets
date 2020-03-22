@@ -75,10 +75,10 @@ class FeatureBase(BaseGraph):
         logger.info(f"Adding {node.name} to complete feature set")
         
         if self.source_filter(key):
-            endpoints[node.name] = node
+            endpoints[str(node.name)] = node
         
-        else:
-            raise NotImplementedError
+        # else:
+        #     raise NotImplementedError
     
     def assign_outputs(self, endpoints):
         """

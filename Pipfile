@@ -1,0 +1,22 @@
+[[source]]
+url = "https://pypi.python.org/simple"
+verify_ssl = true
+
+[dev-packages]
+Sphinx = "*"
+
+[packages]
+requests = "*"
+pandas = "*"
+numpy = "*"
+matplotlib = "*"
+seaborn = "*"
+python-dotenv = "*"
+scikit-learn = "*"
+joblib = "*"
+ipython = "*"
+jupyter = "*"
+pyyaml = "*"
+
+[requires]
+python_version = "3.6"

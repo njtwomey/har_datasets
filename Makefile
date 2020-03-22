@@ -8,7 +8,7 @@ PROJECT_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 BUCKET = [OPTIONAL] your-bucket-for-syncing-data (do not include 's3://')
 PROFILE = default
 PROJECT_NAME = har_datasets
-PYTHON_INTERPRETER = python3
+PYTHON_INTERPRETER = pipenv run
 MAKE = /usr/bin/make
 
 ifeq (,$(shell which conda))

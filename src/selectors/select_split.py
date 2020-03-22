@@ -1,5 +1,5 @@
 import pandas as pd
-
+from pathlib import Path
 from src.selectors.base import SelectorBase
 
 __all__ = [
@@ -7,15 +7,8 @@ __all__ = [
 ]
 
 
-def as_tr_vl_te(df):
-    for col in df.columns:
-        if not isinstance(df[col].dtype, pd.CategoricalDtype):
-            df[col] = df[col].apply(lambda v: ['train', 'test'][v])
-    return df.astype('category')
-
-
 def predefined_split(key, split):
-    return as_tr_vl_te(split)
+    return split.astype('category')
 
 
 def deployable_split(key, split):
@@ -25,29 +18,33 @@ def deployable_split(key, split):
 
 
 def loso_split(key, split):
-    trials = sorted(split.subject.unique().astype(int))
-    return as_tr_vl_te(pd.DataFrame(
-        {kk: split.trial == kk for kk in trials}
-    ).astype(int))
+    return pd.DataFrame({
+        f'fold_{kk}': split.trial.apply(
+            lambda tt: ['train', 'test'][tt == kk]
+        ) for kk in split.trial.unique()
+    })
 
 
 class select_split(SelectorBase):
     def __init__(self, parent, split_type):
         super(select_split, self).__init__(
-            name=split_type, parent=parent, meta='split.yaml'
+            name=split_type, parent=parent, meta=Path('metadata', 'split.yaml')
         )
-        
+
         assert split_type in self.meta['supported']
-        
+
+        func_dict = dict(
+            predefined=predefined_split,
+            deployable=deployable_split,
+            loso=loso_split,
+        )
+
+        split = parent.index['index']
+        if split_type == 'predefined':
+            split = parent.index['fold']
+
         self.index.add_output(
             key='split', backend='pandas',
-            func=dict(
-                predefined=predefined_split,
-                deployable=deployable_split,
-                loso=loso_split,
-            )[split_type],
-            split=(
-                parent.index.fold if split_type == 'predefined' else
-                parent.index.index
-            )
+            func=func_dict[split_type],
+            split=split,
         )

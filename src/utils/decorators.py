@@ -17,7 +17,7 @@ logger = get_logger(__name__)
 
 __all__ = [
     'index_decorator', 'fold_decorator', 'label_decorator',
-    'Partition', 'partitioning_decorator', 'dot_env_decorator',
+    'PartitionByTrial', 'partitioning_decorator', 'dot_env_decorator',
 ]
 
 
@@ -127,13 +127,13 @@ def concat_data_type(datas, data_type_name):
     ))
 
 
-class Partition(DecoratorBase):
+class PartitionByTrial(DecoratorBase):
     """
 
     """
     
     def __init__(self, func):
-        super(Partition, self).__init__(
+        super(PartitionByTrial, self).__init__(
             func=func
         )
     
@@ -218,4 +218,4 @@ def dot_env_decorator(func):
 label_decorator = LabelDecorator
 index_decorator = IndexDecorator
 fold_decorator = FoldDecorator
-partitioning_decorator = Partition
+partitioning_decorator = PartitionByTrial

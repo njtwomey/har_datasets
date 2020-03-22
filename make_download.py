@@ -1,12 +1,14 @@
 import zipfile
-from src import load_datasets_metadata, dot_env_decorator
+from src import dot_env_decorator, get_logger
 from os.path import basename, join, split, exists, splitext
 from os import makedirs
 from tqdm import tqdm
 
 import requests
 
-from src import DatasetMeta
+from src import DatasetMeta, iter_dataset_paths
+
+logger = get_logger(__name__)
 
 
 def unzip_data(zip_path, in_name, out_name):
@@ -31,27 +33,23 @@ def download_and_save(url, path, force=False, chunk_size=2 ** 12):
             fil.write(chunk)
 
 
-def download_dataset(meta):
-    dataset = DatasetMeta(meta)
+def download_dataset(dataset_meta_path):
+    dataset = DatasetMeta(dataset_meta_path)
     if not exists(dataset.zip_path):
         makedirs(dataset.zip_path)
     for ii, url in enumerate(dataset.meta['download_urls']):
-        print('\t{}/{} {}'.format(ii + 1, len(dataset.meta['download_urls']), url))
+        logger.info('\t{}/{} {}'.format(ii + 1, len(dataset.meta['download_urls']), url))
         download_and_save(url=url, path=dataset.zip_path)
         zip_name = basename(dataset.meta['download_urls'][0])
         unzip_path = join(dataset.zip_path, splitext(zip_name)[0])
-        unzip_data(
-            zip_path=dataset.zip_path,
-            in_name=zip_name,
-            out_name=unzip_path
-        )
+        unzip_data(zip_path=dataset.zip_path, in_name=zip_name, out_name=unzip_path)
 
 
 @dot_env_decorator
 def main():
-    for name in load_datasets_metadata().keys():
-        print('Downloading {}'.format(name))
-        download_dataset(name)
+    for dataset_meta_path in iter_dataset_paths():
+        logger.info(f'Downloading {dataset_meta_path}')
+        download_dataset(dataset_meta_path)
 
 
 if __name__ == '__main__':

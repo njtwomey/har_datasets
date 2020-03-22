@@ -1,5 +1,5 @@
-from os.path import join
-from os import environ, listdir
+from os import environ
+from pathlib import Path
 
 import pandas as pd
 
@@ -12,7 +12,7 @@ logger = get_logger(__name__)
 __all__ = [
     # Generic
     'load_csv_data', 'load_metadata', 'build_path', 'get_yaml_file_list',
-    'iter_datasets', 'iter_tasks',
+    'iter_dataset_paths', 'iter_task_paths', 'metadata_path',
     # Metadata loaders
     'load_task_metadata', 'load_modality_metadata', 'load_placement_metadata',
     'load_split_metadata',
@@ -24,77 +24,72 @@ __all__ = [
 
 
 # Root directory of the project
-
 def get_project_root():
-    return environ['PROJECT_ROOT']
+    return Path(environ['PROJECT_ROOT'])
 
 
 # For building file structure
-
 def build_path(*args):
-    return join(
-        environ['BUILD_ROOT'],
-        *args
-    )
+    path = Path(environ['BUILD_ROOT']).joinpath(*args)
+    return path
 
 
-def metadata_path():
-    return join(
-        get_project_root(),
-        'metadata'
-    )
+def metadata_path(*args):
+    path = get_project_root() / 'metadata'
+    return path.joinpath(*args)
 
 
 # Generic CSV loader
-
 def load_csv_data(fname, astype='list'):
     df = pd.read_csv(
         fname,
         delim_whitespace=True,
         header=None
     )
-    
+
     if astype in {'dataframe', 'pandas', 'pd'}:
         return df
     if astype in {'values', 'np', 'numpy'}:
         return df.values
     if astype == 'list':
         return df.values.ravel().tolist()
-    
+
     logger.exception(ValueError(
         f"Un-implemented type specification: {astype}"
     ))
 
 
 # YAML file loaders
-def iter_files(path, ext, strip_ext=False):
-    fil_iter = filter(lambda fil: fil.endswith(ext), listdir(path))
-    if strip_ext:
-        return map(lambda fil: fil[:-len(ext)], fil_iter)
-    return fil_iter
+def iter_files(path, suffix, stem=False):
+    fil_iter = filter(lambda fil: fil.suffix == suffix, path.iterdir())
+    if stem:
+        yield from map(lambda fil: fil.stem, fil_iter)
+    yield from map(lambda fil: path / fil, fil_iter)
 
 
-def iter_datasets():
+def iter_dataset_paths():
     return iter_files(
-        path=join(metadata_path(), 'datasets'),
-        ext='.yaml', strip_ext=True
+        path=metadata_path('datasets'),
+        suffix='.yaml',
+        stem=False,
     )
 
 
-def iter_tasks():
+def iter_task_paths():
     return iter_files(
-        path=join(metadata_path(), 'tasks'),
-        ext='.yaml', strip_ext=True
+        path=metadata_path('tasks'),
+        suffix='.yaml',
+        stem=False,
     )
 
 
 # Metadata
-def load_metadata(fname):
-    return yaml.load(open(join(metadata_path(), fname), 'r'))
+def load_metadata(*args):
+    return yaml.load(open(metadata_path(*args), 'r'))
 
 
 def load_task_metadata(task_name):
-    return load_metadata(join('tasks', f'{task_name}.yaml'))
+    return load_metadata('task', f'{task_name}.yaml')
 
 
 # Dataset metadata
@@ -112,9 +107,9 @@ def load_modality_metadata():
 
 #
 
-def get_yaml_file_list(*args, strip_ext=False):
-    path = join(metadata_path(), *args)
-    fil_iter = iter_files(path=path, ext='.yaml', strip_ext=strip_ext)
+def get_yaml_file_list(*args, stem=False):
+    path = metadata_path(*args)
+    fil_iter = iter_files(path=path, suffix='.yaml', stem=stem)
     return list(fil_iter)
 
 

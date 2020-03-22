@@ -63,5 +63,5 @@ def ecdf_rep(data, components):
     m = data.mean(0)
     data = np.sort(data, axis=0)
     data = data[np.int32(np.around(np.linspace(0, data.shape[0] - 1, num=components))), :]
-    data = data.flatten(1)
+    data = data.flatten()
     return np.hstack((data, m))

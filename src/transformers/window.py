@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 
 from src.transformers.base import TransformerBase
-from src.utils.decorators import Partition
+from src.utils.decorators import PartitionByTrial
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -30,11 +30,11 @@ def window_data(key, index, data, fs, win_len, win_inc):
     """
     win_len = int(win_len * fs)
     win_inc = int(win_inc * fs)
-    
+
     data_windowed = sliding_window_rect(
         np.atleast_2d(data), win_len, win_inc
     )
-    
+
     return np.atleast_3d(data_windowed)
 
 
@@ -67,47 +67,44 @@ class window(TransformerBase):
             name=self.__class__.__name__,
             parent=parent,
         )
-        
+
         self.win_len = win_len
         self.win_inc = win_inc
-        
+
         fs = self.get_ancestral_metadata('fs')
-        
+
         kwargs = dict(
             win_len=self.win_len,
             win_inc=self.win_inc,
             fs=fs,
         )
-        
+
         # Build index outputs
         for key, node in parent.index.items():
             self.index.add_output(
                 key=key,
-                func=Partition(window_index),
+                func=PartitionByTrial(window_index),
                 index=parent.index['index'],
                 data=node,
                 **kwargs
             )
-        
+
         # Build Data outputs
         for key, node in parent.outputs.items():
             self.outputs.add_output(
                 key=key,
-                func=Partition(window_data),
+                func=PartitionByTrial(window_data),
                 index=parent.index['index'],
                 data=node,
                 backend='none',
                 **kwargs
             )
-    
+
     @property
     def identifier(self):
         win_len = f'{self.win_len:03.2f}'
         win_inc = f'{self.win_inc:03.2f}'
-        return join(
-            self.parent.identifier,
-            f'{self.name}_{win_len}s_{win_inc}s'
-        )
+        return self.parent.identifier / f'{self.name}_{win_len}s_{win_inc}s'
 
 
 def norm_shape(shape):
@@ -125,14 +122,14 @@ def norm_shape(shape):
     except TypeError:
         # shape was not a number
         pass
-    
+
     try:
         t = tuple(shape)
         return t
     except TypeError:
         # shape was not iterable
         pass
-    
+
     logger.exception(TypeError('shape must be an int, or a tuple of ints'))
 
 
@@ -155,33 +152,33 @@ def sliding_window(a, ws, ss=None, flatten=True):
     Returns
         an array containing each n-dimensional window from a
     """
-    
+
     if None is ss:
         # ss was not provided. the windows will not overlap in any direction.
         ss = ws
     ws = norm_shape(ws)
     ss = norm_shape(ss)
-    
+
     # convert ws, ss, and a.shape to numpy arrays so that we can do math in every
     # dimension at once.
     ws = np.array(ws)
     ss = np.array(ss)
     shape = np.array(a.shape)
-    
+
     # ensure that ws, ss, and a.shape all have the same number of dimensions
     ls = [len(shape), len(ws), len(ss)]
     if 1 != len(set(ls)):
         logger.exception(ValueError(
             f'a.shape, ws and ss must all have the same length. They were {ls}'
         ))
-    
+
     # ensure that ws is smaller than a in every dimension
     if np.any(ws > shape):
         logger.exception(ValueError(
             f'ws cannot be larger than a in any dimension. a.shape was %s and '
             'ws was {(str(a.shape), str(ws))}'
         ))
-    
+
     # how many slices will there be in each dimension?
     newshape = norm_shape(((shape - ws) // ss) + 1)
     # the shape of the strided array will be the number of slices in each dimension
@@ -193,14 +190,14 @@ def sliding_window(a, ws, ss=None, flatten=True):
     strided = np.lib.stride_tricks.as_strided(a, shape=newshape, strides=newstrides)
     if not flatten:
         return strided
-    
+
     # Collapse strided so that it has one more dimension than the window.  I.e.,
     # the new array is a flat list of slices.
     meat = len(ws) if ws.shape else 0
     firstdim = (np.product(newshape[:-meat]),) if ws.shape else ()
     dim = firstdim + (newshape[-meat:])
     dim = list(filter(lambda i: i != 1, dim))
-    
+
     return strided.reshape(dim)
 
 
@@ -217,5 +214,5 @@ def sliding_window_rect(data, length, increment):
     """
     length = (length, data.shape[1])
     increment = (increment, data.shape[1])
-    
+
     return sliding_window(data, length, increment)
