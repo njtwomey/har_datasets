@@ -15,44 +15,24 @@ __all__ = [
 
 
 def window_data(key, index, data, fs, win_len, win_inc):
-    """
-    
-    Args:
-        key:
-        index:
-        data:
-        fs:
-        win_len:
-        win_inc:
+    assert data.ndim == 2
 
-    Returns:
-
-    """
     win_len = int(win_len * fs)
     win_inc = int(win_inc * fs)
 
-    data_windowed = sliding_window_rect(
-        np.atleast_2d(data), win_len, win_inc
-    )
+    data_windowed = sliding_window_rect(data, win_len, win_inc)
 
-    return np.atleast_3d(data_windowed)
+    if data.shape[0] // win_len == 0:
+        raise ValueError
+    elif data.shape[0] // win_len == 1:
+        return data_windowed[None, ...]
+    elif data_windowed.ndim == 2:
+        return data_windowed[..., None]
+    assert data_windowed.ndim == 3
+    return data_windowed
 
 
 def window_index(key, index, data, fs, win_len, win_inc, slice_at='middle'):
-    """
-    
-    Args:
-        key:
-        index:
-        data:
-        fs:
-        win_len:
-        win_inc:
-        slice_at:
-
-    Returns:
-
-    """
     assert isinstance(data, pd.DataFrame)
     data_windowed = window_data(key, index, data.values, fs, win_len, win_inc)
     ind = dict(start=0, middle=data_windowed.shape[1] // 2, end=-1, )[slice_at]
@@ -84,9 +64,11 @@ class window(TransformerBase):
             self.index.add_output(
                 key=key,
                 func=PartitionByTrial(window_index),
-                index=parent.index['index'],
-                data=node,
-                **kwargs
+                kwargs=dict(
+                    index=parent.index['index'],
+                    data=node,
+                    **kwargs,
+                )
             )
 
         # Build Data outputs
@@ -94,10 +76,12 @@ class window(TransformerBase):
             self.outputs.add_output(
                 key=key,
                 func=PartitionByTrial(window_data),
-                index=parent.index['index'],
-                data=node,
                 backend='none',
-                **kwargs
+                kwargs=dict(
+                    index=parent.index['index'],
+                    data=node,
+                    **kwargs,
+                )
             )
 
     @property
@@ -108,14 +92,6 @@ class window(TransformerBase):
 
 
 def norm_shape(shape):
-    """
-
-    Args:
-        shape:
-
-    Returns:
-
-    """
     try:
         i = int(shape)
         return i,
@@ -139,18 +115,24 @@ def sliding_window(a, ws, ss=None, flatten=True):
 
     Return a sliding window over a in any number of dimensions
 
-    Parameters:
-        a  - an n-dimensional numpy array
-        ws - an int (a is 1D) or tuple (a is 2D or greater) representing the size
-             of each dimension of the window
-        ss - an int (a is 1D) or tuple (a is 2D or greater) representing the
-             amount to slide the window in each dimension. If not specified, it
-             defaults to ws.
-        flatten - if True, all slices are flattened, otherwise, there is an
-                  extra dimension for each dimension of the input.
+    Parameters
+    ----------
+    a : ndarray
+        an n-dimensional numpy array
+    ws : int, tuple
+        an int (a is 1D) or tuple (a is 2D or greater) representing the size of
+        each dimension of the window
+    ss : int, tuple
+        an int (a is 1D) or tuple (a is 2D or greater) representing the amount
+        to slide the window in each dimension. If not specified, it defaults to ws.
+    flatten : book
+        if True, all slices are flattened, otherwise, there is an extra dimension
+        for each dimension of the input.
 
     Returns
-        an array containing each n-dimensional window from a
+    -------
+        strided : ndarray
+            an array containing each n-dimensional window from a
     """
 
     if None is ss:
@@ -202,16 +184,6 @@ def sliding_window(a, ws, ss=None, flatten=True):
 
 
 def sliding_window_rect(data, length, increment):
-    """
-
-    Args:
-        data:
-        length:
-        increment:
-
-    Returns:
-
-    """
     length = (length, data.shape[1])
     increment = (increment, data.shape[1])
 

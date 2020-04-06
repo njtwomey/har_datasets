@@ -6,6 +6,7 @@ from mldb.backends import (
     ScikitLearnBackend, PNGBackend, VolatileBackend
 )
 
+from src.keys import Key
 from src.meta import BaseMeta
 from src.utils.misc import NumpyEncoder, randomised_order
 from src.utils.logger import get_logger
@@ -16,25 +17,6 @@ logger = get_logger(__name__)
 __all__ = [
     'BaseGraph',
 ]
-
-
-# TODO/FIXME: may be worth defining a key type
-
-def make_key(key):
-    """
-    
-    Args:
-        key:
-
-    Returns:
-
-    """
-    if key is None:
-        key = tuple()
-    if isinstance(key, str):
-        key = (key,)
-    assert isinstance(key, tuple)
-    return key
 
 
 def _get_ancestral_meta(graph, key):
@@ -78,10 +60,11 @@ def validate_ancestry(parent, sibling):
 
 
 def validate_key_set_membership(key, key_set):
-    key = make_key(key)
-    if len(key) != 1:
-        return False
-    return key[0] in key_set
+    return Key(key) in set(map(Key, key_set))
+    # key = Key(key)
+    # if len(key) != 1:
+    #     return False
+    # return key[0] in key_set
 
 
 class ComputationalSet(object):
@@ -113,7 +96,6 @@ class ComputationalSet(object):
                     f'{key} is not in {self.output_dict.keys()}'
                 ))
             self.output_dict[key] = val
-        logger.info(f'Added keys to CompSet: {len(self.output_dict)}, {self.output_dict.keys()}')
 
     @property
     def active_comp_set(self):
@@ -137,7 +119,7 @@ class ComputationalSet(object):
         return item in self.active_comp_set
 
     def __getitem__(self, key):
-        key = make_key(key)
+        key = Key(key)
         try:
             return self.output_dict[key]
         except KeyError:
@@ -155,11 +137,9 @@ class ComputationalSet(object):
             node = self[key]
             if not node.exists or force:
                 if isinstance(node.backend, VolatileBackend):
-                    logger.info(f'Not evaluating {key} by default since it is of a volatile backend: {node.name}')
                     continue
 
                 try:
-                    logger.info(f'Calculating {node.name}')
                     node.evaluate()
 
                 except FileLockExistsException as ex:
@@ -168,40 +148,39 @@ class ComputationalSet(object):
                         f'Continuing to next available process: {ex}'
                     )
 
-            else:
-                logger.info(f'Loading {node.name}')
-
-    def make_output(self, key, func, backend=None, **kwargs):
+    def make_output(self, key, func, backend=None, kwargs=None):
         assert callable(func)
 
-        key = make_key(key)
+        key = Key(key)
+
+        if kwargs is None:
+            kwargs = dict()
 
         assert key not in self.output_dict
 
         node = self.graph.node(
-            name=self.graph.build_path(*key),
             func=func,
+            name=self.graph.build_path(key),
             backend=backend,
-            key=key,
-            **kwargs,
+            kwargs=dict(
+                key=key,
+                **kwargs,
+            )
         )
-
-        logger.info(f'Created node {node.name}; backend: {backend}')
 
         return node
 
     def append_output(self, key, node):
-        key = make_key(key)
+        key = Key(key)
         assert key not in self.output_dict
         self.output_dict[key] = node
-        logger.info(f'Node {node.name} added to outputs: {self.output_dict.keys()}.')
 
-    def add_output(self, key, func, backend=None, **kwargs):
+    def add_output(self, key, func, backend=None, kwargs=None):
         node = self.make_output(
             key=key,
             func=func,
             backend=backend,
-            **kwargs
+            kwargs=kwargs
         )
 
         self.append_output(key=key, node=node)
@@ -223,19 +202,19 @@ class IndexSet(ComputationalSet):
                 f"A non-index key was used for the index computation: {key} not in {self.index_keys}"
             ))
 
-    def add_output(self, key, func, backend=None, **kwargs):
+    def add_output(self, key, func, backend=None, kwargs=None):
         self.validate_key(key)
         return super(IndexSet, self).add_output(
             key=key,
             func=func,
             backend=backend or 'pandas',  # Indexes default to pandas backend
-            **kwargs
+            kwargs=kwargs
         )
 
-    def make_output(self, key, func, backend=None, **kwargs):
+    def make_output(self, key, func, backend=None, kwargs=None):
         self.validate_key(key)
         return super(IndexSet, self).make_output(
-            key=key, func=func, backend=backend or 'pandas', **kwargs
+            key=key, func=func, backend=backend or 'pandas', kwargs=kwargs
         )
 
     @property
@@ -325,7 +304,7 @@ class BaseGraph(ComputationGraph):
             ),
         )
 
-    def build_path(self, *args):
+    def build_path(self, key):
         """
         
         Args:
@@ -334,13 +313,15 @@ class BaseGraph(ComputationGraph):
         Returns:
 
         """
-        assert len(args) > 0
-        if not isinstance(args[0], str):
+        assert isinstance(key, Key)
+
+        assert len(key) > 0
+        if not isinstance(key[0], str):
             logger.exception(ValueError(
                 f'The argument for `build_path` must be strings, but got the type: {type(args[0])}'
             ))
 
-        return build_path(self.identifier, '-'.join(args))
+        return build_path(self.identifier, str(key))
 
     def evaluate_outputs(self):
         """
@@ -361,22 +342,9 @@ class BaseGraph(ComputationGraph):
 
     @property
     def identifier(self):
-        """
-        
-        Returns:
-
-        """
         if self.parent is None:
             return Path(self.name)
         return self.parent.identifier / self.name
 
     def get_ancestral_metadata(self, key):
-        """
-        
-        Args:
-            key:
-
-        Returns:
-
-        """
         return _get_ancestral_meta(self, key)

@@ -9,18 +9,18 @@ __all__ = [
 
 
 class statistical_features(FeatureBase):
-    def __init__(self, parent, source_filter, source_name):
+    def __init__(self, parent, source_filter):
         super(statistical_features, self).__init__(
             name=self.__class__.__name__, parent=parent,
-            source_filter=source_filter, source_name=source_name,
+            source_filter=source_filter,
         )
-        
+
         kwargs = dict(
             fs=self.get_ancestral_metadata('fs')
         )
-        
-        endpoints = dict()
-        
+
+        endpoints = defaultdict(dict)
+
         # There are two feature categories defined here:
         #   1. Time domain
         #   2. Frequency domain
@@ -50,49 +50,47 @@ class statistical_features(FeatureBase):
         #
         # Consult with the dataset table (tables/datasets.md) and see anguita2013 for
         # details.
-        
+
         index = self.parent.index['index']
         for key, node in self.parent.outputs.items():
             key_td = key + ('td',)
             key_fd = key + ('fd',)
-            
+
+            loop_kwargs = dict(
+                index=index,
+                data=node,
+                **kwargs,
+            )
+
             if 'accel' in key:
                 self.prepare_outputs(
                     endpoints=endpoints,
                     key=key_td,
                     func=t_feat,
-                    index=index,
-                    data=node,
-                    **kwargs
+                    kwargs=loop_kwargs,
                 )
-                
+
                 if 'grav' not in key:
                     self.prepare_outputs(
                         endpoints=endpoints,
                         key=key_fd,
                         func=f_feat,
-                        index=index,
-                        data=node,
-                        **kwargs
+                        kwargs=loop_kwargs,
                     )
-            
+
             if 'gyro' in key:
                 self.prepare_outputs(
                     endpoints=endpoints,
                     key=key_td,
                     func=f_feat,
-                    index=index,
-                    data=node,
-                    **kwargs
+                    kwargs=loop_kwargs,
                 )
-                
+
                 self.prepare_outputs(
                     endpoints=endpoints,
                     key=key_fd,
                     func=f_feat,
-                    index=index,
-                    data=node,
-                    **kwargs
+                    kwargs=loop_kwargs,
                 )
-        
+
         self.assign_outputs(endpoints)

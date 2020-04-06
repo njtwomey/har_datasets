@@ -6,10 +6,10 @@ import numpy as np
 
 from os.path import join
 
+from src.evaluation.classification import evaluate_fold
 from src.models.base import ModelBase
 from src.utils.logger import get_logger
 from src.utils.misc import randomised_order
-from src.evaluation.classification import evaluate_fold
 
 logger = get_logger(__name__)
 
@@ -58,6 +58,10 @@ def sklearn_probs(key, model, features):
     return model.predict_proba(features)
 
 
+def sklearn_decision_function(key, model, features):
+    return model.decision_function(features)
+
+
 class sklearn_model(ModelBase):
     def __init__(self, name, parent, model, xval, features, targets, split, fold_name, n_splits=5):
         super(sklearn_model, self).__init__(
@@ -76,46 +80,67 @@ class sklearn_model(ModelBase):
             key=join(fold_name, 'fold'),
             func=select_fold,
             backend='none',
-            folds=split,
-            fold_name=fold_name,
+            kwargs=dict(
+                folds=split,
+                fold_name=fold_name,
+            )
         )
 
         model = self.outputs.add_output(
             key=join(fold_name, 'model'),
             func=learn_sklearn_model,
-            index=self.index['index'],
-            features=features,
-            targets=targets,
-            fold_def=fold_def,
-            model=model,
-            n_splits=n_splits,
             backend='sklearn',
+            kwargs=dict(
+                index=self.index['index'],
+                features=features,
+                targets=targets,
+                fold_def=fold_def,
+                model=model,
+                n_splits=n_splits,
+            )
         )
 
         predictions = self.outputs.add_output(
             key=join(fold_name, 'preds'),
             func=sklearn_preds,
             backend='none',
-            features=features,
-            model=model,
+            kwargs=dict(
+                features=features,
+                model=model,
+            )
         )
 
         self.outputs.add_output(
             key=join(fold_name, 'probs'),
             func=sklearn_probs,
             backend='none',
-            features=features,
-            model=model,
+            kwargs=dict(
+                features=features,
+                model=model,
+            )
+        )
+
+        scores = self.outputs.add_output(
+            key=join(fold_name, 'scores'),
+            func=sklearn_decision_function,
+            backend='none',
+            kwargs=dict(
+                features=features,
+                model=model,
+            )
         )
 
         self.outputs.add_output(
             key=join(fold_name, 'results'),
             func=evaluate_fold,
             backend='json',
-            fold=fold_def,
-            targets=targets,
-            predictions=predictions,
-            model=model,
+            kwargs=dict(
+                fold=fold_def,
+                targets=targets,
+                predictions=predictions,
+                model=model,
+                scores=scores,
+            )
         )
 
 

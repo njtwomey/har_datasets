@@ -15,11 +15,11 @@ def filter_signal(data, filter_order, cutoff, fs, btype, axis=0):
         cutoff / fs / 2,
         btype=btype
     )
-    
+
     mu = np.mean(data, axis=0, keepdims=True)
-    
+
     dd = signal.filtfilt(ba[0], ba[1], data - mu, axis=axis) + mu
-    
+
     return dd
 
 
@@ -50,38 +50,44 @@ class body_grav_filter(TransformerBase):
             name=self.__class__.__name__,
             parent=parent,
         )
-        
+
         kwargs = dict(
             fs=self.get_ancestral_metadata('fs'),
             filter_order=3,
             cutoff=0.3,
         )
-        
+
         for key, node in parent.outputs.items():
             self.outputs.add_output(
                 key=key + ('body',),
                 func=PartitionByTrial(func=body_filt),
-                data=node,
-                index=parent.index.index,
                 backend='none',
-                **kwargs,
+                kwargs=dict(
+                    data=node,
+                    index=parent.index.index,
+                    **kwargs,
+                )
             )
-            
+
             self.outputs.add_output(
                 key=key + ('body', 'jerk',),
                 func=PartitionByTrial(func=body_jerk_filt),
-                data=node,
-                index=parent.index.index,
                 backend='none',
-                **kwargs,
+                kwargs=dict(
+                    data=node,
+                    index=parent.index.index,
+                    **kwargs,
+                )
             )
-            
+
             if 'accel' in key:
                 self.outputs.add_output(
                     key=key + ('grav',),
                     func=PartitionByTrial(func=grav_filt),
-                    data=node,
-                    index=parent.index.index,
                     backend='none',
-                    **kwargs,
+                    kwargs=dict(
+                        data=node,
+                        index=parent.index.index,
+                        **kwargs,
+                    )
                 )

@@ -19,7 +19,7 @@ __all__ = [
     # Module importers
     'dataset_importer', 'transformer_importer', 'feature_importer',
     'pipeline_importer', 'model_importer', 'visualisation_importer',
-
+    'load_yaml'
 ]
 
 
@@ -83,9 +83,14 @@ def iter_task_paths():
     )
 
 
+def load_yaml(filename):
+    with open(filename, 'r') as fil:
+        return yaml.load(fil, Loader=yaml.SafeLoader)
+
+
 # Metadata
 def load_metadata(*args):
-    return yaml.load(open(metadata_path(*args), 'r'))
+    return load_yaml(metadata_path(*args))
 
 
 def load_task_metadata(task_name):

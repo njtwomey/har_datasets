@@ -20,9 +20,10 @@ class select_feats(SelectorBase):
         )
         
         self.outputs.add_output(
-            key='features', backend='none',
+            key='features',
+            backend='none',
             func=do_select_feats,
-            **features
+            kwargs=features,
         )
         
         self.evaluate_outputs()

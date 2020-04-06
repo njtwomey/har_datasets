@@ -60,7 +60,7 @@ def resample_metadata(key, index, data, fs_old, fs_new):
 
 
 class resample(TransformerBase):
-    def __init__(self, parent, fs_new=None):
+    def __init__(self, parent: object, fs_new: object = None) -> object:
         super(resample, self).__init__(
             name=self.__class__.__name__, parent=parent
         )
@@ -82,18 +82,22 @@ class resample(TransformerBase):
                 self.index.add_output(
                     key=key,
                     func=PartitionByTrial(resample_metadata),
-                    index=parent.index['index'],
-                    data=node,
-                    **kwargs
+                    kwargs=dict(
+                        index=parent.index['index'],
+                        data=node,
+                        **kwargs,
+                    )
                 )
 
             for key, node in parent.outputs.items():
                 self.outputs.add_output(
                     key=key,
                     func=PartitionByTrial(resample_data),
-                    index=parent.index['index'],
-                    data=node,
-                    **kwargs
+                    kwargs=dict(
+                        index=parent.index['index'],
+                        data=node,
+                        **kwargs,
+                    )
                 )
 
     @property

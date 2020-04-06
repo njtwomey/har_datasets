@@ -11,26 +11,19 @@ class ModelBase(BaseGraph):
             name=name,
             parent=parent,
         )
-        
+
         self.models = {}
 
-    # @property
-    # def model(self):
-    #     return self.outputs['model']
-    #
-    # @property
-    # def results(self):
-    #     return self.outputs['results']
-    #
-    # @property
-    # def preds(self):
-    #     return self.outputs['preds']
-    #
-    # @property
-    # def probs(self):
-    #     return self.outputs['probs']
-    #
-    # @property
-    # def deployed(self):
-    #     assert self.parent.name == 'deployable'
-    #     return self.models[0].model
+    def filter_outputs(self, key):
+        self.evaluate_outputs()
+        return dict(map(
+            lambda key: (key, self.outputs[key].evaluate()), filter(lambda kk: key in kk, map(str, self.outputs.keys()))
+        ))
+
+    def get_results(self):
+        return self.filter_outputs('results')
+
+    @property
+    def deployed(self):
+        assert self.parent.name == 'deployable'
+        return self.models[0].model

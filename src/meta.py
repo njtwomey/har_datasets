@@ -1,7 +1,6 @@
 from pathlib import Path
 from os import environ
-from src.utils import metadata_path, get_logger
-import yaml
+from src.utils import metadata_path, get_logger, load_yaml
 
 logger = get_logger(__name__)
 
@@ -17,13 +16,11 @@ class BaseMeta(object):
         self.meta = dict()
 
         if path:
-            logger.info(f'Loading metadata file {path} for {self.name}.')
-
             try:
-                meta = yaml.load(open(path, 'r'))
+                meta = load_yaml(path)
 
                 if meta is None:
-                    logger.info(f'The content metadata module {self.name} from {path} is empty. Assigning empty dict')
+                    logger.info(f'The content metadata module "{self.name}" from {path} is empty. Assigning empty dict')
                     meta = dict()
                 else:
                     assert isinstance(meta, dict)
@@ -31,7 +28,8 @@ class BaseMeta(object):
                 self.meta = meta
 
             except FileNotFoundError:
-                logger.warn(f'The metadata file for {self.name} was not found.')
+                # logger.warn(f'The metadata file for "{self.name}" was not found.')
+                pass
 
     def __getitem__(self, item):
         if item not in self.meta:
@@ -57,7 +55,6 @@ class BaseMeta(object):
 
     def insert(self, key, value):
         assert key not in self.meta
-        logger.info(f'The key "{key}" is being manually inserted to metadata {self.name}')
         self.meta[key] = value
 
 
@@ -114,7 +111,7 @@ class DatasetMeta(BaseMeta):
 
         for task_name in self.meta['tasks'].keys():
             task_label_file = metadata_path('tasks', f'{task_name}.yaml')
-            task_labels = yaml.load(open(task_label_file, 'r'))
+            task_labels = load_yaml(task_label_file)
             dataset_labels = self.meta['tasks'][task_name]['target_transform']
             if not set(dataset_labels.keys()).issubset(task_labels.keys()):
                 logger.exception(ValueError(

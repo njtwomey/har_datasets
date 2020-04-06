@@ -44,7 +44,10 @@ class select_split(SelectorBase):
             split = parent.index['fold']
 
         self.index.add_output(
-            key='split', backend='pandas',
+            key='split',
             func=func_dict[split_type],
-            split=split,
+            backend='pandas',
+            kwargs=dict(
+                split=split,
+            )
         )

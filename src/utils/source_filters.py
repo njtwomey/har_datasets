@@ -1,4 +1,4 @@
-from src.base import make_key
+from src.keys import Key
 
 __all__ = [
     'make_key_subset_of', 'accel_filt', 'gyro_filt', 'take_all'
@@ -6,11 +6,11 @@ __all__ = [
 
 
 def make_key_subset_of(key_set):
-    key_set = set(make_key(key_set))
-    
+    key_set = Key(key_set)
+
     def key_subset_of(key):
-        return key_set.issubset(make_key(key))
-    
+        return set(key_set.key).issubset(set(Key(key).key))
+
     return key_subset_of
 
 

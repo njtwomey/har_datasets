@@ -16,25 +16,25 @@ sns.set_context('paper')
 
 
 def learn_umap(key, label, data):
-    umap = Pipeline((
+    umap = Pipeline([
         ('scale', StandardScaler()),
-        ('embed', UMAP(n_neighbors=100 // 2, verbose=True)),
-    ))
-    
+        ('embed', UMAP(n_neighbors=50, verbose=True)),
+    ])
+
     umap.fit(data)
-    
+
     return umap
 
 
 def embed_umap(key, label, data, model):
     embedding = model.transform(data)
-    
+
     # Need to re-label with a new dataframe since the categories in the normalised label
     # set are different to those in the full set.
     label = pd.DataFrame(label.track_0.apply(normalise_labels)).astype('category')
-    
+
     fig, ax = pl.subplots(1, 1, figsize=(10, 10))
-    
+
     labels = label.track_0.unique()
     colours = sns.color_palette(n_colors=labels.shape[0])
     for ll, cc in zip(labels, colours):
@@ -50,7 +50,7 @@ def embed_umap(key, label, data, model):
     pl.legend(fontsize='x-large', markerscale=3)
     pl.tight_layout()
     pl.tight_layout()
-    
+
     return fig
 
 
@@ -59,23 +59,27 @@ class umap_embedding(VisualisationBase):
         super(umap_embedding, self).__init__(
             name=self.__class__.__name__, parent=parent,
         )
-        
+
         label = parent.index['label']
-        
+
         for key, node in parent.outputs.items():
             model = self.outputs.make_output(
                 key=key + ('umap',),
                 func=learn_umap,
                 backend='none',
-                label=label,
-                data=node,
+                kwargs=dict(
+                    label=label,
+                    data=node,
+                )
             )
-            
+
             self.outputs.add_output(
                 key=('viz',) + key,
                 func=embed_umap,
                 label=label,
                 backend='png',
-                data=node,
-                model=model,
+                kwargs=dict(
+                    data=node,
+                    model=model,
+                )
             )

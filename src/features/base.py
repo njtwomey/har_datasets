@@ -2,7 +2,7 @@ from os.path import join
 
 from numpy import concatenate
 
-from src.base import BaseGraph, make_key
+from src.base import BaseGraph, Key
 from src.selectors import select_feats
 from src.utils.logger import get_logger
 
@@ -21,77 +21,65 @@ def concatenate_sources(key, **datas):
 
 
 class FeatureBase(BaseGraph):
-    def __init__(self, name, parent, source_filter, source_name, *args, **kwargs):
+    def __init__(self, name, parent, source_filter, *args, **kwargs):
         super(FeatureBase, self).__init__(
             name=name, parent=parent,
         )
         
         assert source_filter is None or callable(source_filter)
         
-        self.source_filter = source_filter
-        self.source_name = source_name
+        self.source_filter = source_filter()
+        self.source_name = source_filter.__name__
         
         self.locations_set = set(self.get_ancestral_metadata('placements'))
         self.modality_set = set(self.get_ancestral_metadata('modalities'))
         
-        self.key = make_key(source_name)
+        self.key = Key(self.source_name)
     
-    def prepare_outputs(self, endpoints, key, func, **kwargs):
+    def prepare_outputs(self, endpoints, key, func, kwargs):
         """
         Since the feature extraction function is applied to all of the input sources individually and it is not
         (necessarily) desirable to perform classification analysis on features from each stream individually, this
         function allows the features to be extracted, but it does not append these features as outputs. Instead it
         a dictionary of nodes is built up and assigned to the variable endpoints.
-        
+
         By default this function prepares for aggregating all features into one dictionary which is set as the sole
         output when the 'self.aggregate_outputs(endpoints)' is called. If other endpoints are desired, these can be
         specified with the feats variable, as described in its docstring.
-        
-        Args:
-            endpoints: defaultdict(dict)
-                This
-            key: tuple(str)
-            func:
-            feats: None, or list(tuple(str))
-                This defines the types of outputs that the user can define to be outputted. If all features that
-                arose from the accelerometer on the wrist should be aggregated, feats should be specified as:
-                ```python
-                feats = [('accel', 'wrist'),]
-                ```
-                Here 'accel' and 'wrist' are defined in modality and location metadata files, but in general the
-                intersection of the key (a tuple of strings) and the elements of feats are compared. When the size of
-                the intersection matches the length of the elements of feat, this element is added.
-                
-            **kwargs:
 
-        Returns:
+
+        Parameters
+        ----------
+        endpoints : defaultdict(dict)
+        key
+        func
+        kwargs : None, or list(tuple(str))
+            This defines the types of outputs that the user can define to be outputted. If all features that
+            arose from the accelerometer on the wrist should be aggregated, feats should be specified as:
+            ```python
+            feats = [('accel', 'wrist'),]
+            ```
+            Here 'accel' and 'wrist' are defined in modality and location metadata files, but in general the
+            intersection of the key (a tuple of strings) and the elements of feats are compared. When the size of
+            the intersection matches the length of the elements of feat, this element is added.
+
+
+        Returns
+        -------
 
         """
-        key = make_key(key)
+
+        key = Key(key)
         node = self.outputs.make_output(
-            key=key, func=func, **kwargs
+            key=key,
+            func=func,
+            kwargs=kwargs,
         )
-        
-        logger.info(f"Adding {node.name} to complete feature set")
-        
+
         if self.source_filter(key):
             endpoints[str(node.name)] = node
-        
-        # else:
-        #     raise NotImplementedError
-    
+
     def assign_outputs(self, endpoints):
-        """
-        
-        Args:
-            endpoints:
-
-        Returns:
-
-        """
-        
-        logger.info(f'Aggregates for feature {self.key}')
-        
         feats = select_feats(
             parent=self, name='-'.join(self.key), **endpoints
         )

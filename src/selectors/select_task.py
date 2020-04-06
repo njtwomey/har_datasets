@@ -26,6 +26,8 @@ class select_task(SelectorBase):
         self.index.add_output(
             key='target',
             func=task_selector,
-            data=parent.index[task_name],
-            backend='pandas'
+            backend='pandas',
+            kwargs=dict(
+                data=parent.index[task_name],
+            )
         )
