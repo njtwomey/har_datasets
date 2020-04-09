@@ -2,8 +2,13 @@ from pathlib import Path
 
 from mldb import ComputationGraph, FileLockExistsException
 from mldb.backends import (
-    PickleBackend, JsonBackend, PandasBackend, NumpyBackend,
-    ScikitLearnBackend, PNGBackend, VolatileBackend
+    PickleBackend,
+    JsonBackend,
+    PandasBackend,
+    NumpyBackend,
+    ScikitLearnBackend,
+    PNGBackend,
+    VolatileBackend,
 )
 
 from src.keys import Key
@@ -15,7 +20,7 @@ from src.utils.loaders import build_path, get_yaml_file_list
 logger = get_logger(__name__)
 
 __all__ = [
-    'BaseGraph',
+    "BaseGraph",
 ]
 
 
@@ -30,31 +35,29 @@ def _get_ancestral_meta(graph, key):
 
     """
     if graph.meta is None:
-        logger.exception(TypeError(
-            f'The key "{key}" cannot be found in "{graph}"'
-        ))
+        logger.exception(TypeError(f'The key "{key}" cannot be found in "{graph}"'))
     if key in graph.meta:
         return graph.meta[key]
     if graph.parent is None:
-        logger.exception(TypeError(
-            f'The key "{key}" cannot be found in the ancestry of "{graph}"'
-        ))
+        logger.exception(TypeError(f'The key "{key}" cannot be found in the ancestry of "{graph}"'))
     return _get_ancestral_meta(graph.parent, key)
 
 
 def validate_ancestry(parent, sibling):
     if parent is not None and sibling is not None:
-        logger.exception(ValueError(
-            f'DAG cannot be specified consisting of both a parent and a sibling'
-        ))
+        logger.exception(
+            ValueError(f"DAG cannot be specified consisting of both a parent and a sibling")
+        )
     if parent is not None:
         return parent
     if sibling is not None:
-        if not hasattr(sibling, 'parent'):
-            logger.exception(TypeError(
-                'The variable {sibling} is expected to have an attribute '
-                'called parent but does not.'
-            ))
+        if not hasattr(sibling, "parent"):
+            logger.exception(
+                TypeError(
+                    "The variable {sibling} is expected to have an attribute "
+                    "called parent but does not."
+                )
+            )
         return sibling.parent
     return None
 
@@ -68,7 +71,7 @@ def validate_key_set_membership(key, key_set):
 
 
 class ComputationalSet(object):
-    def __init__(self, graph, parent=None, sibling=None, cat='outputs'):
+    def __init__(self, graph, parent=None, sibling=None, cat="outputs"):
         """
         
         Args:
@@ -82,19 +85,15 @@ class ComputationalSet(object):
         self.parent = validate_ancestry(parent, sibling)
         self.output_dict = dict()
 
-        yaml_files = get_yaml_file_list('tasks', stem=True)
-        self.index_keys = set(
-            ['index', 'fold', 'label', 'target', 'split'] + yaml_files
-        )
+        yaml_files = get_yaml_file_list("tasks", stem=True)
+        self.index_keys = set(["index", "fold", "label", "target", "split"] + yaml_files)
 
         self.acquired = [self]
 
     def acquire(self, other):
         for key, val in other.output_dict.items():
             if key in self.output_dict:
-                logger.exception(KeyError(
-                    f'{key} is not in {self.output_dict.keys()}'
-                ))
+                logger.exception(KeyError(f"{key} is not in {self.output_dict.keys()}"))
             self.output_dict[key] = val
 
     @property
@@ -144,8 +143,8 @@ class ComputationalSet(object):
 
                 except FileLockExistsException as ex:
                     logger.warn(
-                        f'The file {node.name} is currently being evaluated by a different process. '
-                        f'Continuing to next available process: {ex}'
+                        f"The file {node.name} is currently being evaluated by a different process. "
+                        f"Continuing to next available process: {ex}"
                     )
 
     def make_output(self, key, func, backend=None, kwargs=None):
@@ -162,10 +161,7 @@ class ComputationalSet(object):
             func=func,
             name=self.graph.build_path(key),
             backend=backend,
-            kwargs=dict(
-                key=key,
-                **kwargs,
-            )
+            kwargs=dict(key=key, **kwargs,),
         )
 
         return node
@@ -176,12 +172,7 @@ class ComputationalSet(object):
         self.output_dict[key] = node
 
     def add_output(self, key, func, backend=None, kwargs=None):
-        node = self.make_output(
-            key=key,
-            func=func,
-            backend=backend,
-            kwargs=kwargs
-        )
+        node = self.make_output(key=key, func=func, backend=backend, kwargs=kwargs)
 
         self.append_output(key=key, node=node)
 
@@ -191,39 +182,39 @@ class ComputationalSet(object):
 class IndexSet(ComputationalSet):
     def __init__(self, graph, parent):
         super(IndexSet, self).__init__(
-            cat='index',
-            graph=graph,
-            parent=parent,
+            cat="index", graph=graph, parent=parent,
         )
 
     def validate_key(self, key):
         if not self.is_index_key(key):
-            logger.exception(ValueError(
-                f"A non-index key was used for the index computation: {key} not in {self.index_keys}"
-            ))
+            logger.exception(
+                ValueError(
+                    f"A non-index key was used for the index computation: {key} not in {self.index_keys}"
+                )
+            )
 
     def add_output(self, key, func, backend=None, kwargs=None):
         self.validate_key(key)
         return super(IndexSet, self).add_output(
             key=key,
             func=func,
-            backend=backend or 'pandas',  # Indexes default to pandas backend
-            kwargs=kwargs
+            backend=backend or "pandas",  # Indexes default to pandas backend
+            kwargs=kwargs,
         )
 
     def make_output(self, key, func, backend=None, kwargs=None):
         self.validate_key(key)
         return super(IndexSet, self).make_output(
-            key=key, func=func, backend=backend or 'pandas', kwargs=kwargs
+            key=key, func=func, backend=backend or "pandas", kwargs=kwargs
         )
 
     @property
     def index(self):
-        return self['index']
+        return self["index"]
 
     @property
     def fold(self):
-        return self['fold']
+        return self["fold"]
 
 
 class ComputationalCollection(object):
@@ -255,7 +246,7 @@ class BaseGraph(ComputationGraph):
     A simple computational graph that is meant only to define backends and load metadata
     """
 
-    def __init__(self, name, parent=None, meta=None, default_backend='numpy'):
+    def __init__(self, name, parent=None, meta=None, default_backend="numpy"):
         """
         
         Args:
@@ -264,9 +255,7 @@ class BaseGraph(ComputationGraph):
             meta:
             default_backend:
         """
-        super(BaseGraph, self).__init__(
-            name=name,
-        )
+        super(BaseGraph, self).__init__(name=name,)
 
         if isinstance(meta, BaseMeta):
             self.meta = meta
@@ -278,30 +267,26 @@ class BaseGraph(ComputationGraph):
             self.meta = BaseMeta(path=name)
 
         else:
-            logger.exception(ValueError(
-                f'Ambiguous metadata specification with name={name} and meta={meta}'
-            ))
+            logger.exception(
+                ValueError(f"Ambiguous metadata specification with name={name} and meta={meta}")
+            )
 
         self.parent = parent
 
         self.fs_root = build_path()
 
-        self.add_backend('pickle', PickleBackend(self.fs_root))
-        self.add_backend('pandas', PandasBackend(self.fs_root))
-        self.add_backend('numpy', NumpyBackend(self.fs_root))
-        self.add_backend('json', JsonBackend(self.fs_root, cls=NumpyEncoder))
-        self.add_backend('sklearn', ScikitLearnBackend(self.fs_root))
-        self.add_backend('png', PNGBackend(self.fs_root))
+        self.add_backend("pickle", PickleBackend(self.fs_root))
+        self.add_backend("pandas", PandasBackend(self.fs_root))
+        self.add_backend("numpy", NumpyBackend(self.fs_root))
+        self.add_backend("json", JsonBackend(self.fs_root, cls=NumpyEncoder))
+        self.add_backend("sklearn", ScikitLearnBackend(self.fs_root))
+        self.add_backend("png", PNGBackend(self.fs_root))
 
         self.set_default_backend(default_backend)
 
         self.collections = ComputationalCollection(
-            index=IndexSet(
-                graph=self, parent=parent
-            ),
-            outputs=ComputationalSet(
-                graph=self, parent=parent
-            ),
+            index=IndexSet(graph=self, parent=parent),
+            outputs=ComputationalSet(graph=self, parent=parent),
         )
 
     def build_path(self, key):
@@ -317,9 +302,11 @@ class BaseGraph(ComputationGraph):
 
         assert len(key) > 0
         if not isinstance(key[0], str):
-            logger.exception(ValueError(
-                f'The argument for `build_path` must be strings, but got the type: {type(args[0])}'
-            ))
+            logger.exception(
+                ValueError(
+                    f"The argument for `build_path` must be strings, but got the type: {type(key[0])}"
+                )
+            )
 
         return build_path(self.identifier, str(key))
 
@@ -334,11 +321,11 @@ class BaseGraph(ComputationGraph):
 
     @property
     def index(self):
-        return self.collections['index']
+        return self.collections["index"]
 
     @property
     def outputs(self):
-        return self.collections['outputs']
+        return self.collections["outputs"]
 
     @property
     def identifier(self):

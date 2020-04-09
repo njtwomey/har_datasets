@@ -11,10 +11,8 @@ def main():
     for name in randomised_order(datasets.keys()):
         for pipeline in randomised_order(pipelines.keys()):
             print(name, pipeline)
-            pipeline_importer(
-                pipeline, name=name
-            ).evaluate_outputs()
+            pipeline_importer(pipeline, name=name).evaluate_outputs()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

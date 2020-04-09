@@ -4,6 +4,7 @@ verify_ssl = true
 
 [dev-packages]
 Sphinx = "*"
+pre-commit = "*"
 
 [packages]
 requests = "*"

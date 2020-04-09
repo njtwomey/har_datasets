@@ -1,8 +1,6 @@
 from src.keys import Key
 
-__all__ = [
-    'make_key_subset_of', 'accel_filt', 'gyro_filt', 'take_all'
-]
+__all__ = ["make_key_subset_of", "accel_filt", "gyro_filt", "take_all"]
 
 
 def make_key_subset_of(key_set):
@@ -15,11 +13,11 @@ def make_key_subset_of(key_set):
 
 
 def accel_filt():
-    return make_key_subset_of('accel')
+    return make_key_subset_of("accel")
 
 
 def gyro_filt():
-    return make_key_subset_of('gyro')
+    return make_key_subset_of("gyro")
 
 
 def take_all():

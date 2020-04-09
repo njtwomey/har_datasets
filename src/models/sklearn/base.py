@@ -14,7 +14,7 @@ from src.utils.misc import randomised_order
 logger = get_logger(__name__)
 
 __all__ = [
-    'sklearn_model',
+    "sklearn_model",
 ]
 
 
@@ -22,7 +22,7 @@ def select_fold(key, folds, fold_name):
     assert fold_name in folds.columns
     fold_def = folds[fold_name]
     fold_vals = set(np.unique(fold_def.values))
-    assert fold_vals.issubset({'train', 'val', 'test'})
+    assert fold_vals.issubset({"train", "val", "test"})
     return fold_def
 
 
@@ -31,13 +31,13 @@ def learn_sklearn_model(key, index, features, targets, fold_def, model, n_splits
     assert index.shape[0] == targets.shape[0]
     assert index.shape[0] == fold_def.shape[0]
 
-    tr_inds = fold_def == 'train'
+    tr_inds = fold_def == "train"
 
-    x_train, y_train = features[tr_inds], targets['target'][tr_inds].values.ravel()
+    x_train, y_train = features[tr_inds], targets["target"][tr_inds].values.ravel()
 
     model = clone(model)
 
-    if 'val' in fold_def:
+    if "val" in fold_def:
         raise NotImplementedError
 
     else:
@@ -69,78 +69,57 @@ class sklearn_model(ModelBase):
         )
 
         if not isinstance(model, GridSearchCV):
-            model = GridSearchCV(
-                estimator=model,
-                param_grid=xval,
-                refit=True,
-                verbose=10,
-            )
+            model = GridSearchCV(estimator=model, param_grid=xval, refit=True, verbose=10,)
 
         fold_def = self.outputs.add_output(
-            key=join(fold_name, 'fold'),
+            key=join(fold_name, "fold"),
             func=select_fold,
-            backend='none',
-            kwargs=dict(
-                folds=split,
-                fold_name=fold_name,
-            )
+            backend="none",
+            kwargs=dict(folds=split, fold_name=fold_name,),
         )
 
         model = self.outputs.add_output(
-            key=join(fold_name, 'model'),
+            key=join(fold_name, "model"),
             func=learn_sklearn_model,
-            backend='sklearn',
+            backend="sklearn",
             kwargs=dict(
-                index=self.index['index'],
+                index=self.index["index"],
                 features=features,
                 targets=targets,
                 fold_def=fold_def,
                 model=model,
                 n_splits=n_splits,
-            )
+            ),
         )
 
         predictions = self.outputs.add_output(
-            key=join(fold_name, 'preds'),
+            key=join(fold_name, "preds"),
             func=sklearn_preds,
-            backend='none',
-            kwargs=dict(
-                features=features,
-                model=model,
-            )
+            backend="none",
+            kwargs=dict(features=features, model=model,),
         )
 
         self.outputs.add_output(
-            key=join(fold_name, 'probs'),
+            key=join(fold_name, "probs"),
             func=sklearn_probs,
-            backend='none',
-            kwargs=dict(
-                features=features,
-                model=model,
-            )
+            backend="none",
+            kwargs=dict(features=features, model=model,),
         )
 
         scores = self.outputs.add_output(
-            key=join(fold_name, 'scores'),
+            key=join(fold_name, "scores"),
             func=sklearn_decision_function,
-            backend='none',
-            kwargs=dict(
-                features=features,
-                model=model,
-            )
+            backend="none",
+            kwargs=dict(features=features, model=model,),
         )
 
         self.outputs.add_output(
-            key=join(fold_name, 'results'),
+            key=join(fold_name, "results"),
             func=evaluate_fold,
-            backend='json',
+            backend="json",
             kwargs=dict(
-                fold=fold_def,
-                targets=targets,
-                predictions=predictions,
-                model=model,
-                scores=scores,
-            )
+                fold=fold_def, targets=targets, predictions=predictions, model=model, scores=scores,
+            ),
         )
 
 
@@ -161,14 +140,14 @@ class sklearn_model_factory(ModelBase):
                 model=model,
                 xval=xval,
                 fold_name=fold_name,
-                features=data.outputs['features'],
-                targets=self.index['target'],
-                split=self.index['split'],
+                features=data.outputs["features"],
+                targets=self.index["target"],
+                split=self.index["split"],
                 n_splits=n_splits,
             )
 
             self.models[fold_name] = clf
             self.outputs.acquire(clf.outputs)
 
-        for fold_name in randomised_order(self.index['split'].evaluate()):
+        for fold_name in randomised_order(self.index["split"].evaluate()):
             append_model(fold_name=str(fold_name))

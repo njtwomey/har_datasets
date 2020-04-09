@@ -7,9 +7,7 @@ from src.evaluation.base import EvaluationBase
 
 logger = get_logger(__name__)
 
-__all__ = [
-    'classification_metrics'
-]
+__all__ = ["classification_metrics"]
 
 
 class classification_metrics(EvaluationBase):
@@ -21,16 +19,11 @@ class classification_metrics(EvaluationBase):
         for key, node in parent.outputs.items():
             self.parent.outputs.add_output(
                 func=evaluate_performance,
-                key=key + ('results',),
-                backend='json',
+                key=key + ("results",),
+                backend="json",
                 kwargs=dict(
-                    fold=None,
-                    fold_id=None,
-                    label=None,
-                    data=None,
-                    scores=None,
-                    model=None,
-                )
+                    fold=None, fold_id=None, label=None, data=None, scores=None, model=None,
+                ),
             )
 
         raise NotImplementedError
@@ -47,8 +40,8 @@ def evaluate_performance(key, fold, fold_id, label, data, model):
         res[fold_id][tr_val_te] = _classification_perf_metrics(
             labels=yy, model=model, predictions=y_hat, scores=scores
         )
-        if hasattr(model, 'cv_results_'):
-            res[fold_id][tr_val_te]['xval'] = model.cv_results_
+        if hasattr(model, "cv_results_"):
+            res[fold_id][tr_val_te]["xval"] = model.cv_results_
     return res
 
 
@@ -64,17 +57,15 @@ def evaluate_fold(key, fold, targets, predictions, model, scores):
             predictions=np.asarray(pp),
             scores=np.asarray(ss),
         )
-    if hasattr(model, 'cv_results_'):
-        res['xval'] = model.cv_results_
+    if hasattr(model, "cv_results_"):
+        res["xval"] = model.cv_results_
     return res
 
 
 def _get_class_names(model):
-    if hasattr(model, 'classes_'):
+    if hasattr(model, "classes_"):
         return model.classes_
-    logger.exception(TypeError(
-        f'The classes member cannot be extracted from this object: {model}'
-    ))
+    logger.exception(TypeError(f"The classes member cannot be extracted from this object: {model}"))
 
 
 def _classification_perf_metrics(labels, model, predictions, scores):
@@ -90,21 +81,19 @@ def _classification_perf_metrics(labels, model, predictions, scores):
         if scores_.shape[1] == 2:
             scores_ = scores_[:, 1]
         return {
-            f'{name}_{average}': func(
+            f"{name}_{average}": func(
                 y_true=np.asarray([lookup[label] for label in labels_]),
                 y_score=scores_,
                 average=average,
-                **kwargs
-            ) for average in (
-                'macro', 'weighted',
+                **kwargs,
             )
+            for average in ("macro", "weighted",)
         }
 
     def prediction_metrics(name, func):
         return {
-            f'{name}_{average}': func(
-                y_true=labels, y_pred=predictions, average=average
-            ) for average in ('macro', 'micro', 'weighted')
+            f"{name}_{average}": func(y_true=labels, y_pred=predictions, average=average)
+            for average in ("macro", "micro", "weighted")
         }
 
     label_lookup = dict(zip(model.classes_, range(model.classes_.shape[0])))
@@ -120,12 +109,12 @@ def _classification_perf_metrics(labels, model, predictions, scores):
         class_prior={kk: vv / len(labels) for kk, vv in label_counts.items()},
         accuracy=metrics.accuracy_score(labels, predictions),
         confusion_matrix=metrics.confusion_matrix(labels, predictions),
-        **score_metrics('auroc_ovo', metrics.roc_auc_score, label_ind, probs, multi_class='ovo'),
-        **score_metrics('auroc_ovr', metrics.roc_auc_score, label_ind, probs, multi_class='ovr'),
-        **prediction_metrics('f1', metrics.f1_score),
-        **prediction_metrics('precision', metrics.precision_score),
-        **prediction_metrics('recall', metrics.recall_score),
-        per_class_metrics=dict()
+        **score_metrics("auroc_ovo", metrics.roc_auc_score, label_ind, probs, multi_class="ovo"),
+        **score_metrics("auroc_ovr", metrics.roc_auc_score, label_ind, probs, multi_class="ovr"),
+        **prediction_metrics("f1", metrics.f1_score),
+        **prediction_metrics("precision", metrics.precision_score),
+        **prediction_metrics("recall", metrics.recall_score),
+        per_class_metrics=dict(),
     )
 
     if len(cols) > 2:
@@ -133,7 +122,7 @@ def _classification_perf_metrics(labels, model, predictions, scores):
             yi = label_lookup[col]
             yy_i = labels == col
             y_hat_i = predictions == col
-            res['per_class_metrics'][col] = dict(
+            res["per_class_metrics"][col] = dict(
                 index=yi,
                 label=col,
                 count=yy_i.sum(),

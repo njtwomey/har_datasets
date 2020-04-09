@@ -5,9 +5,7 @@ from numpy import ndarray
 
 from src.utils.decorators import DecoratorBase
 
-__all__ = [
-    'randomised_order', 'NumpyEncoder'
-]
+__all__ = ["randomised_order", "NumpyEncoder"]
 
 
 def randomised_order(iterable):
@@ -30,7 +28,7 @@ class NumpyEncoder(json.JSONEncoder):
     This is useful for dumping the cross-validation data resulting from a grid search
     to a JSON record.
     """
-    
+
     def default(self, obj):
         """
         This function allows numpy ndarrays to be serialised. Call with:

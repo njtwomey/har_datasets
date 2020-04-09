@@ -9,15 +9,13 @@ from src.utils.logger import get_logger
 logger = get_logger(__name__)
 
 __all__ = [
-    'FeatureBase',
+    "FeatureBase",
 ]
 
 
 def concatenate_sources(key, **datas):
     assert len(set([type(i) for i in datas.values()])) == 1
-    return concatenate([
-        datas[kk] for kk in sorted(datas.keys())
-    ], axis=1)
+    return concatenate([datas[kk] for kk in sorted(datas.keys())], axis=1)
 
 
 class FeatureBase(BaseGraph):
@@ -25,17 +23,17 @@ class FeatureBase(BaseGraph):
         super(FeatureBase, self).__init__(
             name=name, parent=parent,
         )
-        
+
         assert source_filter is None or callable(source_filter)
-        
+
         self.source_filter = source_filter()
         self.source_name = source_filter.__name__
-        
-        self.locations_set = set(self.get_ancestral_metadata('placements'))
-        self.modality_set = set(self.get_ancestral_metadata('modalities'))
-        
+
+        self.locations_set = set(self.get_ancestral_metadata("placements"))
+        self.modality_set = set(self.get_ancestral_metadata("modalities"))
+
         self.key = Key(self.source_name)
-    
+
     def prepare_outputs(self, endpoints, key, func, kwargs):
         """
         Since the feature extraction function is applied to all of the input sources individually and it is not
@@ -70,23 +68,17 @@ class FeatureBase(BaseGraph):
         """
 
         key = Key(key)
-        node = self.outputs.make_output(
-            key=key,
-            func=func,
-            kwargs=kwargs,
-        )
+        node = self.outputs.make_output(key=key, func=func, kwargs=kwargs,)
 
         if self.source_filter(key):
             endpoints[str(node.name)] = node
 
     def assign_outputs(self, endpoints):
-        feats = select_feats(
-            parent=self, name='-'.join(self.key), **endpoints
-        )
-        
+        feats = select_feats(parent=self, name="-".join(self.key), **endpoints)
+
         self.outputs.acquire(feats.outputs)
         self.name = join(self.name, feats.name)
 
     @property
     def features(self):
-        return self.outputs['features']
+        return self.outputs["features"]

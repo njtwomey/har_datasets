@@ -3,21 +3,16 @@ from collections import defaultdict
 from src.features.base import FeatureBase
 from src.features.statistical_features_impl import t_feat, f_feat
 
-__all__ = [
-    'statistical_features'
-]
+__all__ = ["statistical_features"]
 
 
 class statistical_features(FeatureBase):
     def __init__(self, parent, source_filter):
         super(statistical_features, self).__init__(
-            name=self.__class__.__name__, parent=parent,
-            source_filter=source_filter,
+            name=self.__class__.__name__, parent=parent, source_filter=source_filter,
         )
 
-        kwargs = dict(
-            fs=self.get_ancestral_metadata('fs')
-        )
+        kwargs = dict(fs=self.get_ancestral_metadata("fs"))
 
         endpoints = defaultdict(dict)
 
@@ -51,46 +46,30 @@ class statistical_features(FeatureBase):
         # Consult with the dataset table (tables/datasets.md) and see anguita2013 for
         # details.
 
-        index = self.parent.index['index']
+        index = self.parent.index["index"]
         for key, node in self.parent.outputs.items():
-            key_td = key + ('td',)
-            key_fd = key + ('fd',)
+            key_td = key + ("td",)
+            key_fd = key + ("fd",)
 
-            loop_kwargs = dict(
-                index=index,
-                data=node,
-                **kwargs,
-            )
+            loop_kwargs = dict(index=index, data=node, **kwargs,)
 
-            if 'accel' in key:
+            if "accel" in key:
                 self.prepare_outputs(
-                    endpoints=endpoints,
-                    key=key_td,
-                    func=t_feat,
-                    kwargs=loop_kwargs,
+                    endpoints=endpoints, key=key_td, func=t_feat, kwargs=loop_kwargs,
                 )
 
-                if 'grav' not in key:
+                if "grav" not in key:
                     self.prepare_outputs(
-                        endpoints=endpoints,
-                        key=key_fd,
-                        func=f_feat,
-                        kwargs=loop_kwargs,
+                        endpoints=endpoints, key=key_fd, func=f_feat, kwargs=loop_kwargs,
                     )
 
-            if 'gyro' in key:
+            if "gyro" in key:
                 self.prepare_outputs(
-                    endpoints=endpoints,
-                    key=key_td,
-                    func=f_feat,
-                    kwargs=loop_kwargs,
+                    endpoints=endpoints, key=key_td, func=f_feat, kwargs=loop_kwargs,
                 )
 
                 self.prepare_outputs(
-                    endpoints=endpoints,
-                    key=key_fd,
-                    func=f_feat,
-                    kwargs=loop_kwargs,
+                    endpoints=endpoints, key=key_fd, func=f_feat, kwargs=loop_kwargs,
                 )
 
         self.assign_outputs(endpoints)

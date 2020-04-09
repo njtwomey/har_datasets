@@ -6,15 +6,14 @@ import numpy as np
 from src.features.base import FeatureBase
 
 __all__ = [
-    'ecdf',
+    "ecdf",
 ]
 
 
 class ecdf(FeatureBase):
     def __init__(self, parent, n_components, source_filter):
         super(ecdf, self).__init__(
-            name=f'ecdf_{n_components}', parent=parent,
-            source_filter=source_filter,
+            name=f"ecdf_{n_components}", parent=parent, source_filter=source_filter,
         )
 
         endpoints = defaultdict(dict)
@@ -24,13 +23,9 @@ class ecdf(FeatureBase):
         for key, node in parent.outputs.items():
             self.prepare_outputs(
                 endpoints=endpoints,
-                key=key + ('ecdf',),
+                key=key + ("ecdf",),
                 func=calc_ecdf,
-                kwargs=dict(
-                    n_components=n_components,
-                    index=parent.index['index'],
-                    data=node,
-                )
+                kwargs=dict(n_components=n_components, index=parent.index["index"], data=node,),
             )
 
         self.assign_outputs(endpoints)

@@ -8,67 +8,73 @@ from src.utils.loaders import load_csv_data
 
 from src.datasets.base import Dataset
 
-__all__ = [
-    'anguita2013'
-]
+__all__ = ["anguita2013"]
 
 
 class anguita2013(Dataset):
     def __init__(self):
         super(anguita2013, self).__init__(
-            name=self.__class__.__name__,
-            unzip_path=lambda s: s.replace('%20', ' ')
+            name=self.__class__.__name__, unzip_path=lambda s: s.replace("%20", " ")
         )
-        
+
         self.win_len = 128
-    
+
     @label_decorator
     def build_label(self, task, *args, **kwargs):
         labels = []
-        for fold in ('train', 'test'):
-            fold_labels = load_csv_data(join(self.unzip_path, fold, f'y_{fold}.txt'))
+        for fold in ("train", "test"):
+            fold_labels = load_csv_data(join(self.unzip_path, fold, f"y_{fold}.txt"))
             labels.extend([l for l in fold_labels for _ in range(self.win_len)])
         return self.meta.inv_lookup[task], pd.DataFrame(dict(labels=labels))
-    
+
     @fold_decorator
     def build_fold(self, *args, **kwargs):
         fold = []
         fold.extend(
-            ['train' for _ in load_csv_data(join(
-                self.unzip_path, 'train', 'y_train.txt'
-            )) for _ in range(self.win_len)])
+            [
+                "train"
+                for _ in load_csv_data(join(self.unzip_path, "train", "y_train.txt"))
+                for _ in range(self.win_len)
+            ]
+        )
         fold.extend(
-            ['test' for _ in load_csv_data(join(
-                self.unzip_path, 'test', 'y_test.txt'
-            )) for _ in range(self.win_len)])
+            [
+                "test"
+                for _ in load_csv_data(join(self.unzip_path, "test", "y_test.txt"))
+                for _ in range(self.win_len)
+            ]
+        )
         return pd.DataFrame(fold)
-    
+
     @index_decorator
     def build_index(self, *args, **kwargs):
         sub = []
-        for fold in ('train', 'test'):
-            sub.extend(load_csv_data(join(self.unzip_path, fold, f'subject_{fold}.txt')))
-        index = pd.DataFrame(dict(
-            subject=[si for si in sub for _ in range(self.win_len)],
-            trial=build_seq_list(subs=sub, win_len=self.win_len),
-            time=build_time(subs=sub, win_len=self.win_len, fs=float(self.meta.meta['fs'])),
-        ))
+        for fold in ("train", "test"):
+            sub.extend(load_csv_data(join(self.unzip_path, fold, f"subject_{fold}.txt")))
+        index = pd.DataFrame(
+            dict(
+                subject=[si for si in sub for _ in range(self.win_len)],
+                trial=build_seq_list(subs=sub, win_len=self.win_len),
+                time=build_time(subs=sub, win_len=self.win_len, fs=float(self.meta.meta["fs"])),
+            )
+        )
         return index
-    
+
     def build_data(self, key, *args, **kwargs):
         modality, placement = key
         x_data = []
         y_data = []
         z_data = []
-        modality = dict(
-            accel='acc',
-            gyro='gyro',
-        )[modality]
-        for fold in ('train', 'test'):
-            for l, d in zip((x_data, y_data, z_data), ('x', 'y', 'z')):
-                ty = ['body', 'total'][modality in {'accel', 'acc'}]
-                acc = load_csv_data(join(self.unzip_path, fold, 'Inertial Signals', f'{ty}_{modality}_{d}_{fold}.txt'),
-                                    astype='np')
+        modality = dict(accel="acc", gyro="gyro",)[modality]
+        for fold in ("train", "test"):
+            for l, d in zip((x_data, y_data, z_data), ("x", "y", "z")):
+                ty = ["body", "total"][modality in {"accel", "acc"}]
+                acc = load_csv_data(
+                    join(
+                        self.unzip_path, fold, "Inertial Signals", f"{ty}_{modality}_{d}_{fold}.txt"
+                    ),
+                    astype="np",
+                )
                 l.extend(acc.ravel().tolist())
         return np.c_[x_data, y_data, z_data]
 

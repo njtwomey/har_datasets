@@ -5,7 +5,7 @@ import logging
 import sys
 from logging import FileHandler
 
-FORMATTER = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+FORMATTER = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 LOG_FILE = "logging.log"
 
 
@@ -23,19 +23,17 @@ def get_file_handler():
 
 def logger_exception(logger):
     str_exception = logger.exception
-    
+
     def exception(msg, *args, exc_info=True, **kwargs):
         if not isinstance(msg, Exception):
-            logger.warn(
-                f'logger.exception called outside of Exception scope'
-            )
+            logger.warn(f"logger.exception called outside of Exception scope")
             msg = Exception(msg)
         try:
             raise msg
         except Exception as ex:
             str_exception(msg, *args, exc_info=exc_info, **kwargs)
             raise ex
-    
+
     return exception
 
 
@@ -47,8 +45,8 @@ def get_logger(logger_name, with_file=True, with_console=True, raise_exceptions=
     if with_file:
         logger.addHandler(get_file_handler())
     logger.propagate = False
-    
+
     if raise_exceptions:
         logger.exception = logger_exception(logger)
-    
+
     return logger

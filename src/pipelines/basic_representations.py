@@ -3,7 +3,9 @@ from src import features
 from src import transformers
 
 __all__ = [
-    'stat_feat', 'ecdf_11', 'ecdf_21',
+    "stat_feat",
+    "ecdf_11",
+    "ecdf_21",
 ]
 
 

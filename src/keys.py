@@ -1,6 +1,4 @@
-__all__ = [
-    'Key'
-]
+__all__ = ["Key"]
 
 
 def validate_key(key):
@@ -24,13 +22,13 @@ class Key(object):
         return len(self.key)
 
     def __str__(self):
-        return '-'.join(self.key)
+        return "-".join(self.key)
 
     def __getitem__(self, item):
         return self.key[item]
 
     def __repr__(self):
-        return f'<Key key={self.key}>'
+        return f"<Key key={self.key}>"
 
     def __eq__(self, other):
         return self.key == other.key

@@ -1,8 +1,6 @@
 from src.base import BaseGraph
 
-__all__ = [
-    'TransformerBase'
-]
+__all__ = ["TransformerBase"]
 
 
 class TransformerBase(BaseGraph):

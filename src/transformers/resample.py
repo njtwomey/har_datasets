@@ -6,7 +6,7 @@ from src.transformers.base import TransformerBase
 from src.utils.decorators import PartitionByTrial
 
 __all__ = [
-    'resample',
+    "resample",
 ]
 
 
@@ -53,28 +53,23 @@ def resample_metadata(key, index, data, fs_old, fs_new):
 
     inds = align_metadata(t_old, t_new)
     df = data.iloc[inds].copy()
-    if 'index' in key:
-        df.loc[:, 'time'] = t_new
+    if "index" in key:
+        df.loc[:, "time"] = t_new
     df = df.astype(data.dtypes)
     return df
 
 
 class resample(TransformerBase):
     def __init__(self, parent: object, fs_new: object = None) -> object:
-        super(resample, self).__init__(
-            name=self.__class__.__name__, parent=parent
-        )
+        super(resample, self).__init__(name=self.__class__.__name__, parent=parent)
 
-        self.fs_old = parent.get_ancestral_metadata('fs')
+        self.fs_old = parent.get_ancestral_metadata("fs")
         self.fs_new = fs_new
         if self.fs_new is None:
             self.fs_new = self.fs_old
-        self.meta.insert('fs', self.fs_new)
+        self.meta.insert("fs", self.fs_new)
 
-        kwargs = dict(
-            fs_old=self.fs_old,
-            fs_new=self.fs_new
-        )
+        kwargs = dict(fs_old=self.fs_old, fs_new=self.fs_new)
 
         if self.fs_old != self.fs_new:
             # Only compute indexes and outputs if the sample rate has changed
@@ -82,24 +77,16 @@ class resample(TransformerBase):
                 self.index.add_output(
                     key=key,
                     func=PartitionByTrial(resample_metadata),
-                    kwargs=dict(
-                        index=parent.index['index'],
-                        data=node,
-                        **kwargs,
-                    )
+                    kwargs=dict(index=parent.index["index"], data=node, **kwargs,),
                 )
 
             for key, node in parent.outputs.items():
                 self.outputs.add_output(
                     key=key,
                     func=PartitionByTrial(resample_data),
-                    kwargs=dict(
-                        index=parent.index['index'],
-                        data=node,
-                        **kwargs,
-                    )
+                    kwargs=dict(index=parent.index["index"], data=node, **kwargs,),
                 )
 
     @property
     def identifier(self):
-        return self.parent.identifier / f'{self.fs_new}Hz'
+        return self.parent.identifier / f"{self.fs_new}Hz"
