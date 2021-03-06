@@ -28,10 +28,10 @@ def main(
     filtered = body_grav_filter(parent=resampled)
     windowed = window(parent=filtered, win_len=win_len, win_inc=win_inc)
     accel_feats = ecdf(parent=windowed, source_filter=source_filter, n_components=21)
-    viz = umap_embedding(accel_feats)
-    viz.evaluate_outputs()
     task = select_task(parent=accel_feats, task_name=task)
     split = select_split(parent=task, split_type=split_type)
+    viz = umap_embedding(accel_feats, task=task)
+    viz.evaluate_outputs()
     clf = models.sgd_classifier(parent=split, split=split, task=task, data=accel_feats)
     clf.evaluate_outputs()
     return clf

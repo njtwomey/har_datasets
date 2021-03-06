@@ -68,7 +68,7 @@ class sklearn_model(ModelBase):
         )
 
         if not isinstance(model, GridSearchCV):
-            model = GridSearchCV(estimator=model, param_grid=xval, refit=True, verbose=10,)
+            model = GridSearchCV(estimator=model, param_grid=xval, refit=True, verbose=10)
 
         fold_def = self.outputs.add_output(
             key=join(fold_name, "fold"),
