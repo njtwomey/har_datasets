@@ -1,4 +1,1 @@
-[submodule "mldb"]
-	path = mldb
-	url = git@github.com:njtwomey/mldb.git
 
