@@ -21,6 +21,7 @@ tqdm = "*"
 mldb = {git = "https://github.com/njtwomey/mldb.git"}
 PyYAML = "*"
 spectrum = "*"
+umap-learn = "*"
 
 [requires]
 python_version = "3.8"

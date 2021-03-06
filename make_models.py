@@ -1,11 +1,9 @@
-from src import dot_env_decorator
 from src import iter_dataset_paths
 from src import model_importer
 from src import pipeline_importer
 from src import randomised_order
 
 
-@dot_env_decorator
 def main():
     pass
     # datasets = load_datasets_metadata()

@@ -1,11 +1,8 @@
 from functools import partial
 from functools import update_wrapper
-from functools import wraps
 
 import numpy as np
 import pandas as pd
-from dotenv import find_dotenv
-from dotenv import load_dotenv
 from loguru import logger
 from pandas.api.types import is_categorical_dtype
 from tqdm import tqdm
@@ -20,7 +17,6 @@ __all__ = [
     "label_decorator",
     "PartitionByTrial",
     "partitioning_decorator",
-    "dot_env_decorator",
 ]
 
 
@@ -201,15 +197,6 @@ class RequiredModalities(DecoratorBase):
 
 
 required_modalities = RequiredModalities
-
-
-def dot_env_decorator(func):
-    @wraps(func)
-    def _dot_env_decorator(*args, **kwargs):
-        load_dotenv(find_dotenv())
-        return func(*args, **kwargs)
-
-    return _dot_env_decorator
 
 
 label_decorator = LabelDecorator

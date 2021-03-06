@@ -1,5 +1,4 @@
 from src import dataset_importer
-from src import dot_env_decorator
 from src import features
 from src import models
 from src import selectors
@@ -10,7 +9,6 @@ from src.utils import randomised_order
 from src.utils import take_all
 
 
-@dot_env_decorator
 def main(
     dataset_name, source_filter, feat_name, clf_name, fs_new, win_len, win_inc, split_type,
 ):

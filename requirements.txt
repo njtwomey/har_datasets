@@ -15,3 +15,4 @@ tqdm
 git+https://github.com/njtwomey/mldb.git#egg=mldb
 spectrum
 click
+umap-learn

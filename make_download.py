@@ -11,7 +11,6 @@ from loguru import logger
 from tqdm import tqdm
 
 from src import DatasetMeta
-from src import dot_env_decorator
 from src import iter_dataset_paths
 
 
@@ -47,7 +46,6 @@ def download_dataset(dataset_meta_path):
         unzip_data(zip_path=dataset.zip_path, in_name=zip_name, out_name=unzip_path)
 
 
-@dot_env_decorator
 def main():
     for dataset_meta_path in iter_dataset_paths():
         logger.info(f"Downloading {dataset_meta_path}")

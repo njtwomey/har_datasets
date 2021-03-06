@@ -1,6 +1,9 @@
-from os.path import join, basename, splitext
+from os.path import basename
+from os.path import join
+from os.path import splitext
 
-from src import BaseGraph, DatasetMeta, Key
+from src.base import BaseGraph
+from src.meta import DatasetMeta
 
 __all__ = [
     "Dataset",
@@ -18,7 +21,7 @@ class Dataset(BaseGraph):
 
         # Build the indexes
         self.index.add_output(
-            key="fold", func=self.build_fold, backend="pandas", kwargs=dict(path=self.unzip_path,)
+            key="fold", func=self.build_fold, backend="pandas", kwargs=dict(path=self.unzip_path)
         )
 
         self.index.add_output(
