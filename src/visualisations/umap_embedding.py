@@ -1,15 +1,12 @@
+import matplotlib.pyplot as pl
+import pandas as pd
+import seaborn as sns
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
-
-import pandas as pd
-
-import matplotlib.pyplot as pl
-import seaborn as sns
-
 from umap import UMAP
 
-from src.visualisations.base import VisualisationBase
 from src.utils.label_helpers import normalise_labels
+from src.visualisations.base import VisualisationBase
 
 sns.set_style("darkgrid")
 sns.set_context("paper")

@@ -1,9 +1,8 @@
 import numpy as np
-
 import scipy.signal
 import scipy.stats
-
 from spectrum import arburg
+
 
 __all__ = [
     "mad",

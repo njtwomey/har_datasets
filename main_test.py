@@ -1,12 +1,13 @@
-from src import dot_env_decorator
-
-from src.utils import take_all, accel_filt, gyro_filt, randomised_order
-
 from src import dataset_importer
+from src import dot_env_decorator
 from src import features
-from src import transformers
-from src import selectors
 from src import models
+from src import selectors
+from src import transformers
+from src.utils import accel_filt
+from src.utils import gyro_filt
+from src.utils import randomised_order
+from src.utils import take_all
 
 
 @dot_env_decorator

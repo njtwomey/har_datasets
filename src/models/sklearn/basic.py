@@ -11,6 +11,7 @@ from sklearn.svm import SVC
 
 from src.models.sklearn.base import sklearn_model_factory
 
+
 __all__ = ["logistic_regression", "logistic_regression_cv", "sgd_classifier"]
 
 

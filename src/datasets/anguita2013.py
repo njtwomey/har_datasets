@@ -1,12 +1,13 @@
-import pandas as pd
-import numpy as np
-
 from os.path import join
 
-from src.utils.decorators import index_decorator, label_decorator, fold_decorator
-from src.utils.loaders import load_csv_data
+import numpy as np
+import pandas as pd
 
 from src.datasets.base import Dataset
+from src.utils.decorators import fold_decorator
+from src.utils.decorators import index_decorator
+from src.utils.decorators import label_decorator
+from src.utils.loaders import load_csv_data
 
 __all__ = ["anguita2013"]
 

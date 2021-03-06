@@ -3,6 +3,7 @@ import random
 
 import numpy as np
 
+
 __all__ = ["randomised_order", "NumpyEncoder"]
 
 

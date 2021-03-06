@@ -3,7 +3,7 @@ __all__ = ["normalise_labels"]
 
 def normalise_labels(ll):
     """
-    
+
     Args:
         ll:
 

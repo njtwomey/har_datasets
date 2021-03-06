@@ -11,7 +11,7 @@ from src.utils import take_all
 
 @dot_env_decorator
 def main(
-    dataset_name="pamap2",
+    dataset_name="uschad",
     fs_new=33,
     win_len=2.56,
     win_inc=1.0,

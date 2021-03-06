@@ -10,8 +10,8 @@ from loguru import logger
 from pandas.api.types import is_categorical_dtype
 from tqdm import tqdm
 
-from src.utils import dataset_importer
 from src.utils.exceptions import ModalityNotPresentError
+from src.utils.loaders import dataset_importer
 
 
 __all__ = [

@@ -1,5 +1,3 @@
-from loguru import logger
-
 from src.utils.decorators import *
 from src.utils.label_helpers import *
 from src.utils.loaders import *

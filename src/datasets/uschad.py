@@ -1,14 +1,14 @@
 from os.path import join
 
-import pandas as pd
 import numpy as np
-
+import pandas as pd
 from scipy.io import loadmat
-
 from tqdm import trange
 
-from src.utils.decorators import index_decorator, label_decorator, fold_decorator
 from src.datasets.base import Dataset
+from src.utils.decorators import fold_decorator
+from src.utils.decorators import index_decorator
+from src.utils.decorators import label_decorator
 
 __all__ = ["uschad"]
 

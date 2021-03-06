@@ -1,5 +1,6 @@
 from src.base import BaseGraph
 
+
 __all__ = ["VisualisationBase"]
 
 

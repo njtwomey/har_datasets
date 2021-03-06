@@ -5,6 +5,7 @@ import numpy as np
 
 from src.features.base import FeatureBase
 
+
 __all__ = [
     "ecdf",
 ]

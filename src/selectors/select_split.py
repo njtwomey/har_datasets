@@ -1,5 +1,7 @@
-import pandas as pd
 from pathlib import Path
+
+import pandas as pd
+
 from src.selectors.base import SelectorBase
 
 __all__ = [
