@@ -9,12 +9,10 @@ This repository aims to provide a unified interface to wearable-based Human Acti
 It is good practise to use virtual environments when using this. I have recently been using [miniconda](https://docs.conda.io/en/latest/miniconda.html) as my python management system. It works exactly like anaconda. The following commands create a new environment, activates it and installs the requirements to that environment.
 
 ```bash 
-conda create python=3.7 --name har_datasets
-conda activat har_datasets
-conda install --file requirements.txt 
+pipenv install --python 3.8 --skip-lock --dev
+pipenv shell
+pre-commit install
 ```
-
-These are packaged into the `make environment` command. 
 
 ## dotenv 
 

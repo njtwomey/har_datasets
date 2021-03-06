@@ -1,12 +1,15 @@
 from os.path import join
+from typing import Any
+from typing import Dict
+from typing import Optional
 
+from loguru import logger
 from numpy import concatenate
 
-from src.base import BaseGraph, Key
+from src.base import BaseGraph
+from src.base import Key
 from src.selectors import select_feats
-from src.utils.logger import get_logger
 
-logger = get_logger(__name__)
 
 __all__ = [
     "FeatureBase",
@@ -34,7 +37,7 @@ class FeatureBase(BaseGraph):
 
         self.key = Key(self.source_name)
 
-    def prepare_outputs(self, endpoints, key, func, kwargs):
+    def prepare_outputs(self, endpoints, key, func, kwargs: Optional[Dict[str, Any]]):
         """
         Since the feature extraction function is applied to all of the input sources individually and it is not
         (necessarily) desirable to perform classification analysis on features from each stream individually, this
@@ -68,7 +71,7 @@ class FeatureBase(BaseGraph):
         """
 
         key = Key(key)
-        node = self.outputs.make_output(key=key, func=func, kwargs=kwargs,)
+        node = self.outputs.make_output(key=key, func=func, kwargs=kwargs)
 
         if self.source_filter(key):
             endpoints[str(node.name)] = node

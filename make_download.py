@@ -1,14 +1,18 @@
 import zipfile
-from src import dot_env_decorator, get_logger
-from os.path import basename, join, split, exists, splitext
 from os import makedirs
-from tqdm import tqdm
+from os.path import basename
+from os.path import exists
+from os.path import join
+from os.path import split
+from os.path import splitext
 
 import requests
+from loguru import logger
+from tqdm import tqdm
 
-from src import DatasetMeta, iter_dataset_paths
-
-logger = get_logger(__name__)
+from src import DatasetMeta
+from src import dot_env_decorator
+from src import iter_dataset_paths
 
 
 def unzip_data(zip_path, in_name, out_name):

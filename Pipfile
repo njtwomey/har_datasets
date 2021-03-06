@@ -1,15 +1,14 @@
 [[source]]
-url = "https://pypi.python.org/simple"
+name = "pypi"
+url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
-Sphinx = "*"
-pre-commit = "*"
 
 [packages]
 requests = "*"
-pandas = "*"
 numpy = "*"
+pandas = "*"
 matplotlib = "*"
 seaborn = "*"
 python-dotenv = "*"
@@ -17,7 +16,11 @@ scikit-learn = "*"
 joblib = "*"
 ipython = "*"
 jupyter = "*"
-pyyaml = "*"
+loguru = "*"
+tqdm = "*"
+mldb = {git = "https://github.com/njtwomey/mldb.git"}
+PyYAML = "*"
+spectrum = "*"
 
 [requires]
-python_version = "3.6"
+python_version = "3.8"

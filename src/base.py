@@ -1,23 +1,23 @@
 from pathlib import Path
 
-from mldb import ComputationGraph, FileLockExistsException
-from mldb.backends import (
-    PickleBackend,
-    JsonBackend,
-    PandasBackend,
-    NumpyBackend,
-    ScikitLearnBackend,
-    PNGBackend,
-    VolatileBackend,
-)
+from loguru import logger
+from mldb import ComputationGraph
+from mldb import FileLockExistsException
+from mldb.backends import JsonBackend
+from mldb.backends import NumpyBackend
+from mldb.backends import PandasBackend
+from mldb.backends import PickleBackend
+from mldb.backends import PNGBackend
+from mldb.backends import ScikitLearnBackend
+from mldb.backends import VolatileBackend
 
 from src.keys import Key
 from src.meta import BaseMeta
-from src.utils.misc import NumpyEncoder, randomised_order
-from src.utils.logger import get_logger
-from src.utils.loaders import build_path, get_yaml_file_list
+from src.utils.loaders import build_path
+from src.utils.loaders import get_yaml_file_list
+from src.utils.misc import NumpyEncoder
+from src.utils.misc import randomised_order
 
-logger = get_logger(__name__)
 
 __all__ = [
     "BaseGraph",
@@ -25,15 +25,6 @@ __all__ = [
 
 
 def _get_ancestral_meta(graph, key):
-    """
-    
-    Args:
-        graph:
-        key:
-
-    Returns:
-
-    """
     if graph.meta is None:
         logger.exception(TypeError(f'The key "{key}" cannot be found in "{graph}"'))
     if key in graph.meta:
@@ -259,13 +250,10 @@ class BaseGraph(ComputationGraph):
 
         if isinstance(meta, BaseMeta):
             self.meta = meta
-
         elif isinstance(meta, (str, Path)):
             self.meta = BaseMeta(path=meta)
-
         elif isinstance(name, (str, Path)):
             self.meta = BaseMeta(path=name)
-
         else:
             logger.exception(
                 ValueError(f"Ambiguous metadata specification with name={name} and meta={meta}")

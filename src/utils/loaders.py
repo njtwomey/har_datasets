@@ -2,12 +2,9 @@ from os import environ
 from pathlib import Path
 
 import pandas as pd
-
 import yaml
+from loguru import logger
 
-from src.utils.logger import get_logger
-
-logger = get_logger(__name__)
 
 __all__ = [
     # Generic

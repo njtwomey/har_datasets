@@ -1,5 +1,5 @@
-from os.path import join
 from collections import defaultdict
+from os.path import join
 
 import numpy as np
 
@@ -25,7 +25,7 @@ class ecdf(FeatureBase):
                 endpoints=endpoints,
                 key=key + ("ecdf",),
                 func=calc_ecdf,
-                kwargs=dict(n_components=n_components, index=parent.index["index"], data=node,),
+                kwargs=dict(n_components=n_components, index=parent.index["index"], data=node),
             )
 
         self.assign_outputs(endpoints)

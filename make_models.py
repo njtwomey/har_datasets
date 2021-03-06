@@ -1,10 +1,8 @@
-from src import iter_dataset_paths
-from src import pipeline_importer, model_importer
 from src import dot_env_decorator
+from src import iter_dataset_paths
+from src import model_importer
+from src import pipeline_importer
 from src import randomised_order
-from src import get_logger
-
-logger = get_logger(__name__)
 
 
 @dot_env_decorator

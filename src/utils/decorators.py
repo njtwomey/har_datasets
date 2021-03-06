@@ -1,19 +1,18 @@
-import pandas as pd
-from pandas.api.types import is_categorical_dtype
+from functools import partial
+from functools import update_wrapper
+from functools import wraps
 
 import numpy as np
-
+import pandas as pd
+from dotenv import find_dotenv
+from dotenv import load_dotenv
+from loguru import logger
+from pandas.api.types import is_categorical_dtype
 from tqdm import tqdm
-
-from dotenv import find_dotenv, load_dotenv
-
-from functools import wraps, update_wrapper, partial
 
 from src.utils import dataset_importer
 from src.utils.exceptions import ModalityNotPresentError
-from src.utils.logger import get_logger
 
-logger = get_logger(__name__)
 
 __all__ = [
     "index_decorator",

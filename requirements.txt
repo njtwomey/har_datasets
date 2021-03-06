@@ -1,0 +1,17 @@
+requests
+numpy
+pandas
+numpy
+matplotlib
+seaborn
+python-dotenv
+scikit-learn
+joblib
+ipython
+jupyter
+pyyaml
+loguru
+tqdm
+git+https://github.com/njtwomey/mldb.git#egg=mldb
+spectrum
+click

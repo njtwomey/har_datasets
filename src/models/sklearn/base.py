@@ -1,17 +1,16 @@
-from sklearn import clone
-from sklearn.model_selection import GridSearchCV, GroupKFold
-
-import pandas as pd
-import numpy as np
-
 from os.path import join
+
+import numpy as np
+import pandas as pd
+from loguru import logger
+from sklearn import clone
+from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GroupKFold
 
 from src.evaluation.classification import evaluate_fold
 from src.models.base import ModelBase
-from src.utils.logger import get_logger
 from src.utils.misc import randomised_order
 
-logger = get_logger(__name__)
 
 __all__ = [
     "sklearn_model",

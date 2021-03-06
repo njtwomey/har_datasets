@@ -1,13 +1,12 @@
 from os.path import join
 
-import pandas as pd
 import numpy as np
+import pandas as pd
+from loguru import logger
 
 from src.transformers.base import TransformerBase
 from src.utils.decorators import PartitionByTrial
-from src.utils.logger import get_logger
 
-logger = get_logger(__name__)
 
 __all__ = [
     "window",

@@ -1,7 +1,7 @@
 import numpy as np
-
 from scipy import signal
 
+from src import BaseGraph
 from src.transformers.base import TransformerBase
 from src.utils.decorators import PartitionByTrial
 
@@ -60,7 +60,7 @@ def resample_metadata(key, index, data, fs_old, fs_new):
 
 
 class resample(TransformerBase):
-    def __init__(self, parent: object, fs_new: object = None) -> object:
+    def __init__(self, parent: BaseGraph, fs_new: object = None):
         super(resample, self).__init__(name=self.__class__.__name__, parent=parent)
 
         self.fs_old = parent.get_ancestral_metadata("fs")

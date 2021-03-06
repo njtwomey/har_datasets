@@ -1,8 +1,11 @@
-from pathlib import Path
 from os import environ
-from src.utils import metadata_path, get_logger, load_yaml
+from pathlib import Path
 
-logger = get_logger(__name__)
+from loguru import logger
+
+from src.utils import load_yaml
+from src.utils import metadata_path
+
 
 __all__ = [
     "DatasetMeta",

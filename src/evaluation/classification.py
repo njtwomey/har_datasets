@@ -1,11 +1,12 @@
-from sklearn import metrics
-import numpy as np
 from collections import Counter
+
+import numpy as np
+from loguru import logger
 from scipy.special import logsumexp
-from src.utils.logger import get_logger
+from sklearn import metrics
+
 from src.evaluation.base import EvaluationBase
 
-logger = get_logger(__name__)
 
 __all__ = ["classification_metrics"]
 
