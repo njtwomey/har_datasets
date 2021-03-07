@@ -63,9 +63,7 @@ def sklearn_decision_function(key, model, features):
 
 class sklearn_model(ModelBase):
     def __init__(self, name, parent, model, xval, features, targets, split, fold_name, n_splits=5):
-        super(sklearn_model, self).__init__(
-            name=name, parent=parent, model=model,
-        )
+        super(sklearn_model, self).__init__(name=name, parent=parent, model=model)
 
         if not isinstance(model, GridSearchCV):
             model = GridSearchCV(estimator=model, param_grid=xval, refit=True, verbose=10)

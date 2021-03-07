@@ -1,3 +1,5 @@
+from numpy import concatenate
+
 from src.transformers.base import TransformerBase
 
 __all__ = [
@@ -5,8 +7,11 @@ __all__ = [
 ]
 
 
-def identity(key, parent):
-    return parent
+def do_select_feats(key, **nodes):
+    keys = sorted(nodes.keys())
+    feats = concatenate([nodes[key] for key in keys], axis=1)
+    print("feats:", feats.shape)
+    return feats
 
 
 class modality_selector(TransformerBase):
@@ -21,14 +26,18 @@ class modality_selector(TransformerBase):
         assert modality in self.modality_set or location == "all"
         self.location_name = location
 
+        # Aggregate all relevant sources
+        features = []
         for key, node in parent.outputs.items():
             has_view = modality == "all" or modality in key
             has_location = location == "all" or location in key
-
             if has_view and has_location:
-                self.outputs.add_output(
-                    key=key, func=identity, backend="none", kwargs=dict(parent=node),
-                )
+                features.append((str(key), node))
+
+        # Concatenate the features
+        self.outputs.add_output(
+            key="features", backend="none", func=do_select_feats, kwargs=dict(features)
+        )
 
     @property
     def identifier(self):

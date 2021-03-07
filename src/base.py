@@ -81,11 +81,14 @@ class ComputationalSet(object):
 
         self.acquired = [self]
 
+    def acquire_one(self, key, node):
+        if key in self.output_dict:
+            logger.exception(KeyError(f"{key} is not in {self.output_dict.keys()}"))
+        self.output_dict[key] = node
+
     def acquire(self, other):
         for key, val in other.output_dict.items():
-            if key in self.output_dict:
-                logger.exception(KeyError(f"{key} is not in {self.output_dict.keys()}"))
-            self.output_dict[key] = val
+            self.acquire_one(key, val)
 
     @property
     def active_comp_set(self):
@@ -123,6 +126,7 @@ class ComputationalSet(object):
         return validate_key_set_membership(key, self.index_keys)
 
     def evaluate_outputs(self, force=False):
+        outputs = dict()
         for key in randomised_order(self.keys()):
             node = self[key]
             if not node.exists or force:
@@ -130,13 +134,14 @@ class ComputationalSet(object):
                     continue
 
                 try:
-                    node.evaluate()
+                    outputs[key] = node.evaluate()
 
                 except FileLockExistsException as ex:
                     logger.warn(
                         f"The file {node.name} is currently being evaluated by a different process. "
                         f"Continuing to next available process: {ex}"
                     )
+        return outputs
 
     def make_output(self, key, func, backend=None, kwargs=None):
         assert callable(func)
@@ -304,8 +309,11 @@ class BaseGraph(ComputationGraph):
         Returns:
 
         """
+
+        outputs = dict()
         for key, output in self.collections.items():
-            output.evaluate_outputs()
+            outputs[key] = output.evaluate_outputs()
+        return outputs
 
     @property
     def index(self):

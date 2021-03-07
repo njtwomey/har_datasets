@@ -1,7 +1,6 @@
-from src import models
 from src.features import ecdf
 from src.features import statistical_features
-from src.selectors import concatenate_features
+from src.models import sgd_classifier
 from src.selectors import select_split
 from src.selectors import select_task
 from src.transformers import body_grav_filter
@@ -21,7 +20,7 @@ def main(
     split_type="predefined",
     features="statistical",
     modality="accel",
-    location="waist",
+    location="all",
 ):
     # Window/align the raw data
     dataset = dataset_importer(dataset_name)
@@ -34,7 +33,7 @@ def main(
     if features == "statistical":
         wear_feats = statistical_features(parent=wear_windowed)
     elif features == "ecdf":
-        wear_feats = statistical_features(parent=wear_windowed)
+        wear_feats = ecdf(parent=wear_windowed, n_components=21)
     else:
         raise ValueError
 
@@ -45,13 +44,13 @@ def main(
     task = select_task(parent=selected_feats, task_name=task)
     split = select_split(parent=task, split_type=split_type)
 
+    # Learn the classifier
+    clf = sgd_classifier(parent=split, split=split, task=task, data=selected_feats)
+    clf.evaluate_outputs()
+
     # Visualise the embeddings
     viz = umap_embedding(selected_feats, task=task)
     viz.evaluate_outputs()
-
-    # Learn the classifier
-    clf = models.sgd_classifier(parent=split, split=split, task=task, data=wear_feats)
-    clf.evaluate_outputs()
 
     return clf
 

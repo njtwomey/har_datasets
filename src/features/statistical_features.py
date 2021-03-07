@@ -13,8 +13,6 @@ class statistical_features(FeatureBase):
 
         kwargs = dict(fs=self.get_ancestral_metadata("fs"))
 
-        endpoints = defaultdict(dict)
-
         # There are two feature categories defined here:
         #   1. Time domain
         #   2. Frequency domain
@@ -53,22 +51,9 @@ class statistical_features(FeatureBase):
             loop_kwargs = dict(index=index, data=node, **kwargs)
 
             if "accel" in key:
-                self.prepare_outputs(
-                    endpoints=endpoints, key=key_td, func=t_feat, kwargs=loop_kwargs,
-                )
-
+                self.outputs.add_output(key=key_td, func=t_feat, kwargs=loop_kwargs)
                 if "grav" not in key:
-                    self.prepare_outputs(
-                        endpoints=endpoints, key=key_fd, func=f_feat, kwargs=loop_kwargs,
-                    )
-
+                    self.outputs.add_output(key=key_fd, func=f_feat, kwargs=loop_kwargs)
             if "gyro" in key:
-                self.prepare_outputs(
-                    endpoints=endpoints, key=key_td, func=f_feat, kwargs=loop_kwargs,
-                )
-
-                self.prepare_outputs(
-                    endpoints=endpoints, key=key_fd, func=f_feat, kwargs=loop_kwargs,
-                )
-
-        self.assign_outputs(endpoints)
+                self.outputs.add_output(key=key_td, func=f_feat, kwargs=loop_kwargs)
+                self.outputs.add_output(key=key_fd, func=f_feat, kwargs=loop_kwargs)

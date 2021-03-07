@@ -15,19 +15,14 @@ class ecdf(FeatureBase):
     def __init__(self, parent, n_components):
         super(ecdf, self).__init__(name=f"ecdf_{n_components}", parent=parent)
 
-        endpoints = defaultdict(dict)
-
         self.n_components = n_components
 
         for key, node in parent.outputs.items():
-            self.prepare_outputs(
-                endpoints=endpoints,
+            self.outputs.add_output(
                 key=key + ("ecdf",),
                 func=calc_ecdf,
                 kwargs=dict(n_components=n_components, index=parent.index["index"], data=node),
             )
-
-        self.assign_outputs(endpoints)
 
 
 def calc_ecdf(key, index, data, n_components):

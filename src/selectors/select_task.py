@@ -15,13 +15,13 @@ def task_selector(key, data):
 
 class select_task(SelectorBase):
     def __init__(self, parent, task_name):
-        tasks = get_yaml_file_list("tasks", stem=True)
-
-        assert task_name in tasks
-
         super(select_task, self).__init__(
             name=task_name, parent=parent, meta=metadata_path("tasks", f"{task_name}.yaml"),
         )
+
+        tasks = self.get_ancestral_metadata("tasks").keys()
+
+        assert task_name in tasks
 
         self.index.add_output(
             key="target",
