@@ -9,9 +9,7 @@ __all__ = [
 
 def do_select_feats(key, **nodes):
     keys = sorted(nodes.keys())
-    feats = concatenate([nodes[key] for key in keys], axis=1)
-    print("feats:", feats.shape)
-    return feats
+    return concatenate([nodes[key] for key in keys], axis=1)
 
 
 class modality_selector(TransformerBase):

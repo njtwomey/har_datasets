@@ -5,9 +5,9 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from umap import UMAP
 
-from src.keys import Key
-from src.utils.label_helpers import normalise_labels
 from src.visualisations.base import VisualisationBase
+
+# from src.utils.label_helpers import normalise_labels
 
 sns.set_style("darkgrid")
 sns.set_context("paper")

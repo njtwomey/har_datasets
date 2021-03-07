@@ -12,13 +12,13 @@ from src.visualisations import umap_embedding
 
 
 def main(
-    dataset_name="anguita2013",
+    dataset_name="pamap2",
     fs_new=33,
     win_len=2.56,
     win_inc=1.0,
     task="har",
     split_type="predefined",
-    features="statistical",
+    features="ecdf",
     modality="accel",
     location="all",
 ):
