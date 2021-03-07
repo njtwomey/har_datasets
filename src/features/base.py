@@ -8,7 +8,7 @@ from numpy import concatenate
 
 from src.base import BaseGraph
 from src.base import Key
-from src.selectors import select_feats
+from src.selectors import concatenate_features
 
 
 __all__ = [
@@ -22,20 +22,11 @@ def concatenate_sources(key, **datas):
 
 
 class FeatureBase(BaseGraph):
-    def __init__(self, name, parent, source_filter, *args, **kwargs):
-        super(FeatureBase, self).__init__(
-            name=name, parent=parent,
-        )
-
-        assert source_filter is None or callable(source_filter)
-
-        self.source_filter = source_filter()
-        self.source_name = source_filter.__name__
+    def __init__(self, name, parent, *args, **kwargs):
+        super(FeatureBase, self).__init__(name=name, parent=parent)
 
         self.locations_set = set(self.get_ancestral_metadata("placements"))
         self.modality_set = set(self.get_ancestral_metadata("modalities"))
-
-        self.key = Key(self.source_name)
 
     def prepare_outputs(self, endpoints, key, func, kwargs: Optional[Dict[str, Any]]):
         """
@@ -72,15 +63,11 @@ class FeatureBase(BaseGraph):
 
         key = Key(key)
         node = self.outputs.make_output(key=key, func=func, kwargs=kwargs)
-
-        if self.source_filter(key):
-            endpoints[str(node.name)] = node
+        endpoints[str(node.name)] = node
 
     def assign_outputs(self, endpoints):
-        feats = select_feats(parent=self, name="-".join(self.key), **endpoints)
-
+        feats = concatenate_features(parent=self, **endpoints)
         self.outputs.acquire(feats.outputs)
-        self.name = join(self.name, feats.name)
 
     @property
     def features(self):

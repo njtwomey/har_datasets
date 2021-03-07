@@ -26,7 +26,8 @@ def embed_umap(key, label, data, model):
 
     # Need to re-label with a new dataframe since the categories in the normalised label
     # set are different to those in the full set.
-    label = pd.DataFrame(label.target.apply(normalise_labels)).astype("category")
+    # label = pd.DataFrame(label.target.apply(normalise_labels)).astype("category")
+    label = pd.DataFrame(label.target).astype("category")
 
     fig, ax = pl.subplots(1, 1, figsize=(10, 10))
 
@@ -37,7 +38,7 @@ def embed_umap(key, label, data, model):
         if ll == "other":
             continue
         inds = labels == ll
-        ax.scatter(embedding[inds, 0], embedding[inds, 1], c=cc, label=ll, s=5, alpha=0.75)
+        ax.scatter(embedding[inds, 0], embedding[inds, 1], color=cc, label=ll, s=5, alpha=0.75)
     pl.legend(fontsize="x-large", markerscale=3)
     pl.tight_layout()
 

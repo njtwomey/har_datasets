@@ -74,7 +74,7 @@ class sklearn_model(ModelBase):
             key=join(fold_name, "fold"),
             func=select_fold,
             backend="none",
-            kwargs=dict(folds=split, fold_name=fold_name,),
+            kwargs=dict(folds=split, fold_name=fold_name),
         )
 
         model = self.outputs.add_output(

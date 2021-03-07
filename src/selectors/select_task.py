@@ -1,7 +1,8 @@
 from pathlib import Path
 
 from src.selectors.base import SelectorBase
-from src.utils.loaders import get_yaml_file_list, metadata_path
+from src.utils.loaders import get_yaml_file_list
+from src.utils.loaders import metadata_path
 
 __all__ = [
     "select_task",
@@ -26,5 +27,5 @@ class select_task(SelectorBase):
             key="target",
             func=task_selector,
             backend="pandas",
-            kwargs=dict(data=parent.index[task_name],),
+            kwargs=dict(data=parent.index[task_name]),
         )

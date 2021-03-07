@@ -46,7 +46,7 @@ class body_grav_filter(TransformerBase):
             name=self.__class__.__name__, parent=parent,
         )
 
-        kwargs = dict(fs=self.get_ancestral_metadata("fs"), filter_order=3, cutoff=0.3,)
+        kwargs = dict(fs=self.get_ancestral_metadata("fs"), filter_order=3, cutoff=0.3)
 
         for key, node in parent.outputs.items():
             self.outputs.add_output(
@@ -57,7 +57,7 @@ class body_grav_filter(TransformerBase):
             )
 
             self.outputs.add_output(
-                key=key + ("body", "jerk",),
+                key=key + ("body", "jerk"),
                 func=PartitionByTrial(func=body_jerk_filt),
                 backend="none",
                 kwargs=dict(data=node, index=parent.index.index, **kwargs,),

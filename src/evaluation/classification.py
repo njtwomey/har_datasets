@@ -88,7 +88,7 @@ def _classification_perf_metrics(labels, model, predictions, scores):
                 average=average,
                 **kwargs,
             )
-            for average in ("macro", "weighted",)
+            for average in ("macro", "weighted")
         }
 
     def prediction_metrics(name, func):

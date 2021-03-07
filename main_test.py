@@ -19,7 +19,7 @@ def main(
     if feat_name == "ecdf":
         feats = features.ecdf(parent=windowed, source_filter=source_filter, n_components=21)
     elif feat_name == "statistical":
-        feats = features.statistical_features(parent=windowed, source_filter=source_filter,)
+        feats = features.statistical_features(parent=windowed, source_filter=source_filter)
     else:
         raise ValueError
     task = selectors.select_task(parent=feats, task_name="har")

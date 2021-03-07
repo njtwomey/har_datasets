@@ -25,7 +25,7 @@ class Dataset(BaseGraph):
         )
 
         self.index.add_output(
-            key="index", func=self.build_index, backend="pandas", kwargs=dict(path=self.unzip_path,)
+            key="index", func=self.build_index, backend="pandas", kwargs=dict(path=self.unzip_path)
         )
 
         tasks = self.get_ancestral_metadata("tasks")

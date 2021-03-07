@@ -152,7 +152,7 @@ class ComputationalSet(object):
             func=func,
             name=self.graph.build_path(key),
             backend=backend,
-            kwargs=dict(key=key, **kwargs,),
+            kwargs=dict(key=key, **kwargs),
         )
 
         return node
@@ -246,7 +246,7 @@ class BaseGraph(ComputationGraph):
             meta:
             default_backend:
         """
-        super(BaseGraph, self).__init__(name=name,)
+        super(BaseGraph, self).__init__(name=name)
 
         if isinstance(meta, BaseMeta):
             self.meta = meta

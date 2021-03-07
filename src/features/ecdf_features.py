@@ -12,10 +12,8 @@ __all__ = [
 
 
 class ecdf(FeatureBase):
-    def __init__(self, parent, n_components, source_filter):
-        super(ecdf, self).__init__(
-            name=f"ecdf_{n_components}", parent=parent, source_filter=source_filter,
-        )
+    def __init__(self, parent, n_components):
+        super(ecdf, self).__init__(name=f"ecdf_{n_components}", parent=parent)
 
         endpoints = defaultdict(dict)
 
