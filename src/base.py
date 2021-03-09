@@ -135,12 +135,12 @@ class ComputationalSet(object):
 
                 try:
                     outputs[key] = node.evaluate()
-
                 except FileLockExistsException as ex:
-                    logger.warn(
+                    logger.warning(
                         f"The file {node.name} is currently being evaluated by a different process. "
                         f"Continuing to next available process: {ex}"
                     )
+
         return outputs
 
     def make_output(self, key, func, backend=None, kwargs=None):
@@ -303,7 +303,7 @@ class BaseGraph(ComputationGraph):
 
         return build_path(self.identifier, str(key))
 
-    def evaluate_outputs(self):
+    def evaluate_outputs(self, force=False):
         """
         
         Returns:
@@ -312,7 +312,7 @@ class BaseGraph(ComputationGraph):
 
         outputs = dict()
         for key, output in self.collections.items():
-            outputs[key] = output.evaluate_outputs()
+            outputs[key] = output.evaluate_outputs(force=force)
         return outputs
 
     @property
@@ -331,3 +331,8 @@ class BaseGraph(ComputationGraph):
 
     def get_ancestral_metadata(self, key):
         return _get_ancestral_meta(self, key)
+
+    def __truediv__(self, name):
+        return BaseGraph(
+            name=name, parent=self, default_backend=self.default_backend, meta=self.meta,
+        )

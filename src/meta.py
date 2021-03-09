@@ -38,7 +38,7 @@ class BaseMeta(object):
                 self.meta = meta
 
             except FileNotFoundError:
-                # logger.warn(f'The metadata file for "{self.name}" was not found.')
+                # logger.warning(f'The metadata file for "{self.name}" was not found.')
                 pass
 
     def __getitem__(self, item):

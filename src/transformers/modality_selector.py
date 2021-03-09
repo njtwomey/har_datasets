@@ -13,22 +13,22 @@ def do_select_feats(key, **nodes):
 
 
 class modality_selector(TransformerBase):
-    def __init__(self, parent, modality="all", location="all"):
+    def __init__(self, parent, modality="all", placement="all"):
         super(modality_selector, self).__init__(name=self.__class__.__name__, parent=parent)
 
         self.locations_set = set(self.get_ancestral_metadata("placements"))
-        assert location in self.locations_set or location == "all"
+        assert placement in self.locations_set or placement == "all"
         self.view_name = modality
 
         self.modality_set = set(self.get_ancestral_metadata("modalities"))
-        assert modality in self.modality_set or location == "all"
-        self.location_name = location
+        assert modality in self.modality_set or placement == "all"
+        self.location_name = placement
 
         # Aggregate all relevant sources
         features = []
         for key, node in parent.outputs.items():
             has_view = modality == "all" or modality in key
-            has_location = location == "all" or location in key
+            has_location = placement == "all" or placement in key
             if has_view and has_location:
                 features.append((str(key), node))
 

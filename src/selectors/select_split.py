@@ -34,12 +34,12 @@ class select_split(SelectorBase):
 
         assert split_type in self.meta["supported"]
 
-        func_dict = dict(predefined=predefined_split, deployable=deployable_split, loso=loso_split,)
+        func_dict = dict(predefined=predefined_split, deployable=deployable_split, loso=loso_split)
 
         split = parent.index["index"]
         if split_type == "predefined":
             split = parent.index["fold"]
 
         self.index.add_output(
-            key="split", func=func_dict[split_type], backend="pandas", kwargs=dict(split=split,)
+            key="split", func=func_dict[split_type], backend="pandas", kwargs=dict(split=split)
         )

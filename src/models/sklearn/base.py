@@ -1,8 +1,6 @@
 from os.path import join
 
 import numpy as np
-import pandas as pd
-from loguru import logger
 from sklearn import clone
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import GroupKFold
@@ -93,21 +91,21 @@ class sklearn_model(ModelBase):
             key=join(fold_name, "preds"),
             func=sklearn_preds,
             backend="none",
-            kwargs=dict(features=features, model=model,),
+            kwargs=dict(features=features, model=model),
         )
 
         self.outputs.add_output(
             key=join(fold_name, "probs"),
             func=sklearn_probs,
             backend="none",
-            kwargs=dict(features=features, model=model,),
+            kwargs=dict(features=features, model=model),
         )
 
         scores = self.outputs.add_output(
             key=join(fold_name, "scores"),
             func=sklearn_decision_function,
             backend="none",
-            kwargs=dict(features=features, model=model,),
+            kwargs=dict(features=features, model=model),
         )
 
         self.outputs.add_output(
