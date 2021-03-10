@@ -8,7 +8,7 @@ from src.selectors import select_task
 from src.visualisations import umap_embedding
 
 
-def predict_and_concat(key, data, **models):
+def predict_and_concat(data, **models):
     probs = {kk: model.predict_proba(data) for kk, model in models.items()}
     return np.concatenate([probs[kk] for kk in sorted(probs.keys())], axis=1)
 
@@ -30,12 +30,12 @@ def har_chain(
     test_dataset="anguita2013",
     fs_new=33,
     win_len=2.56,
-    win_inc=1.0,
+    win_inc=1,
     task="har",
     split_type="predefined",
     features="ecdf",
 ):
-    kwargs = dict(fs_new=fs_new, win_len=win_len, win_inc=win_inc, task=task, features=features,)
+    kwargs = dict(fs_new=fs_new, win_len=win_len, win_inc=win_inc, task=task, features=features)
 
     dataset_alignment = dict(
         anguita2013=dict(dataset_name="anguita2013", placement="waist", modality="accel"),
@@ -52,9 +52,7 @@ def har_chain(
     models = dict()
     for name, dataset in dataset_alignment.items():
         _, _, _, classifier = har_basic(split_type="deployable", **test_dataset, **kwargs)
-        models[name] = classifier.outputs[
-            list(filter(lambda kk: "model" in str(kk), classifier.outputs.keys()))[0]
-        ]
+        models[name] = classifier.model
 
     chain = classifier_chain(parent=test_feats, data=test_feats.outputs["features"], models=models)
 

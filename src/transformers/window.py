@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 from loguru import logger
 
-from src.transformers.base import TransformerBase
 from src.utils.decorators import PartitionByTrial
 
 
@@ -13,7 +12,7 @@ __all__ = [
 ]
 
 
-def window_data(key, index, data, fs, win_len, win_inc):
+def window_data(index, data, fs, win_len, win_inc):
     assert data.ndim == 2
 
     win_len = int(win_len * fs)
@@ -31,50 +30,40 @@ def window_data(key, index, data, fs, win_len, win_inc):
     return data_windowed
 
 
-def window_index(key, index, data, fs, win_len, win_inc, slice_at="middle"):
+def window_index(index, data, fs, win_len, win_inc, slice_at="middle"):
     assert isinstance(data, pd.DataFrame)
-    data_windowed = window_data(key, index, data.values, fs, win_len, win_inc)
-    ind = dict(start=0, middle=data_windowed.shape[1] // 2, end=-1,)[slice_at]
+    data_windowed = window_data(index, data.values, fs, win_len, win_inc)
+    ind = dict(start=0, middle=data_windowed.shape[1] // 2, end=-1)[slice_at]
     df = pd.DataFrame(data_windowed[:, ind, :], columns=data.columns)
     df = df.astype(data.dtypes)
     return df
 
 
-class window(TransformerBase):
-    def __init__(self, parent, win_len, win_inc):
-        super(window, self).__init__(
-            name=self.__class__.__name__, parent=parent,
+def window(parent, win_len, win_inc):
+    root = parent / f"window_{win_len:03.2f}s_{win_inc:03.2f}s"
+
+    fs = root.get_ancestral_metadata("fs")
+
+    kwargs = dict(win_len=win_len, win_inc=win_inc, fs=fs)
+
+    # Build index outputs
+    for key, node in parent.index.items():
+        root.index.add_output(
+            key=key,
+            func=PartitionByTrial(window_index),
+            kwargs=dict(index=parent.index["index"], data=node, **kwargs),
         )
 
-        self.win_len = win_len
-        self.win_inc = win_inc
+    # Build Data outputs
+    for key, node in parent.outputs.items():
+        root.outputs.add_output(
+            key=key,
+            func=PartitionByTrial(window_data),
+            backend="none",
+            kwargs=dict(index=parent.index["index"], data=node, **kwargs),
+        )
 
-        fs = self.get_ancestral_metadata("fs")
-
-        kwargs = dict(win_len=self.win_len, win_inc=self.win_inc, fs=fs,)
-
-        # Build index outputs
-        for key, node in parent.index.items():
-            self.index.add_output(
-                key=key,
-                func=PartitionByTrial(window_index),
-                kwargs=dict(index=parent.index["index"], data=node, **kwargs,),
-            )
-
-        # Build Data outputs
-        for key, node in parent.outputs.items():
-            self.outputs.add_output(
-                key=key,
-                func=PartitionByTrial(window_data),
-                backend="none",
-                kwargs=dict(index=parent.index["index"], data=node, **kwargs,),
-            )
-
-    @property
-    def identifier(self):
-        win_len = f"{self.win_len:03.2f}"
-        win_inc = f"{self.win_inc:03.2f}"
-        return self.parent.identifier / f"{self.name}_{win_len}s_{win_inc}s"
+    return root
 
 
 def norm_shape(shape):

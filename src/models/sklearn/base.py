@@ -5,8 +5,8 @@ from sklearn import clone
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import GroupKFold
 
+from src import BaseGraph
 from src.evaluation.classification import evaluate_fold
-from src.models.base import ModelBase
 from src.utils.misc import randomised_order
 
 
@@ -15,7 +15,7 @@ __all__ = [
 ]
 
 
-def select_fold(key, folds, fold_name):
+def select_fold(folds, fold_name):
     assert fold_name in folds.columns
     fold_def = folds[fold_name]
     fold_vals = set(np.unique(fold_def.values))
@@ -23,7 +23,7 @@ def select_fold(key, folds, fold_name):
     return fold_def
 
 
-def learn_sklearn_model(key, index, features, targets, fold_def, model, n_splits):
+def learn_sklearn_model(index, features, targets, fold_def, model, n_splits):
     assert index.shape[0] == features.shape[0]
     assert index.shape[0] == targets.shape[0]
     assert index.shape[0] == fold_def.shape[0]
@@ -47,15 +47,15 @@ def learn_sklearn_model(key, index, features, targets, fold_def, model, n_splits
     return model
 
 
-def sklearn_preds(key, model, features):
+def sklearn_preds(model, features):
     return model.predict(features)
 
 
-def sklearn_probs(key, model, features):
+def sklearn_probs(model, features):
     return model.predict_proba(features)
 
 
-def sklearn_decision_function(key, model, features):
+def sklearn_decision_function(model, features):
     if hasattr(model, "decision_function"):
         return model.decision_function(features)
     elif hasattr(model, "predict_log_proba"):
@@ -63,70 +63,63 @@ def sklearn_decision_function(key, model, features):
     raise ValueError
 
 
-class sklearn_model(ModelBase):
-    def __init__(self, name, parent, model, xval, features, targets, split, fold_name, n_splits=5):
-        super(sklearn_model, self).__init__(name=name, parent=parent, model=model)
+def sklearn_model(name, parent, model, xval, features, targets, split, fold_name, n_splits=5):
+    root = parent / name / fold_name
 
-        if not isinstance(model, GridSearchCV):
-            model = GridSearchCV(estimator=model, param_grid=xval, refit=True, verbose=10)
+    if not isinstance(model, GridSearchCV):
+        model = GridSearchCV(estimator=model, param_grid=xval, refit=True, verbose=10)
 
-        fold_def = self.outputs.add_output(
-            key=join(fold_name, "fold"),
-            func=select_fold,
-            backend="none",
-            kwargs=dict(folds=split, fold_name=fold_name),
-        )
+    fold_definition = root.outputs.add_output(
+        key="fold", func=select_fold, backend="none", kwargs=dict(folds=split, fold_name=fold_name),
+    )
 
-        model = self.outputs.add_output(
-            key=join(fold_name, "model"),
-            func=learn_sklearn_model,
-            backend="sklearn",
-            kwargs=dict(
-                index=self.index["index"],
-                features=features,
-                targets=targets,
-                fold_def=fold_def,
-                model=model,
-                n_splits=n_splits,
-            ),
-        )
+    model_instance = root.outputs.add_output(
+        key="model",
+        func=learn_sklearn_model,
+        backend="sklearn",
+        kwargs=dict(
+            index=root.index["index"],
+            features=features,
+            targets=targets,
+            fold_def=fold_definition,
+            model=model,
+            n_splits=n_splits,
+        ),
+    )
 
-        predictions = self.outputs.add_output(
-            key=join(fold_name, "preds"),
-            func=sklearn_preds,
-            backend="none",
-            kwargs=dict(features=features, model=model),
-        )
+    model_predictions = root.outputs.add_output(
+        key="preds",
+        func=sklearn_preds,
+        backend="none",
+        kwargs=dict(features=features, model=model_instance),
+    )
 
-        self.outputs.add_output(
-            key=join(fold_name, "probs"),
-            func=sklearn_probs,
-            backend="none",
-            kwargs=dict(features=features, model=model),
-        )
+    scores = root.outputs.add_output(
+        key="probs",
+        func=sklearn_probs,
+        backend="none",
+        kwargs=dict(features=features, model=model_instance),
+    )
 
-        scores = self.outputs.add_output(
-            key=join(fold_name, "scores"),
-            func=sklearn_decision_function,
-            backend="none",
-            kwargs=dict(features=features, model=model),
-        )
+    root.outputs.add_output(
+        key="results",
+        func=evaluate_fold,
+        backend="json",
+        kwargs=dict(
+            fold=fold_definition,
+            targets=targets,
+            predictions=model_predictions,
+            model=model_instance,
+            scores=scores,
+        ),
+    )
 
-        self.outputs.add_output(
-            key=join(fold_name, "results"),
-            func=evaluate_fold,
-            backend="json",
-            kwargs=dict(
-                fold=fold_def, targets=targets, predictions=predictions, model=model, scores=scores,
-            ),
-        )
+    return root
 
 
-class sklearn_model_factory(ModelBase):
+class sklearn_model_factory(BaseGraph):
     def __init__(self, name, parent, data, model, xval, n_splits=5):
-        super(sklearn_model_factory, self).__init__(
-            name=name, parent=parent, model=model,
-        )
+        super(sklearn_model_factory, self).__init__(name=name, parent=parent)
 
         del parent
 
@@ -150,3 +143,15 @@ class sklearn_model_factory(ModelBase):
 
         for fold_name in randomised_order(self.index["split"].evaluate()):
             append_model(fold_name=str(fold_name))
+
+    @property
+    def model_node(self):
+        return next(iter(self.models.values())).outputs
+
+    @property
+    def model(self):
+        return self.model_node["model"]
+
+    @property
+    def results(self):
+        return self.model_node["results"]

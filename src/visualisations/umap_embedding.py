@@ -5,15 +5,13 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from umap import UMAP
 
-from src.visualisations.base import VisualisationBase
-
 # from src.utils.label_helpers import normalise_labels
 
 sns.set_style("darkgrid")
 sns.set_context("paper")
 
 
-def learn_umap(key, label, data):
+def learn_umap(label, data):
     umap = Pipeline([("scale", StandardScaler()), ("embed", UMAP(n_neighbors=50, verbose=True))])
 
     umap.fit(data)
@@ -21,7 +19,7 @@ def learn_umap(key, label, data):
     return umap
 
 
-def embed_umap(key, label, data, model):
+def embed_umap(label, data, model):
     embedding = model.transform(data)
 
     # Need to re-label with a new dataframe since the categories in the normalised label
@@ -45,25 +43,24 @@ def embed_umap(key, label, data, model):
     return fig
 
 
-class umap_embedding(VisualisationBase):
-    def __init__(self, parent, task):
-        super(umap_embedding, self).__init__(
-            name=self.__class__.__name__, parent=parent,
+def umap_embedding(parent, task):
+    root = parent / "umap_embedding"
+
+    label = task.index["target"]
+
+    for key, node in parent.outputs.items():
+        model = root.outputs.make_output(
+            key=tuple(key) + ("umap",),
+            func=learn_umap,
+            backend="none",
+            kwargs=dict(label=label, data=node),
         )
 
-        label = task.index["target"]
+        root.outputs.add_output(
+            key=tuple(key) + ("umap", "viz"),
+            func=embed_umap,
+            backend="png",
+            kwargs=dict(data=node, model=model, label=label),
+        ).evaluate()
 
-        for key, node in parent.outputs.items():
-            model = self.outputs.make_output(
-                key=tuple(key) + ("umap",),
-                func=learn_umap,
-                backend="none",
-                kwargs=dict(label=label, data=node),
-            )
-
-            self.outputs.add_output(
-                key=tuple(key) + ("umap", "viz"),
-                func=embed_umap,
-                backend="png",
-                kwargs=dict(data=node, model=model, label=label),
-            ).evaluate()
+    return root

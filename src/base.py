@@ -154,10 +154,7 @@ class ComputationalSet(object):
         assert key not in self.output_dict
 
         node = self.graph.node(
-            func=func,
-            name=self.graph.build_path(key),
-            backend=backend,
-            kwargs=dict(key=key, **kwargs),
+            func=func, name=self.graph.build_path(key), backend=backend, kwargs=dict(**kwargs),
         )
 
         return node
@@ -333,6 +330,7 @@ class BaseGraph(ComputationGraph):
         return _get_ancestral_meta(self, key)
 
     def __truediv__(self, name):
-        return BaseGraph(
-            name=name, parent=self, default_backend=self.default_backend, meta=self.meta,
-        )
+        return BaseGraph(name=name, parent=self)
+
+    def make_child(self, name, meta):
+        return BaseGraph(name=name, parent=self, meta=meta)

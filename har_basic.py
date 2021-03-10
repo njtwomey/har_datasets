@@ -16,7 +16,7 @@ def har_basic(
     dataset_name="anguita2013",
     fs_new=33,
     win_len=2.56,
-    win_inc=1.0,
+    win_inc=2.5,
     task="har",
     split_type="predefined",
     features="ecdf",
@@ -40,7 +40,7 @@ def har_basic(
         raise ValueError
 
     # Select the features that we're interested in, and get the features
-    selected_feats = modality_selector(parent=wear_feats, modality=modality, placement=placement)
+    selected_feats = modality_selector(parent=wear_feats, view=modality, location=placement)
 
     # Get the task (and its labels), and the train/val/test splits
     task = select_task(parent=selected_feats, task_name=task)

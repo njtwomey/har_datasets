@@ -1,42 +1,35 @@
 from numpy import concatenate
 
-from src.transformers.base import TransformerBase
-
 __all__ = [
     "modality_selector",
 ]
 
 
-def do_select_feats(key, **nodes):
+def do_select_feats(**nodes):
     keys = sorted(nodes.keys())
     return concatenate([nodes[key] for key in keys], axis=1)
 
 
-class modality_selector(TransformerBase):
-    def __init__(self, parent, modality="all", placement="all"):
-        super(modality_selector, self).__init__(name=self.__class__.__name__, parent=parent)
+def modality_selector(parent, view="all", location="all"):
+    locations_set = set(parent.get_ancestral_metadata("placements"))
+    assert location in locations_set or location == "all"
 
-        self.locations_set = set(self.get_ancestral_metadata("placements"))
-        assert placement in self.locations_set or placement == "all"
-        self.view_name = modality
+    modality_set = set(parent.get_ancestral_metadata("modalities"))
+    assert view in modality_set or location == "all"
 
-        self.modality_set = set(self.get_ancestral_metadata("modalities"))
-        assert modality in self.modality_set or placement == "all"
-        self.location_name = placement
+    root = parent / f"view={view}-loc={location}"
 
-        # Aggregate all relevant sources
-        features = []
-        for key, node in parent.outputs.items():
-            has_view = modality == "all" or modality in key
-            has_location = placement == "all" or placement in key
-            if has_view and has_location:
-                features.append((str(key), node))
+    # Aggregate all relevant sources
+    features = []
+    for key, node in parent.outputs.items():
+        has_view = view == "all" or view in key
+        has_location = location == "all" or location in key
+        if has_view and has_location:
+            features.append((str(key), node))
 
-        # Concatenate the features
-        self.outputs.add_output(
-            key="features", backend="none", func=do_select_feats, kwargs=dict(features)
-        )
+    # Concatenate the features
+    root.outputs.add_output(
+        key="features", backend="none", func=do_select_feats, kwargs=dict(features)
+    )
 
-    @property
-    def identifier(self):
-        return self.parent.identifier / f"view={self.view_name}-loc={self.location_name}"
+    return root

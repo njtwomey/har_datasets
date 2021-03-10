@@ -1,8 +1,6 @@
 import numpy as np
 from scipy import signal
 
-from src import BaseGraph
-from src.transformers.base import TransformerBase
 from src.utils.decorators import PartitionByTrial
 
 __all__ = [
@@ -10,7 +8,7 @@ __all__ = [
 ]
 
 
-def resample_data(key, index, data, fs_old, fs_new):
+def resample_data(index, data, fs_old, fs_new):
     if fs_old == fs_new:
         return data
 
@@ -43,7 +41,7 @@ def align_metadata(t_old, t_new):
     return inds
 
 
-def resample_metadata(key, index, data, fs_old, fs_new):
+def resample_metadata(index, data, fs_old, fs_new, is_index):
     if fs_old == fs_new:
         return data
 
@@ -53,40 +51,36 @@ def resample_metadata(key, index, data, fs_old, fs_new):
 
     inds = align_metadata(t_old, t_new)
     df = data.iloc[inds].copy()
-    if "index" in key:
+    if is_index:
         df.loc[:, "time"] = t_new
     df = df.astype(data.dtypes)
     return df
 
 
-class resample(TransformerBase):
-    def __init__(self, parent: BaseGraph, fs_new: object = None):
-        super(resample, self).__init__(name=self.__class__.__name__, parent=parent)
+def resample(parent, fs_new):
+    fs_old = parent.get_ancestral_metadata("fs")
 
-        self.fs_old = parent.get_ancestral_metadata("fs")
-        self.fs_new = fs_new
-        if self.fs_new is None:
-            self.fs_new = self.fs_old
-        self.meta.insert("fs", self.fs_new)
+    root = parent / f"{fs_new}Hz"
+    root.meta.insert("fs", fs_new)
 
-        kwargs = dict(fs_old=self.fs_old, fs_new=self.fs_new)
+    kwargs = dict(fs_old=fs_old, fs_new=fs_new)
 
-        if self.fs_old != self.fs_new:
-            # Only compute indexes and outputs if the sample rate has changed
-            for key, node in parent.index.items():
-                self.index.add_output(
-                    key=key,
-                    func=PartitionByTrial(resample_metadata),
-                    kwargs=dict(index=parent.index["index"], data=node, **kwargs,),
-                )
+    if fs_old != fs_new:
+        # Only compute indexes and outputs if the sample rate has changed
+        for key, node in parent.index.items():
+            root.index.add_output(
+                key=key,
+                func=PartitionByTrial(resample_metadata),
+                kwargs=dict(
+                    index=parent.index["index"], data=node, is_index="index" in str(key), **kwargs
+                ),
+            )
 
-            for key, node in parent.outputs.items():
-                self.outputs.add_output(
-                    key=key,
-                    func=PartitionByTrial(resample_data),
-                    kwargs=dict(index=parent.index["index"], data=node, **kwargs,),
-                )
+        for key, node in parent.outputs.items():
+            root.outputs.add_output(
+                key=key,
+                func=PartitionByTrial(resample_data),
+                kwargs=dict(index=parent.index["index"], data=node, **kwargs),
+            )
 
-    @property
-    def identifier(self):
-        return self.parent.identifier / f"{self.fs_new}Hz"
+    return root

@@ -77,11 +77,11 @@ def iter_files(path, suffix, stem=False):
 
 
 def iter_dataset_paths():
-    return iter_files(path=metadata_path("datasets"), suffix=".yaml", stem=False,)
+    return iter_files(path=metadata_path("datasets"), suffix=".yaml", stem=False)
 
 
 def iter_task_paths():
-    return iter_files(path=metadata_path("tasks"), suffix=".yaml", stem=False,)
+    return iter_files(path=metadata_path("tasks"), suffix=".yaml", stem=False)
 
 
 def load_yaml(filename):

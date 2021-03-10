@@ -60,7 +60,7 @@ class random_forest(sklearn_model_factory):
             parent=parent,
             data=data,
             model=Pipeline([("clf", RandomForestClassifier(n_estimators=10))]),
-            xval=dict(clf__n_estimators=[8, 16, 32, 63],),
+            xval=dict(clf__n_estimators=[8, 16, 32, 63]),
             # *args,
             # **kwargs,
         )
