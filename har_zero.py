@@ -1,75 +1,84 @@
-from collections import Counter
-
 import numpy as np
 import pandas as pd
+from sklearn.base import BaseEstimator
+from sklearn.base import ClassifierMixin
 
 from har_basic import har_basic
-from src.evaluation.classification import evaluate_fold
+from src.models.sklearn.base import sklearn_model_factory
+from src.selectors import select_split
+from src.selectors import select_task
 
 
-def resolve_zero_shot(data, label_names, targets, **models):
-    label_names = np.asarray(label_names)
+CLASSIFIERS = dict()
 
-    probs = {
-        kk: pd.DataFrame(mm.predict_proba(data), columns=mm.classes_) for kk, mm in models.items()
-    }
 
-    label_map = dict(
-        # cycle="walk",
-        elevator_down="stand",
-        elevator_up="stand",
-        iron="stand",
-        # jump="walk",
-        # other="walk",
-        # rope_jump="walk",
-        run="walk",
-        sit="sit",
-        sleep="lie",
-        stand="stand",
-        # vacuum="walk",
-        walk="walk",
-        walk_down="walk_down",
-        walk_left="walk",
-        walk_nordic="walk",
-        walk_right="walk",
-        walk_up="walk_up",
-        lie="lie",
+class ZeroShotModel(BaseEstimator, ClassifierMixin):
+    def __init__(self, alpha):
+        self.alpha = alpha
+
+        self.classes_ = None
+        self.label_map = dict(
+            # cycle="walk",
+            elevator_down="stand",
+            elevator_up="stand",
+            iron="stand",
+            # jump="walk",
+            # other="walk",
+            # rope_jump="walk",
+            run="walk",
+            sit="sit",
+            sleep="lie",
+            stand="stand",
+            # vacuum="walk",
+            walk="walk",
+            walk_down="walk_down",
+            walk_left="walk",
+            walk_nordic="walk",
+            walk_right="walk",
+            walk_up="walk_up",
+            lie="lie",
+        )
+
+    def fit(self, x, y):
+        self.classes_ = np.unique(y)
+        return self
+
+    def predict_proba(self, data):
+        weights = dict(zip(sorted(CLASSIFIERS.keys()), [self.alpha, 1 - self.alpha]))
+
+        probs = {
+            kk: pd.DataFrame(mm.predict_proba(data), columns=mm.classes_)
+            for kk, mm in CLASSIFIERS.items()
+        }
+
+        label_idx = dict(zip(self.classes_, np.arange(len(self.classes_))))
+        output = np.zeros((len(data), len(self.classes_)))
+        for kk, prob in probs.items():
+            prob = weights[kk] * prob / prob.values.sum(axis=1, keepdims=True)
+            for col in prob.columns:
+                if col in self.label_map:
+                    output[:, label_idx[self.label_map[col]]] += prob[col].values
+
+        return output
+
+    def score(self, x, y):
+        return np.mean(self.predict(x) == y)
+
+    def predict(self, data):
+        return self.classes_[self.predict_proba(data).argmax(axis=1)]
+
+
+def make_zero_shot_model(parent, data, models):
+    CLASSIFIERS.clear()
+    for kk, vv in models.items():
+        CLASSIFIERS[kk] = vv.evaluate()
+    return sklearn_model_factory(
+        name=f"zero_shot_model_from={sorted(CLASSIFIERS.keys())}",
+        parent=parent,
+        data=data,
+        model=ZeroShotModel(alpha=0.5),
+        xval=dict(alpha=np.linspace(0, 1, 21),),
     )
-
-    output = np.zeros((len(data), len(label_names)))
-    for kk, df in probs.items():
-        for col in df.columns:
-            if col in label_map:
-                output[:, list(label_names).index(label_map[col])] += df[col].values
-
-    predictions = np.asarray(label_names)[output.argmax(1)]
-
-    class Model:
-        def __init__(self):
-            self.classes_ = label_names
-
-    mets = evaluate_fold(
-        fold=pd.Series(np.repeat("test", data.shape[0])),
-        targets=targets,
-        predictions=predictions,
-        scores=output,
-        model=Model(),
-    )
-
-    return mets
-
-
-def zero_shot(parent, data, label_names, models, targets):
-    root = parent / f"zero_shot_from_{sorted(models.keys())}"
-
-    root.outputs.add_output(
-        key="results",
-        backend="json",
-        func=resolve_zero_shot,
-        kwargs=dict(data=data, label_names=label_names, targets=targets, **models),
-    )
-
-    return root
 
 
 def har_zero(
@@ -79,7 +88,7 @@ def har_zero(
     win_inc=1,
     task="har",
     split_type="predefined",
-    features="ecdf",
+    features="statistical",
 ):
     kwargs = dict(fs_new=fs_new, win_len=win_len, win_inc=win_inc, task=task, features=features)
 
@@ -100,18 +109,14 @@ def har_zero(
         _, _, _, classifier = har_basic(split_type="deployable", **dataset, **kwargs)
         models[name] = classifier.model
 
-    test_labels = list(test_feats.get_ancestral_metadata("tasks")["har"]["target_transform"].keys())
+    task = select_task(parent=test_feats, task_name=task)
+    split = select_split(parent=task, split_type=split_type)
 
-    zero = zero_shot(
-        parent=test_feats,
-        data=test_feats.outputs["features"],
-        label_names=test_labels,
-        models=models,
-        targets=test_feats.index["har"],
-    )
-    zero.evaluate_outputs()
+    # Learn the classifier
+    clf = make_zero_shot_model(parent=split, data=test_feats, models=models)
+    clf.evaluate_outputs()
 
-    return zero
+    return clf
 
 
 if __name__ == "__main__":
