@@ -330,7 +330,7 @@ class BaseGraph(ComputationGraph):
         return _get_ancestral_meta(self, key)
 
     def __truediv__(self, name):
-        return BaseGraph(name=name, parent=self)
+        return self.make_child(name=name)
 
-    def make_child(self, name, meta):
-        return BaseGraph(name=name, parent=self, meta=meta)
+    def make_child(self, name, meta=None, default_backend="numpy"):
+        return BaseGraph(name=name, parent=self, meta=meta, default_backend=default_backend)

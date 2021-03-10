@@ -15,7 +15,7 @@ def classification_metrics(parent, *args, **kwargs):
             func=evaluate_performance,
             key=key + ("results",),
             backend="json",
-            kwargs=dict(fold=None, fold_id=None, label=None, data=None, scores=None, model=None,),
+            kwargs=dict(fold=None, fold_id=None, label=None, data=None, scores=None, model=None),
         )
 
     return parent

@@ -51,7 +51,7 @@ def har_chain(
 
     models = dict()
     for name, dataset in dataset_alignment.items():
-        _, _, _, classifier = har_basic(split_type="deployable", **test_dataset, **kwargs)
+        _, _, _, classifier = har_basic(split_type="deployable", **dataset, **kwargs)
         models[name] = classifier.model
 
     chain = classifier_chain(parent=test_feats, data=test_feats.outputs["features"], models=models)
