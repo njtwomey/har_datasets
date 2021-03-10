@@ -1,5 +1,6 @@
 from src.features import ecdf
 from src.features import statistical_features
+from src.models import random_forest
 from src.models import sgd_classifier
 from src.selectors import select_split
 from src.selectors import select_task
@@ -12,15 +13,16 @@ from src.visualisations import umap_embedding
 
 
 def har_basic(
-    dataset_name="uschad",
+    dataset_name="anguita2013",
     fs_new=33,
     win_len=2.56,
     win_inc=1.0,
     task="har",
-    split_type="deployable",
+    split_type="predefined",
     features="ecdf",
     modality="accel",
     placement="all",
+    classifier="sgd",
 ):
     # Window/align the raw data
     dataset = dataset_importer(dataset_name)
@@ -45,7 +47,12 @@ def har_basic(
     split = select_split(parent=task, split_type=split_type)
 
     # Learn the classifier
-    clf = sgd_classifier(parent=split, split=split, task=task, data=selected_feats)
+    if classifier == "sgd":
+        clf = sgd_classifier(parent=split, split=split, task=task, data=selected_feats)
+    elif classifier == "rf":
+        clf = random_forest(parent=split, split=split, task=task, data=selected_feats)
+    else:
+        raise ValueError
     clf.evaluate_outputs()
 
     # Visualise the embeddings

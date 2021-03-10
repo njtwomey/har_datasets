@@ -56,7 +56,11 @@ def sklearn_probs(key, model, features):
 
 
 def sklearn_decision_function(key, model, features):
-    return model.decision_function(features)
+    if hasattr(model, "decision_function"):
+        return model.decision_function(features)
+    elif hasattr(model, "predict_log_proba"):
+        return model.predict_log_proba(features)
+    raise ValueError
 
 
 class sklearn_model(ModelBase):
