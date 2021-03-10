@@ -88,7 +88,7 @@ def har_zero(
     win_inc=1,
     task="har",
     split_type="predefined",
-    features="statistical",
+    features="ecdf",
 ):
     kwargs = dict(fs_new=fs_new, win_len=win_len, win_inc=win_inc, task=task, features=features)
 
@@ -106,7 +106,7 @@ def har_zero(
 
     models = dict()
     for name, dataset in dataset_alignment.items():
-        _, _, _, classifier = har_basic(split_type="deployable", **dataset, **kwargs)
+        _, _, _, classifier = har_basic(split_type="deployable", viz=False, **dataset, **kwargs)
         models[name] = classifier.model
 
     task = select_task(parent=test_feats, task_name=task)

@@ -23,6 +23,7 @@ def har_basic(
     modality="accel",
     placement="all",
     classifier="sgd",
+    viz=True,
 ):
     # Window/align the raw data
     dataset = dataset_importer(dataset_name)
@@ -56,8 +57,8 @@ def har_basic(
     clf.evaluate_outputs()
 
     # Visualise the embeddings
-    viz = umap_embedding(selected_feats, task=task)
-    viz.evaluate_outputs()
+    if viz:
+        umap_embedding(selected_feats, task=task).evaluate_outputs()
 
     return selected_feats, task, split, clf
 
