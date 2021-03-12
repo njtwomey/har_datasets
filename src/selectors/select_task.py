@@ -5,6 +5,10 @@ __all__ = [
 ]
 
 
+def select_task_labels(data):
+    return data
+
+
 def select_task(parent, task_name):
     root = parent.make_child(name=task_name, meta=metadata_path("tasks", f"{task_name}.yaml"))
 
@@ -13,10 +17,7 @@ def select_task(parent, task_name):
     assert task_name in tasks
 
     root.index.add_output(
-        key="target",
-        func=lambda data: data,
-        backend="pandas",
-        kwargs=dict(data=parent.index[task_name]),
+        key="target", func=select_task_labels, backend="pandas", kwargs=dict(data=parent.index[task_name]),
     )
 
     return root

@@ -1,5 +1,3 @@
-from os.path import join
-
 import numpy as np
 import pandas as pd
 from loguru import logger
@@ -40,7 +38,7 @@ def window_index(index, data, fs, win_len, win_inc, slice_at="middle"):
 
 
 def window(parent, win_len, win_inc):
-    root = parent / f"window_{win_len:03.2f}s_{win_inc:03.2f}s"
+    root = parent / f"win_len={win_len:03.2f}-win_inc={win_inc:03.2f}"
 
     fs = root.get_ancestral_metadata("fs")
 
@@ -49,9 +47,7 @@ def window(parent, win_len, win_inc):
     # Build index outputs
     for key, node in parent.index.items():
         root.index.add_output(
-            key=key,
-            func=PartitionByTrial(window_index),
-            kwargs=dict(index=parent.index["index"], data=node, **kwargs),
+            key=key, func=PartitionByTrial(window_index), kwargs=dict(index=parent.index["index"], data=node, **kwargs),
         )
 
     # Build Data outputs
@@ -125,16 +121,13 @@ def sliding_window(a, ws, ss=None, flatten=True):
     # ensure that ws, ss, and a.shape all have the same number of dimensions
     ls = [len(shape), len(ws), len(ss)]
     if 1 != len(set(ls)):
-        logger.exception(
-            ValueError(f"a.shape, ws and ss must all have the same length. They were {ls}")
-        )
+        logger.exception(ValueError(f"a.shape, ws and ss must all have the same length. They were {ls}"))
 
     # ensure that ws is smaller than a in every dimension
     if np.any(ws > shape):
         logger.exception(
             ValueError(
-                f"ws cannot be larger than a in any dimension. a.shape was %s and "
-                "ws was {(str(a.shape), str(ws))}"
+                f"ws cannot be larger than a in any dimension. a.shape was %s and " "ws was {(str(a.shape), str(ws))}"
             )
         )
 

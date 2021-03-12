@@ -13,9 +13,9 @@ CLASSIFIERS = dict()
 
 
 class ZeroShotModel(BaseEstimator, ClassifierMixin):
-    def __init__(self, alpha):
+    def __init__(self, alpha, **kwargs):
         self.alpha = alpha
-
+        self.classifiers = kwargs
         self.classes_ = None
         self.label_map = dict(
             # cycle="walk",
@@ -46,14 +46,13 @@ class ZeroShotModel(BaseEstimator, ClassifierMixin):
     def predict_proba(self, data):
         weights = dict(zip(sorted(CLASSIFIERS.keys()), [self.alpha, 1 - self.alpha]))
 
-        probs = {
-            kk: pd.DataFrame(mm.predict_proba(data), columns=mm.classes_)
-            for kk, mm in CLASSIFIERS.items()
-        }
+        probs = {kk: pd.DataFrame(mm.predict_proba(data), columns=mm.classes_) for kk, mm in CLASSIFIERS.items()}
 
         label_idx = dict(zip(self.classes_, np.arange(len(self.classes_))))
         output = np.zeros((len(data), len(self.classes_)))
         for kk, prob in probs.items():
+            cols = np.intersect1d(prob.columns, list(self.label_map.keys()))
+            prob = prob[cols]
             prob = weights[kk] * prob / prob.values.sum(axis=1, keepdims=True)
             for col in prob.columns:
                 if col in self.label_map:
@@ -69,15 +68,15 @@ class ZeroShotModel(BaseEstimator, ClassifierMixin):
 
 
 def make_zero_shot_model(parent, data, models):
-    CLASSIFIERS.clear()
     for kk, vv in models.items():
         CLASSIFIERS[kk] = vv.evaluate()
     return sklearn_model_factory(
-        name=f"zero_shot_model_from={sorted(CLASSIFIERS.keys())}",
+        name=f"zero_shot_model_from={sorted(models.keys())}",
         parent=parent,
         data=data,
-        model=ZeroShotModel(alpha=0.5),
-        xval=dict(alpha=np.linspace(0, 1, 21),),
+        model=ZeroShotModel(alpha=0.5, **CLASSIFIERS),
+        xval=dict(alpha=np.linspace(0, 1, 21)),
+        **models,
     )
 
 
@@ -88,9 +87,9 @@ def har_zero(
     win_inc=1,
     task="har",
     split_type="predefined",
-    features="ecdf",
+    features="statistical",
 ):
-    kwargs = dict(fs_new=fs_new, win_len=win_len, win_inc=win_inc, task=task, features=features)
+    kwargs = dict(fs_new=fs_new, win_len=win_len, win_inc=win_inc, task=task, features=features, viz=False)
 
     dataset_alignment = dict(
         anguita2013=dict(dataset_name="anguita2013", placement="waist", modality="accel"),
@@ -100,20 +99,19 @@ def har_zero(
 
     test_dataset = dataset_alignment.pop(test_dataset)
 
-    test_feats, test_task, test_split, test_clf = har_basic(
-        split_type="predefined", **test_dataset, **kwargs
-    )
+    test_feats, test_task, test_split, test_clf = har_basic(split_type="predefined", **test_dataset, **kwargs)
 
     models = dict()
     for name, dataset in dataset_alignment.items():
-        _, _, _, classifier = har_basic(split_type="deployable", viz=False, **dataset, **kwargs)
+        _, _, _, classifier = har_basic(split_type="deployable", **dataset, **kwargs)
         models[name] = classifier.model
 
-    task = select_task(parent=test_feats, task_name=task)
+    task = select_task(parent=test_feats.parent, task_name=task)
     split = select_split(parent=task, split_type=split_type)
 
     # Learn the classifier
     clf = make_zero_shot_model(parent=split, data=test_feats, models=models)
+    clf.dump_graph()
     clf.evaluate_outputs()
 
     return clf

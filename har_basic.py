@@ -7,30 +7,35 @@ from src.selectors import select_task
 from src.transformers import body_grav_filter
 from src.transformers import resample
 from src.transformers import window
+from src.transformers.modality_selector import concatenate_features
 from src.transformers.modality_selector import modality_selector
 from src.utils.loaders import dataset_importer
 from src.visualisations import umap_embedding
 
 
 def har_basic(
-    dataset_name="anguita2013",
+    dataset_name="pamap2",
     fs_new=33,
-    win_len=2.56,
-    win_inc=2.5,
+    win_len=3,
+    win_inc=1,
     task="har",
     split_type="predefined",
     features="ecdf",
     modality="accel",
     placement="all",
     classifier="sgd",
-    viz=True,
+    viz=False,
 ):
     # Window/align the raw data
     dataset = dataset_importer(dataset_name)
 
-    wear_resampled = resample(parent=dataset, fs_new=fs_new)
-    wear_separated = body_grav_filter(parent=wear_resampled)
-    wear_windowed = window(parent=wear_separated, win_len=win_len, win_inc=win_inc)
+    # Select the features that we're interested in, and get the features
+    selected_feats = modality_selector(parent=dataset, modality=modality, location=placement)
+
+    # Process the wearable data
+    wear_resampled = resample(parent=selected_feats, fs_new=fs_new)
+    wear_filtered = body_grav_filter(parent=wear_resampled)
+    wear_windowed = window(parent=wear_filtered, win_len=win_len, win_inc=win_inc)
 
     # Calculate the features that we want
     if features == "statistical":
@@ -40,27 +45,29 @@ def har_basic(
     else:
         raise ValueError
 
-    # Select the features that we're interested in, and get the features
-    selected_feats = modality_selector(parent=wear_feats, view=modality, location=placement)
+    # Aggregate the features together
+    feature_node = concatenate_features(wear_feats)
 
     # Get the task (and its labels), and the train/val/test splits
-    task = select_task(parent=selected_feats, task_name=task)
+    task = select_task(parent=wear_feats, task_name=task)
     split = select_split(parent=task, split_type=split_type)
 
     # Learn the classifier
     if classifier == "sgd":
-        clf = sgd_classifier(parent=split, split=split, task=task, data=selected_feats)
+        clf = sgd_classifier(parent=split, data=feature_node)
     elif classifier == "rf":
-        clf = random_forest(parent=split, split=split, task=task, data=selected_feats)
+        clf = random_forest(parent=split, data=feature_node)
     else:
         raise ValueError
+
+    clf.dump_graph()
     clf.evaluate_outputs()
 
     # Visualise the embeddings
     if viz:
-        umap_embedding(selected_feats, task=task).evaluate_outputs()
+        umap_embedding(feature_node, task=task).evaluate_outputs()
 
-    return selected_feats, task, split, clf
+    return feature_node, task, split, clf
 
 
 if __name__ == "__main__":

@@ -14,18 +14,23 @@ class Dataset(BaseGraph):
     def __init__(self, name, *args, **kwargs):
         super(Dataset, self).__init__(name=name, parent=None, meta=DatasetMeta(name))
 
-        zip_name = kwargs.get("unzip_path", lambda x: x)(
-            splitext(basename(self.meta.meta["download_urls"][0]))[0]
-        )
+        zip_name = kwargs.get("unzip_path", lambda x: x)(splitext(basename(self.meta.meta["download_urls"][0]))[0])
         self.unzip_path = join(self.meta.zip_path, splitext(zip_name)[0])
+
+        def identifier():
+            return name
+
+        identifier.__name__ = f"dataset={name}"
+
+        dataset = self.outputs.add_output(key=identifier.__name__, func=identifier, backend="none",)
 
         # Build the indexes
         self.index.add_output(
-            key="fold", func=self.build_fold, backend="pandas", kwargs=dict(path=self.unzip_path)
+            key="fold", func=self.build_fold, backend="pandas", kwargs=dict(dataset=dataset, path=self.unzip_path),
         )
 
         self.index.add_output(
-            key="index", func=self.build_index, backend="pandas", kwargs=dict(path=self.unzip_path)
+            key="index", func=self.build_index, backend="pandas", kwargs=dict(dataset=dataset, path=self.unzip_path),
         )
 
         tasks = self.get_ancestral_metadata("tasks")
@@ -34,9 +39,7 @@ class Dataset(BaseGraph):
                 key=task,
                 func=self.build_label,
                 backend="pandas",
-                kwargs=dict(
-                    path=self.unzip_path, task=task, inv_lookup=self.meta.inv_lookup[task],
-                ),
+                kwargs=dict(dataset=dataset, path=self.unzip_path, task=task, inv_lookup=self.meta.inv_lookup[task],),
             )
 
         # Build list of outputs
@@ -45,7 +48,7 @@ class Dataset(BaseGraph):
             modality = placement_modality["modality"]
 
             self.outputs.add_output(
-                key=(modality, placement), func=self.build_data, backend="numpy",
+                key=(modality, placement), func=self.build_data, backend="numpy", kwargs=dict(dataset=dataset),
             )
 
     def build_label(self, *args, **kwargs):

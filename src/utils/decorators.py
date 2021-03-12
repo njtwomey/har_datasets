@@ -79,23 +79,13 @@ class IndexDecorator(DecoratorBase):
 
 
 def infer_data_type(data):
-    """
-
-    Args:
-        data:
-
-    Returns:
-
-    """
     if isinstance(data, np.ndarray):
         return "numpy"
     elif isinstance(data, pd.DataFrame):
         return "pandas"
 
     logger.exception(
-        TypeError(
-            f"Unsupported data type in infer_data_type ({type(data)}), currently only {{numpy, pandas}}"
-        )
+        TypeError(f"Unsupported data type in infer_data_type ({type(data)}), currently only {{numpy, pandas}}")
     )
 
 
@@ -106,9 +96,7 @@ def slice_data_type(data, inds, data_type_name):
         return data.loc[inds]
 
     logger.exception(
-        TypeError(
-            f"Unsupported data type in slice_data_type ({type(data)}), currently only {{numpy, pandas}}"
-        )
+        TypeError(f"Unsupported data type in slice_data_type ({type(data)}), currently only {{numpy, pandas}}")
     )
 
 
@@ -120,9 +108,7 @@ def concat_data_type(datas, data_type_name):
         return df.reset_index(drop=True)
 
     logger.exception(
-        TypeError(
-            f"Unsupported data type in concat_data_type ({type(datas)}), currently only {{numpy, pandas}}"
-        )
+        TypeError(f"Unsupported data type in concat_data_type ({type(datas)}), currently only {{numpy, pandas}}")
     )
 
 
@@ -135,18 +121,6 @@ class PartitionByTrial(DecoratorBase):
         super(PartitionByTrial, self).__init__(func=func)
 
     def __call__(self, index, data, *args, **kwargs):
-        """
-
-        Args:
-            key:
-            index:
-            data:
-            *args:
-            **kwargs:
-
-        Returns:
-
-        """
         if index.shape[0] != data.shape[0]:
             logger.exception(
                 ValueError(

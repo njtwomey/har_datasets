@@ -1,5 +1,3 @@
-from os.path import join
-
 import numpy as np
 from sklearn import clone
 from sklearn.model_selection import GridSearchCV
@@ -23,7 +21,7 @@ def select_fold(folds, fold_name):
     return fold_def
 
 
-def learn_sklearn_model(index, features, targets, fold_def, model, n_splits):
+def learn_sklearn_model(index, features, targets, fold_def, model, n_splits, **kwargs):
     assert index.shape[0] == features.shape[0]
     assert index.shape[0] == targets.shape[0]
     assert index.shape[0] == fold_def.shape[0]
@@ -32,7 +30,8 @@ def learn_sklearn_model(index, features, targets, fold_def, model, n_splits):
 
     x_train, y_train = features[tr_inds], targets["target"][tr_inds].values.ravel()
 
-    model = clone(model)
+    original_model = model
+    model = clone(original_model)
 
     if "val" in fold_def:
         raise NotImplementedError
@@ -63,7 +62,7 @@ def sklearn_decision_function(model, features):
     raise ValueError
 
 
-def sklearn_model(name, parent, model, xval, features, targets, split, fold_name, n_splits=5):
+def sklearn_model(name, parent, model, xval, features, targets, split, fold_name, n_splits=5, *args, **kwargs):
     root = parent / name / fold_name
 
     if not isinstance(model, GridSearchCV):
@@ -84,21 +83,16 @@ def sklearn_model(name, parent, model, xval, features, targets, split, fold_name
             fold_def=fold_definition,
             model=model,
             n_splits=n_splits,
+            **kwargs,
         ),
     )
 
     model_predictions = root.outputs.add_output(
-        key="preds",
-        func=sklearn_preds,
-        backend="none",
-        kwargs=dict(features=features, model=model_instance),
+        key="preds", func=sklearn_preds, backend="none", kwargs=dict(features=features, model=model_instance),
     )
 
     scores = root.outputs.add_output(
-        key="probs",
-        func=sklearn_probs,
-        backend="none",
-        kwargs=dict(features=features, model=model_instance),
+        key="probs", func=sklearn_probs, backend="none", kwargs=dict(features=features, model=model_instance),
     )
 
     root.outputs.add_output(
@@ -106,11 +100,7 @@ def sklearn_model(name, parent, model, xval, features, targets, split, fold_name
         func=evaluate_fold,
         backend="json",
         kwargs=dict(
-            fold=fold_definition,
-            targets=targets,
-            predictions=model_predictions,
-            model=model_instance,
-            scores=scores,
+            fold=fold_definition, targets=targets, predictions=model_predictions, model=model_instance, scores=scores,
         ),
     )
 
@@ -118,7 +108,7 @@ def sklearn_model(name, parent, model, xval, features, targets, split, fold_name
 
 
 class sklearn_model_factory(BaseGraph):
-    def __init__(self, name, parent, data, model, xval, n_splits=5):
+    def __init__(self, name, parent, data, model, xval, n_splits=5, **kwargs):
         super(sklearn_model_factory, self).__init__(name=name, parent=parent)
 
         del parent
@@ -136,6 +126,8 @@ class sklearn_model_factory(BaseGraph):
                 targets=self.index["target"],
                 split=self.index["split"],
                 n_splits=n_splits,
+                data=data,
+                **kwargs,
             )
 
             self.models[fold_name] = clf
