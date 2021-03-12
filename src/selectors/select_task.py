@@ -1,30 +1,23 @@
-from pathlib import Path
-
-from src.selectors.base import SelectorBase
-from src.utils.loaders import get_yaml_file_list, metadata_path
+from src.utils.loaders import metadata_path
 
 __all__ = [
     "select_task",
 ]
 
 
-def task_selector(key, data):
+def select_task_labels(data):
     return data
 
 
-class select_task(SelectorBase):
-    def __init__(self, parent, task_name):
-        tasks = get_yaml_file_list("tasks", stem=True)
+def select_task(parent, task_name):
+    root = parent.make_child(name=task_name, meta=metadata_path("tasks", f"{task_name}.yaml"))
 
-        assert task_name in tasks
+    tasks = root.get_ancestral_metadata("tasks").keys()
 
-        super(select_task, self).__init__(
-            name=task_name, parent=parent, meta=metadata_path("tasks", f"{task_name}.yaml"),
-        )
+    assert task_name in tasks
 
-        self.index.add_output(
-            key="target",
-            func=task_selector,
-            backend="pandas",
-            kwargs=dict(data=parent.index[task_name],),
-        )
+    root.index.add_output(
+        key="target", func=select_task_labels, backend="pandas", kwargs=dict(data=parent.index[task_name]),
+    )
+
+    return root

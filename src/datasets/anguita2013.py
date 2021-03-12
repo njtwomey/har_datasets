@@ -66,7 +66,7 @@ class anguita2013(Dataset):
         x_data = []
         y_data = []
         z_data = []
-        modality = dict(accel="acc", gyro="gyro",)[modality]
+        modality = dict(accel="acc", gyro="gyro")[modality]
         for fold in ("train", "test"):
             for l, d in zip((x_data, y_data, z_data), ("x", "y", "z")):
                 ty = ["body", "total"][modality in {"accel", "acc"}]

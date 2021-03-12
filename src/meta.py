@@ -1,10 +1,10 @@
-from os import environ
 from pathlib import Path
 
 from loguru import logger
 
-from src.utils import load_yaml
-from src.utils import metadata_path
+from src.utils.loaders import get_env
+from src.utils.loaders import load_yaml
+from src.utils.loaders import metadata_path
 
 
 __all__ = [
@@ -38,7 +38,7 @@ class BaseMeta(object):
                 self.meta = meta
 
             except FileNotFoundError:
-                # logger.warn(f'The metadata file for "{self.name}" was not found.')
+                # logger.warning(f'The metadata file for "{self.name}" was not found.')
                 pass
 
     def __getitem__(self, item):
@@ -128,4 +128,4 @@ class DatasetMeta(BaseMeta):
 
     @property
     def zip_path(self):
-        return Path(environ["ZIP_ROOT"]) / self.name
+        return get_env("ZIP_ROOT") / self.name

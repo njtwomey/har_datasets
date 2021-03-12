@@ -1,8 +1,11 @@
+from functools import partial
 from pathlib import Path
 
+import pygraphviz as pgv
 from loguru import logger
 from mldb import ComputationGraph
 from mldb import FileLockExistsException
+from mldb import NodeWrapper
 from mldb.backends import JsonBackend
 from mldb.backends import NumpyBackend
 from mldb.backends import PandasBackend
@@ -13,6 +16,7 @@ from mldb.backends import VolatileBackend
 
 from src.keys import Key
 from src.meta import BaseMeta
+from src.utils.decorators import DecoratorBase
 from src.utils.loaders import build_path
 from src.utils.loaders import get_yaml_file_list
 from src.utils.misc import NumpyEncoder
@@ -36,18 +40,13 @@ def _get_ancestral_meta(graph, key):
 
 def validate_ancestry(parent, sibling):
     if parent is not None and sibling is not None:
-        logger.exception(
-            ValueError(f"DAG cannot be specified consisting of both a parent and a sibling")
-        )
+        logger.exception(ValueError(f"DAG cannot be specified consisting of both a parent and a sibling"))
     if parent is not None:
         return parent
     if sibling is not None:
         if not hasattr(sibling, "parent"):
             logger.exception(
-                TypeError(
-                    "The variable {sibling} is expected to have an attribute "
-                    "called parent but does not."
-                )
+                TypeError("The variable {sibling} is expected to have an attribute " "called parent but does not.")
             )
         return sibling.parent
     return None
@@ -61,10 +60,13 @@ def validate_key_set_membership(key, key_set):
     # return key[0] in key_set
 
 
+INDEX_FILES = set(["index", "fold", "label", "target", "split"] + get_yaml_file_list("tasks", stem=True))
+
+
 class ComputationalSet(object):
     def __init__(self, graph, parent=None, sibling=None, cat="outputs"):
         """
-        
+
         Args:
             graph:
             parent:
@@ -81,11 +83,14 @@ class ComputationalSet(object):
 
         self.acquired = [self]
 
+    def acquire_one(self, key, node):
+        if key in self.output_dict:
+            logger.exception(KeyError(f"{key} is not in {self.output_dict.keys()}"))
+        self.output_dict[key] = node
+
     def acquire(self, other):
         for key, val in other.output_dict.items():
-            if key in self.output_dict:
-                logger.exception(KeyError(f"{key} is not in {self.output_dict.keys()}"))
-            self.output_dict[key] = val
+            self.acquire_one(key, val)
 
     @property
     def active_comp_set(self):
@@ -123,6 +128,7 @@ class ComputationalSet(object):
         return validate_key_set_membership(key, self.index_keys)
 
     def evaluate_outputs(self, force=False):
+        outputs = dict()
         for key in randomised_order(self.keys()):
             node = self[key]
             if not node.exists or force:
@@ -130,13 +136,14 @@ class ComputationalSet(object):
                     continue
 
                 try:
-                    node.evaluate()
-
+                    outputs[key] = node.evaluate()
                 except FileLockExistsException as ex:
-                    logger.warn(
+                    logger.warning(
                         f"The file {node.name} is currently being evaluated by a different process. "
                         f"Continuing to next available process: {ex}"
                     )
+
+        return outputs
 
     def make_output(self, key, func, backend=None, kwargs=None):
         assert callable(func)
@@ -148,12 +155,7 @@ class ComputationalSet(object):
 
         assert key not in self.output_dict
 
-        node = self.graph.node(
-            func=func,
-            name=self.graph.build_path(key),
-            backend=backend,
-            kwargs=dict(key=key, **kwargs,),
-        )
+        node = self.graph.node(func=func, name=self.graph.build_path(key), backend=backend, kwargs=dict(**kwargs),)
 
         return node
 
@@ -179,25 +181,18 @@ class IndexSet(ComputationalSet):
     def validate_key(self, key):
         if not self.is_index_key(key):
             logger.exception(
-                ValueError(
-                    f"A non-index key was used for the index computation: {key} not in {self.index_keys}"
-                )
+                ValueError(f"A non-index key was used for the index computation: {key} not in {self.index_keys}")
             )
 
     def add_output(self, key, func, backend=None, kwargs=None):
         self.validate_key(key)
         return super(IndexSet, self).add_output(
-            key=key,
-            func=func,
-            backend=backend or "pandas",  # Indexes default to pandas backend
-            kwargs=kwargs,
+            key=key, func=func, backend=backend or "pandas", kwargs=kwargs,  # Indexes default to pandas backend
         )
 
     def make_output(self, key, func, backend=None, kwargs=None):
         self.validate_key(key)
-        return super(IndexSet, self).make_output(
-            key=key, func=func, backend=backend or "pandas", kwargs=kwargs
-        )
+        return super(IndexSet, self).make_output(key=key, func=func, backend=backend or "pandas", kwargs=kwargs)
 
     @property
     def index(self):
@@ -239,14 +234,14 @@ class BaseGraph(ComputationGraph):
 
     def __init__(self, name, parent=None, meta=None, default_backend="numpy"):
         """
-        
+
         Args:
             name:
             parent:
             meta:
             default_backend:
         """
-        super(BaseGraph, self).__init__(name=name,)
+        super(BaseGraph, self).__init__(name=name)
 
         if isinstance(meta, BaseMeta):
             self.meta = meta
@@ -255,9 +250,7 @@ class BaseGraph(ComputationGraph):
         elif isinstance(name, (str, Path)):
             self.meta = BaseMeta(path=name)
         else:
-            logger.exception(
-                ValueError(f"Ambiguous metadata specification with name={name} and meta={meta}")
-            )
+            logger.exception(ValueError(f"Ambiguous metadata specification with name={name} and meta={meta}"))
 
         self.parent = parent
 
@@ -273,39 +266,29 @@ class BaseGraph(ComputationGraph):
         self.set_default_backend(default_backend)
 
         self.collections = ComputationalCollection(
-            index=IndexSet(graph=self, parent=parent),
-            outputs=ComputationalSet(graph=self, parent=parent),
+            index=IndexSet(graph=self, parent=parent), outputs=ComputationalSet(graph=self, parent=parent),
         )
 
+        self.children = []
+
+        if parent is not None:
+            parent.children.append(self)
+
     def build_path(self, key):
-        """
-        
-        Args:
-            *args:
-
-        Returns:
-
-        """
         assert isinstance(key, Key)
-
         assert len(key) > 0
         if not isinstance(key[0], str):
             logger.exception(
-                ValueError(
-                    f"The argument for `build_path` must be strings, but got the type: {type(key[0])}"
-                )
+                ValueError(f"The argument for `build_path` must be strings, but got the type: {type(key[0])}")
             )
 
         return build_path(self.identifier, str(key))
 
-    def evaluate_outputs(self):
-        """
-        
-        Returns:
-
-        """
+    def evaluate_outputs(self, force=False):
+        outputs = dict()
         for key, output in self.collections.items():
-            output.evaluate_outputs()
+            outputs[key] = output.evaluate_outputs(force=force)
+        return outputs
 
     @property
     def index(self):
@@ -323,3 +306,59 @@ class BaseGraph(ComputationGraph):
 
     def get_ancestral_metadata(self, key):
         return _get_ancestral_meta(self, key)
+
+    def __truediv__(self, name):
+        return self.make_child(name=name)
+
+    def make_child(self, name, meta=None, default_backend="numpy"):
+        return BaseGraph(name=name, parent=self, meta=meta, default_backend=default_backend)
+
+    def dump_graph(self):
+        dump_graph(graph=self, filename=build_path() / self.identifier / "graph.pdf")
+
+
+def dump_graph(graph, filename):
+    nodes = dict()
+    edges = []
+
+    if isinstance(graph, NodeWrapper):
+        consume_nodes(nodes, edges, graph)
+    elif isinstance(graph, BaseGraph):
+        for _, node in graph.outputs.items():
+            consume_nodes(nodes, edges, node)
+    else:
+        raise TypeError
+
+    nodes = {str(kk): vv for kk, vv in nodes.items()}
+    edges = list(map(lambda rr: list(map(str, rr)), edges))
+
+    G = pgv.AGraph(directed=True, strict=True, rankdir="LR")
+    for node_id, node_name in nodes.items():
+        G.add_node(node_id, label=node_name)
+    G.add_edges_from(edges)
+    G.layout("dot")
+    filename.parent.mkdir(exist_ok=True, parents=True)
+    G.draw(filename)
+    G.close()
+
+    return nodes, edges
+
+
+def consume_nodes(nodes, edges, ptr):
+    def add_node(node):
+        node_name = node.name
+        func = node.func
+        if isinstance(func, partial):
+            func = node.func.func.__self__.func
+        elif isinstance(node.func, DecoratorBase):
+            func = func.func
+        func_name = func.__name__
+        if node_name not in nodes:
+            nodes[node_name] = f"{func_name} =>\n{node.name.stem}"
+        return node_name
+
+    add_node(ptr)
+    for source_node in ptr.sources.values():
+        source_name = add_node(source_node)
+        edges.append((source_name, ptr.name))
+        consume_nodes(nodes, edges, source_node)

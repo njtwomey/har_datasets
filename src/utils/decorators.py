@@ -1,11 +1,8 @@
 from functools import partial
 from functools import update_wrapper
-from functools import wraps
 
 import numpy as np
 import pandas as pd
-from dotenv import find_dotenv
-from dotenv import load_dotenv
 from loguru import logger
 from pandas.api.types import is_categorical_dtype
 from tqdm import tqdm
@@ -20,7 +17,6 @@ __all__ = [
     "label_decorator",
     "PartitionByTrial",
     "partitioning_decorator",
-    "dot_env_decorator",
 ]
 
 
@@ -83,23 +79,13 @@ class IndexDecorator(DecoratorBase):
 
 
 def infer_data_type(data):
-    """
-
-    Args:
-        data:
-
-    Returns:
-
-    """
     if isinstance(data, np.ndarray):
         return "numpy"
     elif isinstance(data, pd.DataFrame):
         return "pandas"
 
     logger.exception(
-        TypeError(
-            f"Unsupported data type in infer_data_type ({type(data)}), currently only {{numpy, pandas}}"
-        )
+        TypeError(f"Unsupported data type in infer_data_type ({type(data)}), currently only {{numpy, pandas}}")
     )
 
 
@@ -110,9 +96,7 @@ def slice_data_type(data, inds, data_type_name):
         return data.loc[inds]
 
     logger.exception(
-        TypeError(
-            f"Unsupported data type in slice_data_type ({type(data)}), currently only {{numpy, pandas}}"
-        )
+        TypeError(f"Unsupported data type in slice_data_type ({type(data)}), currently only {{numpy, pandas}}")
     )
 
 
@@ -124,9 +108,7 @@ def concat_data_type(datas, data_type_name):
         return df.reset_index(drop=True)
 
     logger.exception(
-        TypeError(
-            f"Unsupported data type in concat_data_type ({type(datas)}), currently only {{numpy, pandas}}"
-        )
+        TypeError(f"Unsupported data type in concat_data_type ({type(datas)}), currently only {{numpy, pandas}}")
     )
 
 
@@ -138,34 +120,22 @@ class PartitionByTrial(DecoratorBase):
     def __init__(self, func):
         super(PartitionByTrial, self).__init__(func=func)
 
-    def __call__(self, key, index, data, *args, **kwargs):
-        """
-
-        Args:
-            key:
-            index:
-            data:
-            *args:
-            **kwargs:
-
-        Returns:
-
-        """
+    def __call__(self, index, data, *args, **kwargs):
         if index.shape[0] != data.shape[0]:
             logger.exception(
                 ValueError(
-                    f"The data and index of {key} should have the same length "
+                    f"The data and index  should have the same length "
                     "with index: {index.shape}; and data: {data.shape}"
                 )
             )
         output = []
         trials = index.trial.unique()
         data_type = infer_data_type(data)
-        for trial in tqdm(trials, desc=str(key)):
+        for trial in tqdm(trials):
             inds = index.trial == trial
             index_ = index.loc[inds]
             data_ = slice_data_type(data, inds, data_type)
-            vals = self.func(key=key, index=index_, data=data_, *args, **kwargs)
+            vals = self.func(index=index_, data=data_, *args, **kwargs)
             opdt = infer_data_type(vals)
             if opdt != data_type:
                 logger.exception(
@@ -201,15 +171,6 @@ class RequiredModalities(DecoratorBase):
 
 
 required_modalities = RequiredModalities
-
-
-def dot_env_decorator(func):
-    @wraps(func)
-    def _dot_env_decorator(*args, **kwargs):
-        load_dotenv(find_dotenv())
-        return func(*args, **kwargs)
-
-    return _dot_env_decorator
 
 
 label_decorator = LabelDecorator

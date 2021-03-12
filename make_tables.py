@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 import os
 
-from src import DatasetMeta, load_datasets_metadata, dot_env_decorator
-from src.utils.loaders import load_metadata, build_path
+from src import DatasetMeta
+from src import load_datasets_metadata
+from src.utils.loaders import build_path
+from src.utils.loaders import load_metadata
 
 
 def make_links(links, desc="Link"):
@@ -39,7 +41,6 @@ def make_dataset_row(dataset):
     )
 
 
-@dot_env_decorator
 def main():
     # Ensure the paths exist
     root = build_path("tables")

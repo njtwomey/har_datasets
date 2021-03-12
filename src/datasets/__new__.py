@@ -1,12 +1,15 @@
+from ..utils import data_decorator
+from ..utils import fold_decorator
+from ..utils import index_decorator
+from ..utils import label_decorator
 from .base import Dataset
-from ..utils import index_decorator, label_decorator, fold_decorator, data_decorator
 
 __all__ = ["NameOfTheDataset"]
 
 
 class NameOfTheDataset(Dataset):
     def __init__(self):
-        super(NameOfTheDataset, self).__init__(name=self.__class__.__name__,)
+        super(NameOfTheDataset, self).__init__(name=self.__class__.__name__)
 
     @label_decorator
     def build_labels(self, *args, **kwargs):

@@ -134,7 +134,7 @@ Time and frequency feature interfaces
 """
 
 
-def t_feat(key, index, data, fs):
+def t_feat(index, data, fs):
     data = add_magnitude(data)
     features = [
         f(data, axis=1)
@@ -157,7 +157,7 @@ def t_feat(key, index, data, fs):
     return feats
 
 
-def f_feat(key, index, data, fs):
+def f_feat(index, data, fs):
     data = add_magnitude(data)
 
     freq, spec = scipy.signal.periodogram(data, fs=fs, axis=1)

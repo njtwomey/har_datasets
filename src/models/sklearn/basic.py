@@ -12,7 +12,7 @@ from sklearn.svm import SVC
 from src.models.sklearn.base import sklearn_model_factory
 
 
-__all__ = ["logistic_regression", "logistic_regression_cv", "sgd_classifier"]
+__all__ = ["logistic_regression", "logistic_regression_cv", "sgd_classifier", "random_forest"]
 
 
 class logistic_regression(sklearn_model_factory):
@@ -54,13 +54,15 @@ class sgd_classifier(sklearn_model_factory):
 
 
 class random_forest(sklearn_model_factory):
-    def __init__(self, parent, *args, **kwargs):
+    def __init__(self, parent, data, *args, **kwargs):
         super(random_forest, self).__init__(
             name=self.__class__.__name__,
             parent=parent,
+            data=data,
             model=Pipeline([("clf", RandomForestClassifier(n_estimators=10))]),
-            *args,
-            **kwargs,
+            xval=dict(clf__n_estimators=[8, 16, 32, 63]),
+            # *args,
+            # **kwargs,
         )
 
 

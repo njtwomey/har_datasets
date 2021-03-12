@@ -18,7 +18,8 @@ num_subjects: 30
 num_activities: 6
 splits:
   - predefined
-#  - loso
+  - loso
+  - deployable
 modalities:
   - accel
   - gyro

@@ -1,9 +1,4 @@
-from collections import defaultdict
-from os.path import join
-
 import numpy as np
-
-from src.features.base import FeatureBase
 
 
 __all__ = [
@@ -11,28 +6,20 @@ __all__ = [
 ]
 
 
-class ecdf(FeatureBase):
-    def __init__(self, parent, n_components, source_filter):
-        super(ecdf, self).__init__(
-            name=f"ecdf_{n_components}", parent=parent, source_filter=source_filter,
+def ecdf(parent, n_components):
+    root = parent / f"ecdf_{n_components}"
+
+    for key, node in parent.outputs.items():
+        root.outputs.add_output(
+            key=key + ("ecdf",),
+            func=calc_ecdf,
+            kwargs=dict(n_components=n_components, index=parent.index["index"], data=node),
         )
 
-        endpoints = defaultdict(dict)
-
-        self.n_components = n_components
-
-        for key, node in parent.outputs.items():
-            self.prepare_outputs(
-                endpoints=endpoints,
-                key=key + ("ecdf",),
-                func=calc_ecdf,
-                kwargs=dict(n_components=n_components, index=parent.index["index"], data=node),
-            )
-
-        self.assign_outputs(endpoints)
+    return root
 
 
-def calc_ecdf(key, index, data, n_components):
+def calc_ecdf(index, data, n_components):
     """
 
     Parameters

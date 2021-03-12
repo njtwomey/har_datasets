@@ -5,32 +5,23 @@ from loguru import logger
 from scipy.special import logsumexp
 from sklearn import metrics
 
-from src.evaluation.base import EvaluationBase
-
 
 __all__ = ["classification_metrics"]
 
 
-class classification_metrics(EvaluationBase):
-    def __init__(self, parent, *args, **kwargs):
-        super(classification_metrics, self).__init__(
-            name=self.__class__.__name__, parent=parent, *args, **kwargs
+def classification_metrics(parent, *args, **kwargs):
+    for key, node in parent.outputs.items():
+        parent.outputs.add_output(
+            func=evaluate_performance,
+            key=key + ("results",),
+            backend="json",
+            kwargs=dict(fold=None, fold_id=None, label=None, data=None, scores=None, model=None),
         )
 
-        for key, node in parent.outputs.items():
-            self.parent.outputs.add_output(
-                func=evaluate_performance,
-                key=key + ("results",),
-                backend="json",
-                kwargs=dict(
-                    fold=None, fold_id=None, label=None, data=None, scores=None, model=None,
-                ),
-            )
-
-        raise NotImplementedError
+    return parent
 
 
-def evaluate_performance(key, fold, fold_id, label, data, model):
+def evaluate_performance(fold, fold_id, label, data, model):
     res = dict()
     res[fold_id] = dict()
     for tr_val_te in fold[fold_id].unique():
@@ -46,7 +37,7 @@ def evaluate_performance(key, fold, fold_id, label, data, model):
     return res
 
 
-def evaluate_fold(key, fold, targets, predictions, model, scores):
+def evaluate_fold(fold, targets, predictions, model, scores):
     res = dict()
     for tr_val_te in fold.unique():
         inds = fold == tr_val_te
@@ -88,7 +79,7 @@ def _classification_perf_metrics(labels, model, predictions, scores):
                 average=average,
                 **kwargs,
             )
-            for average in ("macro", "weighted",)
+            for average in ("macro", "weighted")
         }
 
     def prediction_metrics(name, func):

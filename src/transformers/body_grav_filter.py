@@ -1,7 +1,6 @@
 import numpy as np
 from scipy import signal
 
-from src.transformers.base import TransformerBase
 from src.utils.decorators import PartitionByTrial
 
 __all__ = [
@@ -19,20 +18,20 @@ def filter_signal(data, filter_order, cutoff, fs, btype, axis=0):
     return dd
 
 
-def body_filt(key, index, data, **kwargs):
+def body_filt(index, data, **kwargs):
     filt = filter_signal(data, btype="high", **kwargs)
     assert np.isfinite(filt).all()
     return filt
 
 
-def grav_filt(key, index, data, **kwargs):
+def grav_filt(index, data, **kwargs):
     filt = filter_signal(data, btype="low", **kwargs)
     assert np.isfinite(filt).all()
     return filt
 
 
-def body_jerk_filt(key, index, data, **kwargs):
-    filt = body_filt(key, index, data, **kwargs)
+def body_jerk_filt(index, data, **kwargs):
+    filt = body_filt(index, data, **kwargs)
     jerk = np.empty(filt.shape, dtype=filt.dtype)
     jerk[0] = 0
     jerk[1:] = filt[1:] - filt[:-1]
@@ -40,33 +39,32 @@ def body_jerk_filt(key, index, data, **kwargs):
     return jerk
 
 
-class body_grav_filter(TransformerBase):
-    def __init__(self, parent):
-        super(body_grav_filter, self).__init__(
-            name=self.__class__.__name__, parent=parent,
+def body_grav_filter(parent):
+    root = parent / "body_grav_filter"
+
+    kwargs = dict(fs=root.get_ancestral_metadata("fs"), filter_order=3, cutoff=0.3)
+
+    for key, node in parent.outputs.items():
+        root.outputs.add_output(
+            key=key + ("body",),
+            func=PartitionByTrial(func=body_filt),
+            backend="none",
+            kwargs=dict(data=node, index=parent.index.index, **kwargs),
         )
 
-        kwargs = dict(fs=self.get_ancestral_metadata("fs"), filter_order=3, cutoff=0.3,)
+        root.outputs.add_output(
+            key=key + ("body", "jerk"),
+            func=PartitionByTrial(func=body_jerk_filt),
+            backend="none",
+            kwargs=dict(data=node, index=parent.index.index, **kwargs),
+        )
 
-        for key, node in parent.outputs.items():
-            self.outputs.add_output(
-                key=key + ("body",),
-                func=PartitionByTrial(func=body_filt),
+        if "accel" in key:
+            root.outputs.add_output(
+                key=key + ("grav",),
+                func=PartitionByTrial(func=grav_filt),
                 backend="none",
-                kwargs=dict(data=node, index=parent.index.index, **kwargs,),
+                kwargs=dict(data=node, index=parent.index.index, **kwargs),
             )
 
-            self.outputs.add_output(
-                key=key + ("body", "jerk",),
-                func=PartitionByTrial(func=body_jerk_filt),
-                backend="none",
-                kwargs=dict(data=node, index=parent.index.index, **kwargs,),
-            )
-
-            if "accel" in key:
-                self.outputs.add_output(
-                    key=key + ("grav",),
-                    func=PartitionByTrial(func=grav_filt),
-                    backend="none",
-                    kwargs=dict(data=node, index=parent.index.index, **kwargs,),
-                )
+    return root

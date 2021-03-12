@@ -15,7 +15,7 @@ __all__ = ["uschad"]
 
 class uschad(Dataset):
     def __init__(self):
-        super(uschad, self).__init__(name=self.__class__.__name__,)
+        super(uschad, self).__init__(name=self.__class__.__name__)
 
     @label_decorator
     def build_label(self, task, *args, **kwargs):

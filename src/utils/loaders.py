@@ -3,6 +3,8 @@ from pathlib import Path
 
 import pandas as pd
 import yaml
+from dotenv import find_dotenv
+from dotenv import load_dotenv
 from loguru import logger
 
 
@@ -31,14 +33,19 @@ __all__ = [
 ]
 
 
+def get_env(key):
+    load_dotenv(find_dotenv())
+    return Path(environ[key])
+
+
 # Root directory of the project
 def get_project_root():
-    return Path(environ["PROJECT_ROOT"])
+    return get_env("PROJECT_ROOT")
 
 
 # For building file structure
 def build_path(*args):
-    path = Path(environ["BUILD_ROOT"]).joinpath(*args)
+    path = get_env("BUILD_ROOT").joinpath(*args)
     return path
 
 
@@ -70,11 +77,11 @@ def iter_files(path, suffix, stem=False):
 
 
 def iter_dataset_paths():
-    return iter_files(path=metadata_path("datasets"), suffix=".yaml", stem=False,)
+    return iter_files(path=metadata_path("datasets"), suffix=".yaml", stem=False)
 
 
 def iter_task_paths():
-    return iter_files(path=metadata_path("tasks"), suffix=".yaml", stem=False,)
+    return iter_files(path=metadata_path("tasks"), suffix=".yaml", stem=False)
 
 
 def load_yaml(filename):
