@@ -44,26 +44,20 @@ class uschad(Dataset):
             ]
 
         return uschad_iterator(
-            self.unzip_path,
-            callback=callback,
-            columns=["subject", "trial", "time"],
-            desc=f"{self.identifier} Index",
+            self.unzip_path, callback=callback, columns=["subject", "trial", "time"], desc=f"{self.identifier} Index",
         )
 
-    def build_data(self, key, *args, **kwargs):
-        modality, placement = key
-        cols = dict(accel=[0, 1, 2], gyro=[3, 4, 5])[modality]
+    def build_data(self, loc, mod, *args, **kwargs):
+        cols = dict(accel=[0, 1, 2], gyro=[3, 4, 5])[mod]
 
         def callback(ii, sub_id, act_id, trial_id, data):
             return data[:, cols]
 
         scale = dict(accel=1.0, gyro=2 * np.pi / 360)
 
-        data = uschad_iterator(
-            self.unzip_path, callback=callback, desc=f"Data ({modality}-{placement})"
-        )
+        data = uschad_iterator(self.unzip_path, callback=callback, desc=f"Data ({loc}-{mod})")
 
-        return data.values * scale[modality]
+        return data.values * scale[mod]
 
 
 def uschad_iterator(path, columns=None, cols=None, callback=None, desc=None):

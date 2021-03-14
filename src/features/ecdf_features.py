@@ -10,30 +10,14 @@ def ecdf(parent, n_components):
     root = parent / f"ecdf_{n_components}"
 
     for key, node in parent.outputs.items():
-        root.outputs.add_output(
-            key=key + ("ecdf",),
-            func=calc_ecdf,
-            kwargs=dict(n_components=n_components, index=parent.index["index"], data=node),
+        root.outputs.create(
+            key=f"{key}-ecdf", func=calc_ecdf, kwargs=dict(n_components=n_components, data=node),
         )
 
     return root
 
 
-def calc_ecdf(index, data, n_components):
-    """
-
-    Parameters
-    ----------
-    key
-    index
-    data
-    n_components
-
-    Returns
-    -------
-
-    """
-
+def calc_ecdf(data, n_components):
     return np.asarray([ecdf_rep(datum, n_components) for datum in data])
 
 

@@ -17,10 +17,7 @@ def deployable_split(split):
 
 def loso_split(split):
     return pd.DataFrame(
-        {
-            f"fold_{kk}": split.trial.apply(lambda tt: ["train", "test"][tt == kk])
-            for kk in split.trial.unique()
-        }
+        {f"fold_{kk}": split.trial.apply(lambda tt: ["train", "test"][tt == kk]) for kk in split.trial.unique()}
     )
 
 
@@ -35,8 +32,6 @@ def select_split(parent, split_type):
     if split_type == "predefined":
         split = parent.index["fold"]
 
-    root.index.add_output(
-        key="split", func=func_dict[split_type], backend="pandas", kwargs=dict(split=split)
-    )
+    root.index.create(key="split", func=func_dict[split_type], backend="pandas", kwargs=dict(split=split))
 
     return root

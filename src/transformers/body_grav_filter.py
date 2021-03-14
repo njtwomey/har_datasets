@@ -45,23 +45,26 @@ def body_grav_filter(parent):
     kwargs = dict(fs=root.get_ancestral_metadata("fs"), filter_order=3, cutoff=0.3)
 
     for key, node in parent.outputs.items():
-        root.outputs.add_output(
-            key=key + ("body",),
+        filt = "body"
+        root.outputs.create(
+            key=f"{key}-{filt=}",
             func=PartitionByTrial(func=body_filt),
             backend="none",
             kwargs=dict(data=node, index=parent.index.index, **kwargs),
         )
 
-        root.outputs.add_output(
-            key=key + ("body", "jerk"),
+        filt = "body_jerk"
+        root.outputs.create(
+            key=f"{key}-{filt=}",
             func=PartitionByTrial(func=body_jerk_filt),
             backend="none",
             kwargs=dict(data=node, index=parent.index.index, **kwargs),
         )
 
         if "accel" in key:
-            root.outputs.add_output(
-                key=key + ("grav",),
+            filt = "grav"
+            root.outputs.create(
+                key=f"{key}-{filt=}",
                 func=PartitionByTrial(func=grav_filt),
                 backend="none",
                 kwargs=dict(data=node, index=parent.index.index, **kwargs),

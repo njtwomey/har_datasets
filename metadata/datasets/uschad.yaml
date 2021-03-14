@@ -18,13 +18,13 @@ missing: null
 modalities:
   - accel
   - gyro
-placements:
+locations:
   - waist
 sources:
-  - placement: waist
-    modality: accel
-  - placement: waist
-    modality: gyro
+  - loc: waist
+    mod: accel
+  - loc: waist
+    mod: gyro
 tasks:
   har:
     evaluation: classification

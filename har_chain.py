@@ -1,4 +1,5 @@
 import numpy as np
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import SGDClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
@@ -35,8 +36,8 @@ def classifier_chain(parent, data_node, model_nodes):
         name=f"classifier_chain={sorted(model_nodes.keys())}",
         parent=parent,
         data=data_node,
-        model=Pipeline([("scale", StandardScaler()), ("clf", ClassifierChain())]),
-        xval=dict(clf__loss=["log"], clf__penalty=["l2"], clf__alpha=np.power(10.0, np.arange(-5, 5 + 1)),),
+        model=Pipeline([("clf", RandomForestClassifier())]),
+        xval=dict(clf__n_estimators=[8, 16, 32, 63]),
         **model_nodes,
     )
 
@@ -48,14 +49,14 @@ def har_chain(
     win_inc=1,
     task="har",
     split_type="predefined",
-    features="ecdf",
+    features="statistical",
 ):
     # Make metadata for the experiment
     kwargs = dict(fs_new=fs_new, win_len=win_len, win_inc=win_inc, task=task, features=features)
     dataset_alignment = dict(
-        anguita2013=dict(dataset_name="anguita2013", placement="waist", modality="accel"),
-        pamap2=dict(dataset_name="pamap2", placement="chest", modality="accel"),
-        uschad=dict(dataset_name="uschad", placement="waist", modality="accel"),
+        anguita2013=dict(dataset_name="anguita2013", loc="waist", mod="accel"),
+        pamap2=dict(dataset_name="pamap2", loc="chest", mod="accel"),
+        uschad=dict(dataset_name="uschad", loc="waist", mod="accel"),
     )
 
     # Extract the representation for the test datasett
@@ -69,13 +70,13 @@ def har_chain(
     }
 
     # Get the task (and its labels), and the train/val/test splits
-    task = select_task(parent=test_feats.parent, task_name=task)
+    task = select_task(parent=test_feats.root, task_name=task)
     split = select_split(parent=task, split_type=split_type)
 
     # Learn the classifier
     clf = classifier_chain(parent=split, data_node=test_feats, model_nodes=models)
     clf.dump_graph()
-    clf.evaluate_outputs()
+    clf.evaluate()
 
     return clf
 

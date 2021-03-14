@@ -14,7 +14,7 @@ from src.visualisations import umap_embedding
 
 
 def har_basic(
-    dataset_name="pamap2",
+    dataset_name="anguita2013",
     fs_new=33,
     win_len=3,
     win_inc=1,
@@ -22,7 +22,7 @@ def har_basic(
     split_type="predefined",
     features="ecdf",
     modality="accel",
-    placement="all",
+    location="all",
     classifier="sgd",
     viz=False,
 ):
@@ -30,7 +30,7 @@ def har_basic(
     dataset = dataset_importer(dataset_name)
 
     # Select the features that we're interested in, and get the features
-    selected_feats = modality_selector(parent=dataset, modality=modality, location=placement)
+    selected_feats = modality_selector(parent=dataset, modality=modality, location=location)
 
     # Process the wearable data
     wear_resampled = resample(parent=selected_feats, fs_new=fs_new)
@@ -61,11 +61,11 @@ def har_basic(
         raise ValueError
 
     clf.dump_graph()
-    clf.evaluate_outputs()
+    clf.evaluate()
 
     # Visualise the embeddings
     if viz:
-        umap_embedding(feature_node, task=task).evaluate_outputs()
+        umap_embedding(feature_node, task=task).evaluate()
 
     return feature_node, task, split, clf
 

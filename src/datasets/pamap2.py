@@ -17,15 +17,11 @@ __all__ = [
 
 class pamap2(Dataset):
     def __init__(self):
-        super(pamap2, self).__init__(
-            name=self.__class__.__name__, unzip_path=lambda p: join(p, "Protocol")
-        )
+        super(pamap2, self).__init__(name=self.__class__.__name__, unzip_path=lambda p: join(p, "Protocol"))
 
     @label_decorator
     def build_label(self, task, *args, **kwargs):
-        df = pd.DataFrame(
-            iter_pamap2_subs(path=self.unzip_path, cols=[1], desc=f"{self.identifier} Labels")
-        )
+        df = pd.DataFrame(iter_pamap2_subs(path=self.unzip_path, cols=[1], desc=f"{self.identifier} Labels"))
 
         return self.meta.inv_lookup[task], df
 
@@ -35,11 +31,7 @@ class pamap2(Dataset):
             return np.zeros(data.shape[0]) + sid
 
         df = iter_pamap2_subs(
-            path=self.unzip_path,
-            cols=[1],
-            desc=f"{self.identifier} Folds",
-            callback=folder,
-            columns=["fold"],
+            path=self.unzip_path, cols=[1], desc=f"{self.identifier} Folds", callback=folder, columns=["fold"],
         ).astype(int)
 
         data = []
@@ -69,20 +61,17 @@ class pamap2(Dataset):
 
         return df
 
-    def build_data(self, key, *args, **kwargs):
-        modality, placement = key
-        offset = (
-            dict(wrist=3, chest=20, ankle=37)[placement] + dict(accel=1, gyro=7, mag=10)[modality]
-        )
+    def build_data(self, loc, mod, *args, **kwargs):
+        offset = dict(wrist=3, chest=20, ankle=37)[loc] + dict(accel=1, gyro=7, mag=10)[mod]
 
         df = iter_pamap2_subs(
             path=self.unzip_path,
             cols=list(range(offset, offset + 3)),
-            desc=f"Parsing {modality} at {placement}",
+            desc=f"Parsing {mod} at {loc}",
             columns=["x", "y", "z"],
         ).astype(float)
 
-        scale = dict(accel=9.80665, gyro=np.pi * 2.0, mag=1.0)[modality]
+        scale = dict(accel=9.80665, gyro=np.pi * 2.0, mag=1.0)[mod]
 
         return df.values / scale
 
@@ -91,9 +80,9 @@ def iter_pamap2_subs(path, cols, desc, columns=None, callback=None, n_subjects=9
     data = []
 
     for sid in tqdm(range(1, n_subjects + 1), desc=desc):
-        datum = pd.read_csv(
-            join(path, f"subject10{sid}.dat"), delim_whitespace=True, header=None, usecols=cols
-        ).fillna(method="ffill")
+        datum = pd.read_csv(join(path, f"subject10{sid}.dat"), delim_whitespace=True, header=None, usecols=cols).fillna(
+            method="ffill"
+        )
         assert np.isfinite(datum.values).all()
         if callback:
             data.extend(callback(sid, datum.values))

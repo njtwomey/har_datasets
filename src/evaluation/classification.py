@@ -6,51 +6,21 @@ from scipy.special import logsumexp
 from sklearn import metrics
 
 
-__all__ = ["classification_metrics"]
+__all__ = ["evaluate_fold"]
 
 
-def classification_metrics(parent, *args, **kwargs):
-    for key, node in parent.outputs.items():
-        parent.outputs.add_output(
-            func=evaluate_performance,
-            key=key + ("results",),
-            backend="json",
-            kwargs=dict(fold=None, fold_id=None, label=None, data=None, scores=None, model=None),
-        )
-
-    return parent
-
-
-def evaluate_performance(fold, fold_id, label, data, model):
-    res = dict()
-    res[fold_id] = dict()
-    for tr_val_te in fold[fold_id].unique():
-        inds = fold[fold_id] == tr_val_te
-        xx, yy = data[inds], label.target[inds].values.ravel()
-        y_hat = model.predict(xx)
-        scores = model.score(xx)
-        res[fold_id][tr_val_te] = _classification_perf_metrics(
-            labels=yy, model=model, predictions=y_hat, scores=scores
-        )
-        if hasattr(model, "cv_results_"):
-            res[fold_id][tr_val_te]["xval"] = model.cv_results_
-    return res
-
-
-def evaluate_fold(fold, targets, predictions, model, scores):
+def evaluate_fold(fold, fold_name, targets, estimator, predictions, prob_predictions):
+    fold = fold[fold_name]
     res = dict()
     for tr_val_te in fold.unique():
         inds = fold == tr_val_te
-        yy, pp, ss = targets[inds], predictions[inds], scores[inds]
+        yy, pp, ss = targets[inds], predictions[inds], prob_predictions[inds]
         res[tr_val_te] = dict()
         res[tr_val_te] = _classification_perf_metrics(
-            model=model,
-            labels=np.asarray(yy).ravel(),
-            predictions=np.asarray(pp),
-            scores=np.asarray(ss),
+            model=estimator, labels=np.asarray(yy).ravel(), predictions=np.asarray(pp), scores=np.asarray(ss),
         )
-    if hasattr(model, "cv_results_"):
-        res["xval"] = model.cv_results_
+    if hasattr(estimator, "cv_results_"):
+        res["xval"] = estimator.cv_results_
     return res
 
 
@@ -74,10 +44,7 @@ def _classification_perf_metrics(labels, model, predictions, scores):
             scores_ = scores_[:, 1]
         return {
             f"{name}_{average}": func(
-                y_true=np.asarray([lookup[label] for label in labels_]),
-                y_score=scores_,
-                average=average,
-                **kwargs,
+                y_true=np.asarray([lookup[label] for label in labels_]), y_score=scores_, average=average, **kwargs,
             )
             for average in ("macro", "weighted")
         }

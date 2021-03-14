@@ -14,9 +14,7 @@ __all__ = ["anguita2013"]
 
 class anguita2013(Dataset):
     def __init__(self):
-        super(anguita2013, self).__init__(
-            name=self.__class__.__name__, unzip_path=lambda s: s.replace("%20", " ")
-        )
+        super(anguita2013, self).__init__(name=self.__class__.__name__, unzip_path=lambda s: s.replace("%20", " "))
 
         self.win_len = 128
 
@@ -32,18 +30,10 @@ class anguita2013(Dataset):
     def build_fold(self, *args, **kwargs):
         fold = []
         fold.extend(
-            [
-                "train"
-                for _ in load_csv_data(join(self.unzip_path, "train", "y_train.txt"))
-                for _ in range(self.win_len)
-            ]
+            ["train" for _ in load_csv_data(join(self.unzip_path, "train", "y_train.txt")) for _ in range(self.win_len)]
         )
         fold.extend(
-            [
-                "test"
-                for _ in load_csv_data(join(self.unzip_path, "test", "y_test.txt"))
-                for _ in range(self.win_len)
-            ]
+            ["test" for _ in load_csv_data(join(self.unzip_path, "test", "y_test.txt")) for _ in range(self.win_len)]
         )
         return pd.DataFrame(fold)
 
@@ -61,20 +51,16 @@ class anguita2013(Dataset):
         )
         return index
 
-    def build_data(self, key, *args, **kwargs):
-        modality, placement = key
+    def build_data(self, loc, mod, *args, **kwargs):
         x_data = []
         y_data = []
         z_data = []
-        modality = dict(accel="acc", gyro="gyro")[modality]
+        modality = dict(accel="acc", gyro="gyro")[mod]
         for fold in ("train", "test"):
             for l, d in zip((x_data, y_data, z_data), ("x", "y", "z")):
                 ty = ["body", "total"][modality in {"accel", "acc"}]
                 acc = load_csv_data(
-                    join(
-                        self.unzip_path, fold, "Inertial Signals", f"{ty}_{modality}_{d}_{fold}.txt"
-                    ),
-                    astype="np",
+                    join(self.unzip_path, fold, "Inertial Signals", f"{ty}_{modality}_{d}_{fold}.txt"), astype="np",
                 )
                 l.extend(acc.ravel().tolist())
         return np.c_[x_data, y_data, z_data]

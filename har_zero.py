@@ -92,9 +92,9 @@ def har_zero(
     kwargs = dict(fs_new=fs_new, win_len=win_len, win_inc=win_inc, task=task, features=features, viz=False)
 
     dataset_alignment = dict(
-        anguita2013=dict(dataset_name="anguita2013", placement="waist", modality="accel"),
-        pamap2=dict(dataset_name="pamap2", placement="chest", modality="accel"),
-        uschad=dict(dataset_name="uschad", placement="waist", modality="accel"),
+        anguita2013=dict(dataset_name="anguita2013", loc="waist", mod="accel"),
+        pamap2=dict(dataset_name="pamap2", loc="chest", mod="accel"),
+        uschad=dict(dataset_name="uschad", loc="waist", mod="accel"),
     )
 
     test_dataset = dataset_alignment.pop(test_dataset)
@@ -106,13 +106,13 @@ def har_zero(
         _, _, _, classifier = har_basic(split_type="deployable", **dataset, **kwargs)
         models[name] = classifier.model
 
-    task = select_task(parent=test_feats.parent, task_name=task)
+    task = select_task(parent=test_feats.root, task_name=task)
     split = select_split(parent=task, split_type=split_type)
 
     # Learn the classifier
     clf = make_zero_shot_model(parent=split, data=test_feats, models=models)
     clf.dump_graph()
-    clf.evaluate_outputs()
+    clf.evaluate()
 
     return clf
 

@@ -49,18 +49,12 @@ def umap_embedding(parent, task):
     label = task.index["target"]
 
     for key, node in parent.outputs.items():
-        model = root.outputs.make_output(
-            key=tuple(key) + ("umap",),
-            func=learn_umap,
-            backend="none",
-            kwargs=dict(label=label, data=node),
+        model = root.outputs.instantiate_node(
+            key=f"{key}-umap", func=learn_umap, backend="none", kwargs=dict(label=label, data=node),
         )
 
-        root.outputs.add_output(
-            key=tuple(key) + ("umap", "viz"),
-            func=embed_umap,
-            backend="png",
-            kwargs=dict(data=node, model=model, label=label),
+        root.outputs.create(
+            key=f"{key}-viz", func=embed_umap, backend="png", kwargs=dict(data=node, model=model, label=label),
         ).evaluate()
 
     return root

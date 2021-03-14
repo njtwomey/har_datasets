@@ -68,16 +68,14 @@ def resample(parent, fs_new):
     if fs_old != fs_new:
         # Only compute indexes and outputs if the sample rate has changed
         for key, node in parent.index.items():
-            root.index.add_output(
+            root.index.create(
                 key=key,
                 func=PartitionByTrial(resample_metadata),
-                kwargs=dict(
-                    index=parent.index["index"], data=node, is_index="index" in str(key), **kwargs
-                ),
+                kwargs=dict(index=parent.index["index"], data=node, is_index="index" in str(key), **kwargs),
             )
 
         for key, node in parent.outputs.items():
-            root.outputs.add_output(
+            root.outputs.create(
                 key=key,
                 func=PartitionByTrial(resample_data),
                 kwargs=dict(index=parent.index["index"], data=node, **kwargs),

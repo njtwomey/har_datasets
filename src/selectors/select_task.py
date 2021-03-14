@@ -12,11 +12,9 @@ def select_task_labels(data):
 def select_task(parent, task_name):
     root = parent.make_child(name=task_name, meta=metadata_path("tasks", f"{task_name}.yaml"))
 
-    tasks = root.get_ancestral_metadata("tasks").keys()
+    assert task_name in root.get_ancestral_metadata("tasks").keys()
 
-    assert task_name in tasks
-
-    root.index.add_output(
+    root.index.create(
         key="target", func=select_task_labels, backend="pandas", kwargs=dict(data=parent.index[task_name]),
     )
 

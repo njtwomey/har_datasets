@@ -30,7 +30,7 @@ def window_data(index, data, fs, win_len, win_inc):
 
 def window_index(index, data, fs, win_len, win_inc, slice_at="middle"):
     assert isinstance(data, pd.DataFrame)
-    data_windowed = window_data(index, data.values, fs, win_len, win_inc)
+    data_windowed = window_data(index=index, data=data.values, fs=fs, win_len=win_len, win_inc=win_inc)
     ind = dict(start=0, middle=data_windowed.shape[1] // 2, end=-1)[slice_at]
     df = pd.DataFrame(data_windowed[:, ind, :], columns=data.columns)
     df = df.astype(data.dtypes)
@@ -38,25 +38,22 @@ def window_index(index, data, fs, win_len, win_inc, slice_at="middle"):
 
 
 def window(parent, win_len, win_inc):
-    root = parent / f"win_len={win_len:03.2f}-win_inc={win_inc:03.2f}"
+    root = parent / f"{win_len=:03.2f}-{win_inc=:03.2f}"
 
     fs = root.get_ancestral_metadata("fs")
 
-    kwargs = dict(win_len=win_len, win_inc=win_inc, fs=fs)
+    kwargs = dict(index=parent.index["index"], win_len=win_len, win_inc=win_inc, fs=fs)
 
     # Build index outputs
     for key, node in parent.index.items():
-        root.index.add_output(
-            key=key, func=PartitionByTrial(window_index), kwargs=dict(index=parent.index["index"], data=node, **kwargs),
+        root.index.create(
+            key=key, func=PartitionByTrial(window_index), kwargs=dict(data=node, **kwargs),
         )
 
     # Build Data outputs
     for key, node in parent.outputs.items():
-        root.outputs.add_output(
-            key=key,
-            func=PartitionByTrial(window_data),
-            backend="none",
-            kwargs=dict(index=parent.index["index"], data=node, **kwargs),
+        root.outputs.create(
+            key=key, func=PartitionByTrial(window_data), backend="none", kwargs=dict(data=node, **kwargs),
         )
 
     return root

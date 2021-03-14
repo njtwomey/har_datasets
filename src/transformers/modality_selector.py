@@ -14,21 +14,23 @@ def do_select_feats(**nodes):
 
 
 def modality_selector(parent, modality="all", location="all"):
-    locations_set = set(parent.get_ancestral_metadata("placements"))
-    assert location in locations_set or location == "all"
+    locations_set = set(parent.get_ancestral_metadata("locations"))
+    assert location in locations_set or location == "all", f"Location {location} not in {locations_set}"
 
     modality_set = set(parent.get_ancestral_metadata("modalities"))
-    assert modality in modality_set or location == "all"
+    assert modality in modality_set or modality == "all", f"Modality {modality} not in {modality_set}"
 
-    root = parent / f"modality='{modality}'-location='{location}'"
+    loc, mod = location, modality
+    root = parent / f"{loc=}-{mod=}"
 
     # Prepare a set of viable outputs
     valid_locations = set()
-    for pos in parent.meta["sources"]:
-        good_location = location == "all" or location == pos["placement"]
-        good_modality = modality == "all" or modality == pos["modality"]
+    for pair in parent.meta["sources"]:
+        loc, mod = pair["loc"], pair["mod"]
+        good_location = location == "all" or pair["loc"] == location
+        good_modality = modality == "all" or pair["mod"] == modality
         if good_location and good_modality:
-            valid_locations.update({Key((pos["modality"], pos["placement"]))})
+            valid_locations.update({Key(f"{loc=}-{mod=}")})
 
     # Aggregate all relevant sources
     features = []
@@ -41,14 +43,10 @@ def modality_selector(parent, modality="all", location="all"):
 
 
 def concatenate_features(parent):
-    root = parent / f"concatenated"
-
     def concat(**nodes):
         keys = sorted(nodes.keys())
         return concatenate([nodes[key] for key in keys], axis=1)
 
-    root.outputs.add_output(
+    return parent.outputs.create(
         key="features", backend="none", func=concat, kwargs={str(kk): vv for kk, vv in parent.outputs.items()},
     )
-
-    return root

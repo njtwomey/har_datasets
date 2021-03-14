@@ -11,7 +11,6 @@ __all__ = [
     "DatasetMeta",
     "BaseMeta",
     "HARMeta",
-    "PlacementMeta",
     "ModalityMeta",
     "DatasetMeta",
 ]
@@ -28,12 +27,11 @@ class BaseMeta(object):
                 meta = load_yaml(path)
 
                 if meta is None:
-                    logger.info(
-                        f'The content metadata module "{self.name}" from {path} is empty. Assigning empty dict'
-                    )
+                    logger.info(f'The content metadata module "{self.name}" from {path} is empty. Assigning empty dict')
                     meta = dict()
                 else:
-                    assert isinstance(meta, dict)
+                    if not isinstance(meta, dict):
+                        logger.warning(f"Metadata not of type dict loaded: {meta}")
 
                 self.meta = meta
 
@@ -78,14 +76,7 @@ class HARMeta(BaseMeta):
 
 class LocalisationMeta(BaseMeta):
     def __init__(self, path, *args, **kwargs):
-        super(LocalisationMeta, self).__init__(
-            path=metadata_path("tasks", "localisation.yaml"), *args, **kwargs
-        )
-
-
-class PlacementMeta(BaseMeta):
-    def __init__(self, path, *args, **kwargs):
-        super(PlacementMeta, self).__init__(name=metadata_path("placement.yaml"), *args, **kwargs)
+        super(LocalisationMeta, self).__init__(path=metadata_path("tasks", "localisation.yaml"), *args, **kwargs)
 
 
 class ModalityMeta(BaseMeta):
@@ -111,16 +102,14 @@ class DatasetMeta(BaseMeta):
             task_label_file = metadata_path("tasks", f"{task_name}.yaml")
             task_labels = load_yaml(task_label_file)
             dataset_labels = self.meta["tasks"][task_name]["target_transform"]
-            if not set(dataset_labels.keys()).issubset(task_labels.keys()):
+            if not set(dataset_labels.keys()).issubset(set(task_labels)):
                 logger.exception(
                     ValueError(
                         f"The following labels from dataset {path} are not accounted for in {task_label_file}: "
                         f"{set(dataset_labels.keys()).difference(task_labels.keys())}"
                     )
                 )
-            self.inv_lookup[task_name] = {
-                dataset_labels[kk]: kk for kk, vv in dataset_labels.items()
-            }
+            self.inv_lookup[task_name] = {dataset_labels[kk]: kk for kk, vv in dataset_labels.items()}
 
     @property
     def fs(self):

@@ -45,9 +45,7 @@ def autoreg(data, axis):
             coef = [0] * order
         return coef
 
-    ar = np.asarray(
-        [[_autoreg(data[jj, :, ii]) for ii in range(data.shape[2])] for jj in range(data.shape[0])]
-    )
+    ar = np.asarray([[_autoreg(data[jj, :, ii]) for ii in range(data.shape[2])] for jj in range(data.shape[0])])
 
     return ar.reshape(ar.shape[0], -1)
 
@@ -124,9 +122,7 @@ def bands_energy(freq, spec, axis):
 
 def add_magnitude(data):
     assert isinstance(data, np.ndarray)
-    return np.concatenate(
-        (data, np.sqrt(np.power(data, 2).sum(axis=2, keepdims=True)) - 1), axis=-1
-    )
+    return np.concatenate((data, np.sqrt(np.power(data, 2).sum(axis=2, keepdims=True)) - 1), axis=-1)
 
 
 """
@@ -134,7 +130,7 @@ Time and frequency feature interfaces
 """
 
 
-def t_feat(index, data, fs):
+def t_feat(data):
     data = add_magnitude(data)
     features = [
         f(data, axis=1)
@@ -157,7 +153,7 @@ def t_feat(index, data, fs):
     return feats
 
 
-def f_feat(index, data, fs):
+def f_feat(data, fs):
     data = add_magnitude(data)
 
     freq, spec = scipy.signal.periodogram(data, fs=fs, axis=1)
