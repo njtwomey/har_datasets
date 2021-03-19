@@ -4,7 +4,6 @@ from typing import Any
 from typing import Callable
 from typing import Dict
 from typing import ItemsView
-from typing import Iterable
 from typing import KeysView
 from typing import Optional
 from typing import Tuple
@@ -16,7 +15,6 @@ from loguru import logger
 from mldb import ComputationGraph
 from mldb import FileLockExistsException
 from mldb import NodeWrapper
-from mldb.backends import Backend
 from mldb.backends import JsonBackend
 from mldb.backends import NumpyBackend
 from mldb.backends import PandasBackend
