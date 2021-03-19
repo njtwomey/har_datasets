@@ -68,3 +68,26 @@ tasks:
       soccer: 20
       rope_jump: 24
       other: 0
+splits:
+  predefined:
+      - loo_1
+      - loo_2
+      - loo_3
+      - loo_4
+      - loo_5
+      - loo_6
+      - loo_7
+      - loo_8
+      - loo_9
+  loso:
+      - fold_0
+      - fold_1
+      - fold_2
+      - fold_3
+      - fold_4
+      - fold_5
+      - fold_6
+      - fold_7
+      - fold_8
+  deployable:
+      - fold_0

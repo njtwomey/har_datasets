@@ -1,5 +1,7 @@
 from typing import Dict
 
+import numpy as np
+from loguru import logger
 from mldb import NodeWrapper
 from sklearn.base import BaseEstimator
 from sklearn.base import clone
@@ -7,8 +9,9 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import GroupKFold
 from sklearn.pipeline import FeatureUnion
 from sklearn.pipeline import Pipeline
-from slugify import slugify
 
+from src.base import BaseGraph
+from src.base import dump_graph
 from src.evaluation.classification import evaluate_fold
 from src.selectors import select_split
 from src.selectors import select_task
@@ -32,7 +35,14 @@ def instantiate_and_fit(index, fold, fold_name, X, y, estimator, n_splits=5, par
 
     y = y.values.ravel()
 
+    nan_row, nan_col = np.nonzero(np.isnan(X) | np.isinf(X))
+    if len(nan_row):
+        logger.warning(f"Setting {len(nan_row)} NaN elements to zero before fitting {estimator}.")
+        X[nan_row, nan_col] = 0
+
     estimator_clone = clone(estimator)
+
+    logger.info(f"Fitting {estimator_clone} on data (shape: {X.shape})")
 
     if param_grid is not None:
         grid_search = GridSearchCV(estimator=estimator_clone, param_grid=param_grid, verbose=10)
@@ -40,21 +50,22 @@ def instantiate_and_fit(index, fold, fold_name, X, y, estimator, n_splits=5, par
         grid_search.cv = list(k_fold)
         return grid_search.fit(X[train_inds], y[train_inds])
 
-    raise estimator_clone.fit(X[train_inds], y[train_inds])
+    return estimator_clone.fit(X[train_inds], y[train_inds])
 
 
 # noinspection PyPep8Naming
 class ClassifierWrapper(BaseEstimator):
     def __init__(self, root, estimator, param_grid, fold_name):
         self.root = root
-        self.estimator_object = estimator
-        self.estimator = None
+        self.estimator = estimator
+        self.estimator_node = None
         self.fold_name = fold_name
         self.param_grid = param_grid
 
     def fit(self, X, y, fold):
         assert isinstance(X, NodeWrapper)
         assert isinstance(y, NodeWrapper)
+
         self.estimator_node = self.root.outputs.get_or_create(
             key="model",
             func=instantiate_and_fit,
@@ -65,25 +76,13 @@ class ClassifierWrapper(BaseEstimator):
                 index=self.root.index["index"],
                 fold=fold,
                 fold_name=self.fold_name,
-                estimator=self.estimator_object,
+                estimator=self.estimator,
                 param_grid=self.param_grid,
             ),
         )
-        return self.estimator_node
 
-    def score(self, X, y):
-        def score(estimator, X, y):
-            return estimator.score(X, y)
-
-        return self.root.outputs.get_or_create(
-            key="score", backend="none", func=score, kwargs=dict(estimator=self.estimator_node, X=X, y=y)
-        )
-
-    def results(self, X, y, fold):
-        predictions = self.predict(X)
         prob_predictions = self.predict_proba(X)
-        estimator = self.fit(X=X, y=y, fold=fold)
-        return self.root.outputs.create(
+        results = self.root.outputs.get_or_create(
             key="results",
             func=evaluate_fold,
             backend="json",
@@ -91,82 +90,96 @@ class ClassifierWrapper(BaseEstimator):
                 fold=fold,
                 fold_name=self.fold_name,
                 targets=y,
-                estimator=estimator,
-                predictions=predictions,
+                estimator=self.estimator_node,
                 prob_predictions=prob_predictions,
             ),
+        )
+
+        return self.estimator_node, results
+
+    def score(self, X, y):
+        def score(estimator, X, y):
+            return estimator.score(X, y)
+
+        return self.root.outputs.create_orphan_node(
+            backend="none", func=score, kwargs=dict(estimator=self.estimator_node, X=X, y=y)
         )
 
     def transform(self, X):
         def transform(estimator, X):
             return estimator.transform(X)
 
-        return self.root.outputs.get_or_create(
-            key="transformation", backend="none", func=transform, kwargs=dict(estimator=self.estimator_node, X=X)
+        return self.root.outputs.create_orphan_node(
+            backend="none", func=transform, kwargs=dict(estimator=self.estimator_node, X=X)
         )
 
     def predict(self, X):
         def predict(estimator, X):
             return estimator.predict(X)
 
-        return self.root.outputs.get_or_create(
-            key="predictions", backend="none", func=predict, kwargs=dict(estimator=self.estimator_node, X=X)
+        return self.root.outputs.create_orphan_node(
+            backend="none", func=predict, kwargs=dict(estimator=self.estimator_node, X=X)
         )
 
     def decision_function(self, X):
         def decision_function(estimator, X):
             return estimator.predict_proba(X)
 
-        return self.root.outputs.get_or_create(
-            key="decision_function",
-            backend="none",
-            func=decision_function,
-            kwargs=dict(estimator=self.estimator_node, X=X),
+        return self.root.outputs.create_orphan_node(
+            backend="none", func=decision_function, kwargs=dict(estimator=self.estimator_node, X=X),
         )
 
     def predict_proba(self, X):
         def predict_proba(estimator, X):
             return estimator.predict_proba(X)
 
-        return self.root.outputs.get_or_create(
-            key="prob_predictions", backend="none", func=predict_proba, kwargs=dict(estimator=self.estimator_node, X=X)
+        return self.root.outputs.create_orphan_node(
+            backend="none", func=predict_proba, kwargs=dict(estimator=self.estimator_node, X=X)
         )
 
     def predict_log_proba(self, X):
         def predict_log_proba(estimator, X):
             return estimator.predict_proba(X)
 
-        return self.root.outputs.get_or_create(
-            key="log_prob_predictions",
-            backend="none",
-            func=predict_log_proba,
-            kwargs=dict(estimator=self.estimator_node, X=X),
+        return self.root.outputs.create_orphan_node(
+            backend="none", func=predict_log_proba, kwargs=dict(estimator=self.estimator_node, X=X),
         )
 
 
 def get_estimator_name(estimator):
     if isinstance(estimator, Pipeline):
-        return [f"{name}='{slugify(inst.__class__.__name__)}'" for name, inst in sorted(estimator.steps)]
+        parts = []
+        for key, sub_estimator in estimator.steps:
+            sub_estimator_name = get_estimator_name(sub_estimator)
+            parts.append(sub_estimator_name)
+        internal = ", ".join(parts)
+        return f"Pipeline({internal})"
+
     elif isinstance(estimator, FeatureUnion):
         raise NotImplementedError
-    return [slugify(estimator.__class__.__name__)]
+
+    name = str(estimator)
+
+    # TODO: Remove newlines, and extra spaces
+
+    return name
 
 
-def instantiate_classifiers(
-    features, task_name, split_name, index, estimator, param_grid
-) -> Dict[str, ClassifierWrapper]:
+def instantiate_classifiers(features, task_name, split_name, index, estimator, param_grid):
     assert isinstance(features, NodeWrapper)
     assert isinstance(index, NodeWrapper)
 
     task = select_task(parent=features.graph, task_name=task_name)
+    target = task["target"]
     splits = select_split(parent=task, split_type=split_name)
 
     model_nodes: Dict[str, ClassifierWrapper] = dict()
 
-    for fold_name in randomised_order(splits["split"].evaluate()):
+    split_names = features.graph.get_ancestral_metadata("splits")[split_name]
+    for fold_name in randomised_order(split_names):
         clf_name = get_estimator_name(estimator=estimator)
 
-        fold_graph = splits / "-".join(clf_name) / fold_name
+        fold_graph: BaseGraph = splits / clf_name / fold_name
 
         # Instantiate the classifier
         model_node = ClassifierWrapper(
@@ -174,15 +187,16 @@ def instantiate_classifiers(
         )
 
         # Populate the nodes
-        model_node.fit(features, task["target"], fold_graph["fold"])
-        model_node.results(features, task["target"], fold_graph["fold"])
-        model_node.predict(features)
-        model_node.predict_proba(features)
+        node, res = model_node.fit(features, task["target"], splits.index["split"])
 
         # Dump the graph
         fold_graph.dump_graph()
-        fold_graph.evaluate()
+        # node.evaluate()
+        # res.evaluate()
 
         model_nodes[fold_name] = model_node
 
-    return model_nodes
+    if split_name == "deployable":
+        model_nodes = model_node
+
+    return task, target, splits, model_nodes

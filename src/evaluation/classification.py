@@ -9,9 +9,10 @@ from sklearn import metrics
 __all__ = ["evaluate_fold"]
 
 
-def evaluate_fold(fold, fold_name, targets, estimator, predictions, prob_predictions):
+def evaluate_fold(fold, fold_name, targets, estimator, prob_predictions):
     fold = fold[fold_name]
     res = dict()
+    predictions = estimator.classes_[prob_predictions.argmax(axis=1)]
     for tr_val_te in fold.unique():
         inds = fold == tr_val_te
         yy, pp, ss = targets[inds], predictions[inds], prob_predictions[inds]

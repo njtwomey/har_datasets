@@ -1,9 +1,12 @@
 import matplotlib.pyplot as pl
 import pandas as pd
 import seaborn as sns
+from mldb import NodeWrapper
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from umap import UMAP
+
+from src import BaseGraph
 
 # from src.utils.label_helpers import normalise_labels
 
@@ -11,11 +14,9 @@ sns.set_style("darkgrid")
 sns.set_context("paper")
 
 
-def learn_umap(label, data):
+def learn_umap(data):
     umap = Pipeline([("scale", StandardScaler()), ("embed", UMAP(n_neighbors=50, verbose=True))])
-
     umap.fit(data)
-
     return umap
 
 
@@ -25,7 +26,7 @@ def embed_umap(label, data, model):
     # Need to re-label with a new dataframe since the categories in the normalised label
     # set are different to those in the full set.
     # label = pd.DataFrame(label.target.apply(normalise_labels)).astype("category")
-    label = pd.DataFrame(label.target).astype("category")
+    label = pd.DataFrame(label["target"]).astype("category")
 
     fig, ax = pl.subplots(1, 1, figsize=(10, 10))
 
@@ -43,18 +44,12 @@ def embed_umap(label, data, model):
     return fig
 
 
-def umap_embedding(parent, task):
-    root = parent / "umap_embedding"
-
-    label = task.index["target"]
-
-    for key, node in parent.outputs.items():
-        model = root.outputs.instantiate_node(
-            key=f"{key}-umap", func=learn_umap, backend="none", kwargs=dict(label=label, data=node),
-        )
-
-        root.outputs.create(
-            key=f"{key}-viz", func=embed_umap, backend="png", kwargs=dict(data=node, model=model, label=label),
-        ).evaluate()
-
-    return root
+def umap_embedding(node: NodeWrapper, task_name):
+    parent: BaseGraph = node.graph
+    umap_model = parent.outputs.create_orphan_node(func=learn_umap, backend="none", kwargs=dict(data=node),)
+    parent.outputs.create(
+        key=f"{parent.identifier.name}-umap",
+        func=embed_umap,
+        backend="png",
+        kwargs=dict(data=node, model=umap_model, label=parent[task_name]),
+    )

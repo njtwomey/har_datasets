@@ -1,9 +1,10 @@
 from numpy import concatenate
 
-from src import Key
+from src.base import BaseGraph
+from src.keys import Key
 
 __all__ = [
-    "modality_selector",
+    "source_selector",
     "concatenate_features",
 ]
 
@@ -13,7 +14,7 @@ def do_select_feats(**nodes):
     return concatenate([nodes[key] for key in keys], axis=1)
 
 
-def modality_selector(parent, modality="all", location="all"):
+def source_selector(parent, modality="all", location="all"):
     locations_set = set(parent.get_ancestral_metadata("locations"))
     assert location in locations_set or location == "all", f"Location {location} not in {locations_set}"
 
@@ -42,11 +43,19 @@ def modality_selector(parent, modality="all", location="all"):
     return root
 
 
-def concatenate_features(parent):
+def concatenate_nodes(parent, **kwargs):
     def concat(**nodes):
         keys = sorted(nodes.keys())
         return concatenate([nodes[key] for key in keys], axis=1)
 
-    return parent.outputs.create(
-        key="features", backend="none", func=concat, kwargs={str(kk): vv for kk, vv in parent.outputs.items()},
+    return parent.outputs.create_orphan_node(backend="none", func=concat, kwargs=kwargs,)
+
+
+def concatenate_features(parent: BaseGraph):
+    def concat(**nodes):
+        keys = sorted(nodes.keys())
+        return concatenate([nodes[key] for key in keys], axis=1)
+
+    return parent.outputs.create_orphan_node(
+        backend="none", func=concat, kwargs={str(kk): vv for kk, vv in parent.outputs.items()},
     )

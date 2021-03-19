@@ -16,10 +16,6 @@ fs: 50
 missing: null
 num_subjects: 30
 num_activities: 6
-splits:
-  - predefined
-  - loso
-  - deployable
 modalities:
   - accel
   - gyro
@@ -41,3 +37,39 @@ tasks:
       sit: 4
       stand: 5
       lie: 6
+splits:
+  predefined:
+      - fold_0
+  loso:
+      - fold_0
+      - fold_1
+      - fold_2
+      - fold_3
+      - fold_4
+      - fold_5
+      - fold_6
+      - fold_7
+      - fold_8
+      - fold_9
+      - fold_10
+      - fold_11
+      - fold_12
+      - fold_13
+      - fold_14
+      - fold_15
+      - fold_16
+      - fold_17
+      - fold_18
+      - fold_19
+      - fold_20
+      - fold_21
+      - fold_22
+      - fold_23
+      - fold_24
+      - fold_25
+      - fold_26
+      - fold_27
+      - fold_28
+      - fold_29
+  deployable:
+      - fold_0

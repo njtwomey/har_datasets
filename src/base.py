@@ -75,7 +75,7 @@ class BaseGraph(ComputationGraph):
         self.index: IndexNodeGroup = IndexNodeGroup(graph=self, default_backend="pandas")
         self.outputs: OutputNodeGroup = OutputNodeGroup(graph=self)
 
-    def build_path(self, key: Union[Key, str]) -> Path:
+    def build_path(self, key: Key) -> Path:
         assert isinstance(key, Key) and len(key)
         return build_path(self.identifier, str(key))
 
@@ -122,10 +122,12 @@ class OutputNodeGroup(object):
         self.default_backend: Optional[str] = default_backend
         self.output_dict: Dict[Key, NodeWrapper] = dict()
 
-    def validate_key(self, key: Union[Key, str]) -> None:
+    def validate_key(self, key: Union[Key, str]) -> Key:
         assert not is_index_key(key), f"An index key was used for {self}: {key} in {INDEX_FILES_SET}"
+        return Key(key)
 
     def acquire_one(self, key: Union[Key, str], node: NodeWrapper) -> None:
+        key = Key(key)
         if key in self.output_dict:
             raise KeyError(f"{key} is already in {self.output_dict.keys()} of {self}")
         self.output_dict[key] = node
@@ -187,40 +189,43 @@ class OutputNodeGroup(object):
                     )
         return outputs
 
+    def create_orphan_node(
+        self, func: Callable, backend: Optional[str] = None, kwargs: Optional[Dict[str, Any]] = None
+    ):
+        return self.graph.node(func=func, name=None, backend=backend, kwargs=dict(**kwargs), cache=False)
+
     def instantiate_node(
         self,
         key: Union[Key, str],
         func: Callable,
-        backend: Optional[Backend] = None,
-        kwargs: Optional[Dict[Any, Any]] = None,
+        backend: Optional[str] = None,
+        kwargs: Optional[Dict[str, Any]] = None,
     ) -> NodeWrapper:
-        self.validate_key(key)
-        assert callable(func)
-        key = Key(key)
-        if kwargs is None:
-            kwargs = dict()
+        key = self.validate_key(key)
         assert key not in self.output_dict
-        node = self.graph.node(func=func, name=self.graph.build_path(key), backend=backend, kwargs=dict(**kwargs),)
-        return node
-
-    def append_node(self, key: Union[Key, str], node: NodeWrapper) -> None:
-        self.validate_key(key)
-        key = Key(key)
-        assert key not in self.output_dict
-        self.output_dict[key] = node
+        return self.graph.node(func=func, name=self.graph.build_path(key), backend=backend, kwargs=kwargs)
 
     def create(
-        self, key: Union[Key, str], func: Callable, backend: Optional[str] = None, kwargs: Dict[str, Any] = None
+        self,
+        key: Union[Key, str],
+        func: Callable,
+        backend: Optional[str] = None,
+        kwargs: Optional[Dict[str, Any]] = None,
     ) -> NodeWrapper:
-        self.validate_key(key)
+        key = self.validate_key(key)
+        assert key not in self.output_dict
         node = self.instantiate_node(key=key, func=func, backend=backend or self.default_backend, kwargs=kwargs)
-        self.append_node(key=key, node=node)
+        self.output_dict[key] = node
         return node
 
     def get_or_create(
-        self, key: Union[Key, str], func: Callable, backend: Optional[str] = None, kwargs: Dict[str, Any] = None
+        self,
+        key: Union[Key, str],
+        func: Callable,
+        backend: Optional[str] = None,
+        kwargs: Optional[Dict[str, Any]] = None,
     ) -> NodeWrapper:
-        key = Key(key)
+        key = self.validate_key(key)
         if key in self.output_dict:
             return self.output_dict[key]
         return self.create(key=key, func=func, backend=backend, kwargs=kwargs)
@@ -240,8 +245,9 @@ class IndexNodeGroup(OutputNodeGroup):
             return self.graph.parent.index
         return self.output_dict
 
-    def validate_key(self, key):
+    def validate_key(self, key: Union[Key, str]) -> Key:
         assert is_index_key(key), f"A non-index key was used for {self}: {key} not in {INDEX_FILES_SET}"
+        return Key(key)
 
     @property
     def index(self):
@@ -275,10 +281,13 @@ def dump_graph(graph, filename):
     for node_id, node_name in nodes.items():
         G.add_node(node_id, label=node_name)
     G.add_edges_from(edges)
-    G.layout("dot")
-    filename.parent.mkdir(exist_ok=True, parents=True)
-    G.draw(filename)
-    G.close()
+    try:
+        G.layout("dot")
+        filename.parent.mkdir(exist_ok=True, parents=True)
+        G.draw(filename)
+        G.close()
+    except ValueError as ex:
+        logger.exception(f"Unable to save dot file {filename}: {ex}")
 
     return nodes, edges
 
@@ -293,7 +302,11 @@ def consume_nodes(nodes, edges, ptr):
             func = func.func
         func_name = func.__name__
         if node_name not in nodes:
-            nodes[node_name] = f"{func_name} =>\n{node.name.stem}"
+            if isinstance(node.name, Path):
+                name = f"{func_name} =>\n{node.name.stem}"
+            else:
+                name = func_name
+            nodes[node_name] = f"{name}"
         return node_name
 
     add_node(ptr)

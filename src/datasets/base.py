@@ -10,7 +10,6 @@ __all__ = [
 ]
 
 BUILD_ROOT = BaseGraph.build_root()
-BUILD_ROOT.outputs.create("placeholder", func=lambda: "placeholder")
 
 
 class Dataset(BaseGraph):
@@ -22,12 +21,7 @@ class Dataset(BaseGraph):
 
         load_meta.__name__ = name
 
-        if name not in BUILD_ROOT.outputs:
-            BUILD_ROOT.outputs.create(key=f"datasets", func=load_meta, backend="none")
-
-        metadata = self.outputs.create(
-            key=f"metadata", backend="none", func=load_meta, kwargs=dict(metadata=BUILD_ROOT.outputs["datasets"])
-        )
+        metadata = self.outputs.create(key=f"{name}-metadata", backend="none", func=load_meta, kwargs=dict())
 
         zip_name = kwargs.get("unzip_path", lambda x: x)(splitext(basename(self.meta.meta["download_urls"][0]))[0])
         self.unzip_path = join(self.meta.zip_path, splitext(zip_name)[0])

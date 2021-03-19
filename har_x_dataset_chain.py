@@ -1,0 +1,49 @@
+from har_basic import basic_har
+from har_basic import get_classifier
+from src.transformers.source_selector import concatenate_nodes
+
+
+def har_chain(
+    test_dataset="anguita2013",
+    fs_new=33,
+    win_len=2.56,
+    win_inc=1,
+    task_name="har",
+    split_name="predefined",
+    feat_name="ecdf",
+    clf_name="sgd",
+):
+    # Make metadata for the experiment
+    kwargs = dict(
+        fs_new=fs_new, win_len=win_len, win_inc=win_inc, task_name=task_name, feat_name=feat_name, clf_name=clf_name
+    )
+
+    dataset_alignment = dict(
+        anguita2013=dict(dataset_name="anguita2013", location="waist", modality="accel"),
+        pamap2=dict(dataset_name="pamap2", location="chest", modality="accel"),
+        uschad=dict(dataset_name="uschad", location="waist", modality="accel"),
+    )
+
+    # Extract the representation for the test dataset
+    test_dataset = dataset_alignment.pop(test_dataset)
+    feats, task, target, split, model = basic_har(split_name="predefined", **test_dataset, **kwargs)
+
+    # Build a dictionary of the two source datasets
+    models = {
+        name: basic_har(split_name="deployable", **dataset, **kwargs)[-1] for name, dataset in dataset_alignment.items()
+    }
+    probs = {key: model.predict_proba(feats) for key, model in models.items()}
+
+    graph = feats.graph / ("chained-from-" + "-".join(sorted(dataset_alignment.keys())))
+    probs_as_feats = concatenate_nodes(graph, **probs)
+
+    # Learn the classifier
+    task, target, splits, model_nodes = get_classifier(
+        clf_name=clf_name, features=probs_as_feats, task_name=task_name, split_name=split_name
+    )
+
+    return task, target, splits, model_nodes
+
+
+if __name__ == "__main__":
+    har_chain()

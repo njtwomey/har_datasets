@@ -7,7 +7,7 @@ __all__ = [
 
 
 def ecdf(parent, n_components):
-    root = parent / f"ecdf_{n_components}"
+    root = parent / f"feat='ecdf'-k={n_components}"
 
     for key, node in parent.outputs.items():
         root.outputs.create(

@@ -25,6 +25,8 @@ PyYAML = "*"
 spectrum = "*"
 umap-learn = "*"
 networkx = "*"
+pygraphviz = "*"
+python-slugify = "*"
 
 [requires]
 python_version = "3.8"
