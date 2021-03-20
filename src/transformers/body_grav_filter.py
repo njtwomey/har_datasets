@@ -46,28 +46,28 @@ def body_grav_filter(parent):
 
     for key, node in parent.outputs.items():
         filt = "body"
-        root.outputs.create(
+        root.instantiate_node(
             key=f"{key}-{filt=}",
             func=PartitionByTrial(func=body_filt),
             backend="none",
-            kwargs=dict(data=node, index=parent.index.index, **kwargs),
+            kwargs=dict(data=node, index=parent.index["index"], **kwargs),
         )
 
         filt = "body_jerk"
-        root.outputs.create(
+        root.instantiate_node(
             key=f"{key}-{filt=}",
             func=PartitionByTrial(func=body_jerk_filt),
             backend="none",
-            kwargs=dict(data=node, index=parent.index.index, **kwargs),
+            kwargs=dict(data=node, index=parent.index["index"], **kwargs),
         )
 
         if "accel" in key:
             filt = "grav"
-            root.outputs.create(
+            root.instantiate_node(
                 key=f"{key}-{filt=}",
                 func=PartitionByTrial(func=grav_filt),
                 backend="none",
-                kwargs=dict(data=node, index=parent.index.index, **kwargs),
+                kwargs=dict(data=node, index=parent.index["index"], **kwargs),
             )
 
     return root

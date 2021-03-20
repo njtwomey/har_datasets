@@ -20,8 +20,8 @@ from src.visualisations import umap_embedding
 
 
 def get_windowed_wearables(dataset, modality, location, fs_new, win_len, win_inc):
-    selectetd_sources = source_selector(parent=dataset, modality=modality, location=location)
-    wear_resampled = resample(parent=selectetd_sources, fs_new=fs_new)
+    selected_sources = source_selector(parent=dataset, modality=modality, location=location)
+    wear_resampled = resample(parent=selected_sources, fs_new=fs_new)
     wear_filtered = body_grav_filter(parent=wear_resampled)
     wear_windowed = window(parent=wear_filtered, win_len=win_len, win_inc=win_inc)
     return wear_windowed
@@ -37,7 +37,7 @@ def get_features(feat_name, windowed_data):
     return concatenate_features(features)
 
 
-def get_classifier(clf_name, features, task_name, split_name):
+def get_classifier(clf_name, features, task_name, split_name, evaluate=False):
     if clf_name == "sgd":
         estimator = Pipeline([("scaling", Normalizer()), ("clf", SGDClassifier(loss="log"))])
         param_grid = dict(clf__alpha=np.logspace(-5, 5, 11))
@@ -59,6 +59,7 @@ def get_classifier(clf_name, features, task_name, split_name):
         split_name=split_name,
         estimator=estimator,
         param_grid=param_grid,
+        evaluate=evaluate,
     )
 
     return task, target, splits, model_nodes
@@ -87,7 +88,8 @@ def basic_har(
     clf_name="lr",
     #
     # Embedding visualisation
-    viz=True,
+    viz=False,
+    evaluate=False,
 ):
     dataset = dataset_importer(dataset_name)
 
@@ -105,11 +107,11 @@ def basic_har(
 
     # Get classifier params
     task, target, splits, model_nodes = get_classifier(
-        clf_name=clf_name, features=features, task_name=task_name, split_name=split_name
+        clf_name=clf_name, features=features, task_name=task_name, split_name=split_name, evaluate=evaluate
     )
 
     return features, task_name, target, splits, model_nodes
 
 
 if __name__ == "__main__":
-    basic_har()
+    basic_har(viz=True, evaluate=True)

@@ -5,8 +5,8 @@ import numpy as np
 from har_basic import get_classifier
 from har_basic import get_features
 from har_basic import get_windowed_wearables
-from src import BaseGraph
 from src import evaluate_fold
+from src import ExecutionGraph
 from src import randomised_order
 from src.utils.loaders import dataset_importer
 
@@ -32,14 +32,14 @@ def ensemble_classifier(task_name, split_name, feat_names, clf_names, windowed_d
                 models[fold].append((f"{feat_name=}-{clf_name=}", model_nodes[fold].estimator_node))
                 preds[fold].append((f"{feat_name=}-{clf_name=}", model_nodes[fold].predict_proba(features)))
 
-    node: BaseGraph = windowed_data / f"{feat_names}x{clf_names}"
+    node: ExecutionGraph = windowed_data / f"{feat_names}x{clf_names}"
 
     for fold_name in models.keys():
         fold = node / fold_name
 
-        probs = fold.outputs.create_orphan_node(mean, kwargs=dict(axis=0, **dict(preds[fold_name])))
+        probs = fold.instantiate_orphan_node(mean, kwargs=dict(axis=0, **dict(preds[fold_name])))
 
-        fold.outputs.create(
+        fold.instantiate_node(
             key="results",
             func=evaluate_fold,
             backend="json",

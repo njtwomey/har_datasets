@@ -1,6 +1,6 @@
 from numpy import concatenate
 
-from src.base import BaseGraph
+from src.base import ExecutionGraph
 from src.keys import Key
 
 __all__ = [
@@ -34,11 +34,9 @@ def source_selector(parent, modality="all", location="all"):
             valid_locations.update({Key(f"{loc=}-{mod=}")})
 
     # Aggregate all relevant sources
-    features = []
     for key, node in parent.outputs.items():
         if key in valid_locations:
-            root.outputs.acquire_one(key, node)
-            features.append((str(key), node))
+            root.acquire_one(key, node)
 
     return root
 
@@ -48,14 +46,14 @@ def concatenate_nodes(parent, **kwargs):
         keys = sorted(nodes.keys())
         return concatenate([nodes[key] for key in keys], axis=1)
 
-    return parent.outputs.create_orphan_node(backend="none", func=concat, kwargs=kwargs,)
+    return parent.instantiate_orphan_node(backend="none", func=concat, kwargs=kwargs,)
 
 
-def concatenate_features(parent: BaseGraph):
+def concatenate_features(parent: ExecutionGraph):
     def concat(**nodes):
         keys = sorted(nodes.keys())
         return concatenate([nodes[key] for key in keys], axis=1)
 
-    return parent.outputs.create_orphan_node(
+    return parent.instantiate_orphan_node(
         backend="none", func=concat, kwargs={str(kk): vv for kk, vv in parent.outputs.items()},
     )

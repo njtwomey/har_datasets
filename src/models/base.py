@@ -10,8 +10,8 @@ from sklearn.model_selection import GroupKFold
 from sklearn.pipeline import FeatureUnion
 from sklearn.pipeline import Pipeline
 
-from src.base import BaseGraph
 from src.base import dump_graph
+from src.base import ExecutionGraph
 from src.evaluation.classification import evaluate_fold
 from src.selectors import select_split
 from src.selectors import select_task
@@ -66,7 +66,7 @@ class ClassifierWrapper(BaseEstimator):
         assert isinstance(X, NodeWrapper)
         assert isinstance(y, NodeWrapper)
 
-        self.estimator_node = self.root.outputs.get_or_create(
+        self.estimator_node = self.root.get_or_create(
             key="model",
             func=instantiate_and_fit,
             backend="sklearn",
@@ -82,7 +82,7 @@ class ClassifierWrapper(BaseEstimator):
         )
 
         prob_predictions = self.predict_proba(X)
-        results = self.root.outputs.get_or_create(
+        results = self.root.get_or_create(
             key="results",
             func=evaluate_fold,
             backend="json",
@@ -101,7 +101,7 @@ class ClassifierWrapper(BaseEstimator):
         def score(estimator, X, y):
             return estimator.score(X, y)
 
-        return self.root.outputs.create_orphan_node(
+        return self.root.instantiate_orphan_node(
             backend="none", func=score, kwargs=dict(estimator=self.estimator_node, X=X, y=y)
         )
 
@@ -109,7 +109,7 @@ class ClassifierWrapper(BaseEstimator):
         def transform(estimator, X):
             return estimator.transform(X)
 
-        return self.root.outputs.create_orphan_node(
+        return self.root.instantiate_orphan_node(
             backend="none", func=transform, kwargs=dict(estimator=self.estimator_node, X=X)
         )
 
@@ -117,7 +117,7 @@ class ClassifierWrapper(BaseEstimator):
         def predict(estimator, X):
             return estimator.predict(X)
 
-        return self.root.outputs.create_orphan_node(
+        return self.root.instantiate_orphan_node(
             backend="none", func=predict, kwargs=dict(estimator=self.estimator_node, X=X)
         )
 
@@ -125,7 +125,7 @@ class ClassifierWrapper(BaseEstimator):
         def decision_function(estimator, X):
             return estimator.predict_proba(X)
 
-        return self.root.outputs.create_orphan_node(
+        return self.root.instantiate_orphan_node(
             backend="none", func=decision_function, kwargs=dict(estimator=self.estimator_node, X=X),
         )
 
@@ -133,7 +133,7 @@ class ClassifierWrapper(BaseEstimator):
         def predict_proba(estimator, X):
             return estimator.predict_proba(X)
 
-        return self.root.outputs.create_orphan_node(
+        return self.root.instantiate_orphan_node(
             backend="none", func=predict_proba, kwargs=dict(estimator=self.estimator_node, X=X)
         )
 
@@ -141,7 +141,7 @@ class ClassifierWrapper(BaseEstimator):
         def predict_log_proba(estimator, X):
             return estimator.predict_proba(X)
 
-        return self.root.outputs.create_orphan_node(
+        return self.root.instantiate_orphan_node(
             backend="none", func=predict_log_proba, kwargs=dict(estimator=self.estimator_node, X=X),
         )
 
@@ -165,7 +165,7 @@ def get_estimator_name(estimator):
     return name
 
 
-def instantiate_classifiers(features, task_name, split_name, index, estimator, param_grid):
+def instantiate_classifiers(features, task_name, split_name, index, estimator, param_grid, evaluate=False):
     assert isinstance(features, NodeWrapper)
     assert isinstance(index, NodeWrapper)
 
@@ -179,7 +179,7 @@ def instantiate_classifiers(features, task_name, split_name, index, estimator, p
     for fold_name in randomised_order(split_names):
         clf_name = get_estimator_name(estimator=estimator)
 
-        fold_graph: BaseGraph = splits / clf_name / fold_name
+        fold_graph: ExecutionGraph = splits / clf_name / fold_name
 
         # Instantiate the classifier
         model_node = ClassifierWrapper(
@@ -191,8 +191,9 @@ def instantiate_classifiers(features, task_name, split_name, index, estimator, p
 
         # Dump the graph
         fold_graph.dump_graph()
-        # node.evaluate()
-        # res.evaluate()
+        if evaluate:
+            node.evaluate()
+            res.evaluate()
 
         model_nodes[fold_name] = model_node
 

@@ -46,14 +46,14 @@ def window(parent, win_len, win_inc):
 
     # Build index outputs
     for key, node in parent.index.items():
-        root.index.create(
-            key=key, func=PartitionByTrial(window_index), kwargs=dict(data=node, **kwargs),
+        root.instantiate_node(
+            key=key, func=PartitionByTrial(window_index), kwargs=dict(data=node, **kwargs), backend="pandas"
         )
 
     # Build Data outputs
     for key, node in parent.outputs.items():
-        root.outputs.create(
-            key=key, func=PartitionByTrial(window_data), backend="none", kwargs=dict(data=node, **kwargs),
+        root.instantiate_node(
+            key=key, func=PartitionByTrial(window_data), kwargs=dict(data=node, **kwargs), backend="none",
         )
 
     return root

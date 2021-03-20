@@ -6,7 +6,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from umap import UMAP
 
-from src import BaseGraph
+from src import ExecutionGraph
 
 # from src.utils.label_helpers import normalise_labels
 
@@ -45,9 +45,9 @@ def embed_umap(label, data, model):
 
 
 def umap_embedding(node: NodeWrapper, task_name):
-    parent: BaseGraph = node.graph
-    umap_model = parent.outputs.create_orphan_node(func=learn_umap, backend="none", kwargs=dict(data=node),)
-    parent.outputs.create(
+    parent: ExecutionGraph = node.graph
+    umap_model = parent.instantiate_orphan_node(func=learn_umap, backend="none", kwargs=dict(data=node),)
+    parent.instantiate_node(
         key=f"{parent.identifier.name}-umap",
         func=embed_umap,
         backend="png",

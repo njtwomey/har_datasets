@@ -2,42 +2,43 @@ from os.path import basename
 from os.path import join
 from os.path import splitext
 
-from src.base import BaseGraph
+from src.base import ExecutionGraph
 from src.meta import DatasetMeta
 
 __all__ = [
     "Dataset",
 ]
 
-BUILD_ROOT = BaseGraph.build_root()
+# BUILD_ROOT = ExecutionGraph.build_root()
 
 
-class Dataset(BaseGraph):
+class Dataset(ExecutionGraph):
     def __init__(self, name, *args, **kwargs):
-        super(Dataset, self).__init__(name=name, parent=BUILD_ROOT, meta=DatasetMeta(name))
+        super(Dataset, self).__init__(name=f"datasets/{name}", meta=DatasetMeta(name))
 
         def load_meta(*args, **kwargs):
-            return ""
+            return self.meta.meta
 
         load_meta.__name__ = name
 
-        metadata = self.outputs.create(key=f"{name}-metadata", backend="none", func=load_meta, kwargs=dict())
+        metadata = self.instantiate_node(key=f"{name}-metadata", backend="yaml", func=load_meta, kwargs=dict())
+        metadata.evaluate()
 
         zip_name = kwargs.get("unzip_path", lambda x: x)(splitext(basename(self.meta.meta["download_urls"][0]))[0])
         self.unzip_path = join(self.meta.zip_path, splitext(zip_name)[0])
 
         # Build the indexes
-        self.index.create(
+        self.instantiate_node(
             key="fold", func=self.build_fold, backend="pandas", kwargs=dict(path=self.unzip_path, metatdata=metadata),
         )
 
-        self.index.create(
+        self.instantiate_node(
             key="index", func=self.build_index, backend="pandas", kwargs=dict(path=self.unzip_path, metatdata=metadata),
         )
 
         tasks = self.get_ancestral_metadata("tasks")
         for task in tasks:
-            self.index.create(
+            self.instantiate_node(
                 key=task,
                 func=self.build_label,
                 backend="pandas",
@@ -49,7 +50,7 @@ class Dataset(BaseGraph):
             loc = placement_modality["loc"]
             mod = placement_modality["mod"]
 
-            self.outputs.create(
+            self.instantiate_node(
                 key=f"{loc=}-{mod=}",
                 func=self.build_data,
                 backend="numpy",

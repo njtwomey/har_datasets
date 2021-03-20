@@ -1,14 +1,12 @@
 from functools import partial
+from operator import itemgetter
 from pathlib import Path
 from typing import Any
 from typing import Callable
 from typing import Dict
-from typing import ItemsView
-from typing import KeysView
 from typing import Optional
 from typing import Tuple
 from typing import Union
-from typing import ValuesView
 
 import pygraphviz as pgv
 from loguru import logger
@@ -21,7 +19,7 @@ from mldb.backends import PandasBackend
 from mldb.backends import PickleBackend
 from mldb.backends import PNGBackend
 from mldb.backends import ScikitLearnBackend
-from mldb.backends import VolatileBackend
+from mldb.backends import YamlBackend
 
 from src.keys import Key
 from src.meta import BaseMeta
@@ -33,7 +31,7 @@ from src.utils.misc import randomised_order
 
 
 __all__ = [
-    "BaseGraph",
+    "ExecutionGraph",
 ]
 
 
@@ -41,211 +39,77 @@ INDEX_FILES_SET = set(["index", "fold", "label", "target", "split"] + get_yaml_f
 
 
 def is_index_key(key: Union[Key, str]) -> bool:
-    assert isinstance(key, (Key, str))
     return str(key) in INDEX_FILES_SET
 
 
-class BaseGraph(ComputationGraph):
-    def __init__(self, name, parent=None, meta=None, default_backend="numpy"):
-        super(BaseGraph, self).__init__(name=name)
+def validate_meta(meta, name) -> BaseMeta:
+    if isinstance(meta, BaseMeta):
+        return meta
+    elif isinstance(meta, (str, Path)):
+        return BaseMeta(path=meta)
+    elif isinstance(name, (str, Path)):
+        return BaseMeta(path=name)
 
-        if isinstance(meta, BaseMeta):
-            self.meta: BaseMeta = meta
-        elif isinstance(meta, (str, Path)):
-            self.meta: BaseMeta = BaseMeta(path=meta)
-        elif isinstance(name, (str, Path)):
-            self.meta: BaseMeta = BaseMeta(path=name)
-        else:
-            logger.exception(ValueError(f"Ambiguous metadata specification with name={name} and meta={meta}"))
+    logger.exception(f"Ambiguous metadata specification with {name=} and {meta=}")
 
-        self.parent: Optional["BaseGraph"] = parent
+    raise ValueError
 
-        self.fs_root: Path = build_path()
 
-        self.add_backend("pickle", PickleBackend(self.fs_root))
-        self.add_backend("pandas", PandasBackend(self.fs_root))
-        self.add_backend("numpy", NumpyBackend(self.fs_root))
-        self.add_backend("json", JsonBackend(self.fs_root, cls=NumpyEncoder))
-        self.add_backend("sklearn", ScikitLearnBackend(self.fs_root))
-        self.add_backend("png", PNGBackend(self.fs_root))
-        self.set_default_backend(default_backend)
+class OutputGroup(object):
+    def __init__(self, graph: "ExecutionGraph"):
+        self.graph = graph
 
-        self.index: IndexNodeGroup = IndexNodeGroup(graph=self, default_backend="pandas")
-        self.outputs: OutputNodeGroup = OutputNodeGroup(graph=self)
+    def __repr__(self) -> str:
+        graph_name = self.graph.name
+        nodes = sorted(map(str, self.keys()))
+        return f"{self.__class__.__name__}({graph_name=}, {nodes=})"
 
-    def build_path(self, key: Key) -> Path:
-        assert isinstance(key, Key) and len(key)
-        return build_path(self.identifier, str(key))
-
-    def evaluate(self, force: bool = False) -> Dict[Key, Any]:
-        return self.outputs.evaluate(force=force)
+    def validate_key(self, key: Union[Key, str]) -> bool:
+        return not is_index_key(key)
 
     @property
-    def identifier(self) -> Path:
-        if self.parent is None:
-            return Path(self.name)
-        return self.parent.identifier / self.name
-
-    def get_ancestral_metadata(self, key: Union[Key, str]) -> Any:
-        return _get_ancestral_meta(self, key)
-
-    def __truediv__(self, name: Union[Key, str]) -> "BaseGraph":
-        return self.make_child(name=name)
-
-    def __getitem__(self, key: Union[Key, str]) -> NodeWrapper:
-        if is_index_key(key):
-            return self.index[key]
-        return self.outputs[key]
-
-    def make_child(
-        self, name: Union[Key, str], meta: Tuple[Path, str] = None, default_backend: str = "numpy"
-    ) -> "BaseGraph":
-        return BaseGraph(name=name, parent=self, meta=meta, default_backend=default_backend)
-
-    def dump_graph(self) -> None:
-        dump_graph(graph=self, filename=build_path(self.identifier, "graph.pdf"))
-
-    @staticmethod
-    def build_root():
-        return BaseGraph("datasets")
-
-    @staticmethod
-    def zip_root():
-        return BaseGraph("zips")
-
-
-class OutputNodeGroup(object):
-    def __init__(self, graph: BaseGraph, default_backend: Optional[str] = None):
-        self.graph: BaseGraph = graph
-        self.default_backend: Optional[str] = default_backend
-        self.output_dict: Dict[Key, NodeWrapper] = dict()
-
-    def validate_key(self, key: Union[Key, str]) -> Key:
-        assert not is_index_key(key), f"An index key was used for {self}: {key} in {INDEX_FILES_SET}"
-        return Key(key)
-
-    def acquire_one(self, key: Union[Key, str], node: NodeWrapper) -> None:
-        key = Key(key)
-        if key in self.output_dict:
-            raise KeyError(f"{key} is already in {self.output_dict.keys()} of {self}")
-        self.output_dict[key] = node
-
-    def acquire(self, other: "OutputNodeGroup") -> None:
-        for key, val in other.output_dict.items():
-            self.acquire_one(key, val)
-
-    @property
-    def parent_outputs(self):
+    def parent_group(self) -> "OutputGroup":
         return self.graph.parent.outputs
 
-    @property
-    def active_comp_set(self) -> Dict[Key, NodeWrapper]:
-        if len(self.output_dict) == 0:
-            return self.parent_outputs
-        return self.output_dict
-
     def __getitem__(self, key: Union[Key, str]) -> NodeWrapper:
+        assert self.validate_key(key)
+
         key = Key(key)
-        try:
-            return self.output_dict[key]
-        except KeyError:
-            if self.graph.parent is None:
-                logger.exception(ValueError(f"Unable to find key '{key}' in graph - reached root."))
-            return self.parent_outputs[key]
 
-    def keys(self) -> KeysView[Key]:
-        return self.active_comp_set.keys()
+        if key in self.graph.nodes:
+            return self.graph.nodes[key]
 
-    def values(self) -> ValuesView[NodeWrapper]:
-        return self.active_comp_set.values()
+        if self.graph.parent is not None:
+            return self.parent_group[key]
 
-    def items(self) -> ItemsView[Key, NodeWrapper]:
-        return self.active_comp_set.items()
+        logger.exception(f"Unable to find key '{key}' in graph - reached root.")
 
-    def __len__(self) -> int:
-        return len(self.active_comp_set)
+        raise KeyError
 
-    def __contains__(self, item: Union[Key, str]) -> bool:
-        return item in self.active_comp_set
+    def keys(self):
+        yield from list(map(itemgetter(0), self.items()))
 
-    def __repr__(self):
-        return f"<{self.__class__.__name__} outputs={self.keys()}/>"
+    def values(self):
+        yield from list(map(itemgetter(0), self.items()))
 
-    def evaluate(self, force: bool = False) -> Dict[Key, Any]:
-        outputs = dict()
-        for key in randomised_order(self.keys()):
-            node = self[key]
-            if not node.exists or force:
-                if isinstance(node.backend, VolatileBackend):
-                    continue
-                try:
-                    outputs[key] = node.evaluate()
-                except FileLockExistsException as ex:
-                    logger.warning(
-                        f"The file {node.name} is currently being evaluated by a different process. "
-                        f"Continuing to next available process: {ex}"
-                    )
-        return outputs
+    def items(self):
+        keys = [key for key in self.graph.nodes.keys() if self.validate_key(key)]
 
-    def create_orphan_node(
-        self, func: Callable, backend: Optional[str] = None, kwargs: Optional[Dict[str, Any]] = None
-    ):
-        return self.graph.node(func=func, name=None, backend=backend, kwargs=dict(**kwargs), cache=False)
+        if len(keys) == 0:
+            yield from self.parent_group.items()
 
-    def instantiate_node(
-        self,
-        key: Union[Key, str],
-        func: Callable,
-        backend: Optional[str] = None,
-        kwargs: Optional[Dict[str, Any]] = None,
-    ) -> NodeWrapper:
-        key = self.validate_key(key)
-        assert key not in self.output_dict
-        return self.graph.node(func=func, name=self.graph.build_path(key), backend=backend, kwargs=kwargs)
-
-    def create(
-        self,
-        key: Union[Key, str],
-        func: Callable,
-        backend: Optional[str] = None,
-        kwargs: Optional[Dict[str, Any]] = None,
-    ) -> NodeWrapper:
-        key = self.validate_key(key)
-        assert key not in self.output_dict
-        node = self.instantiate_node(key=key, func=func, backend=backend or self.default_backend, kwargs=kwargs)
-        self.output_dict[key] = node
-        return node
-
-    def get_or_create(
-        self,
-        key: Union[Key, str],
-        func: Callable,
-        backend: Optional[str] = None,
-        kwargs: Optional[Dict[str, Any]] = None,
-    ) -> NodeWrapper:
-        key = self.validate_key(key)
-        if key in self.output_dict:
-            return self.output_dict[key]
-        return self.create(key=key, func=func, backend=backend, kwargs=kwargs)
+        else:
+            for key in keys:
+                yield key, self.graph.nodes[key]
 
 
-class IndexNodeGroup(OutputNodeGroup):
-    def __init__(self, graph: BaseGraph, default_backend: Optional[str] = "pandas"):
-        super(IndexNodeGroup, self).__init__(graph=graph, default_backend=default_backend)
+class IndexGroup(OutputGroup):
+    def validate_key(self, key):
+        return is_index_key(key)
 
     @property
-    def parent_outputs(self):
+    def parent_group(self) -> "IndexGroup":
         return self.graph.parent.index
-
-    @property
-    def active_comp_set(self):
-        if len(self.output_dict) == 0:
-            return self.graph.parent.index
-        return self.output_dict
-
-    def validate_key(self, key: Union[Key, str]) -> Key:
-        assert is_index_key(key), f"A non-index key was used for {self}: {key} not in {INDEX_FILES_SET}"
-        return Key(key)
 
     @property
     def index(self):
@@ -260,13 +124,142 @@ class IndexNodeGroup(OutputNodeGroup):
         return self["split"]
 
 
+class ExecutionGraph(ComputationGraph):
+    def __init__(self, name, parent=None, meta=None, default_backend="numpy"):
+        super(ExecutionGraph, self).__init__(name=name)
+
+        self.meta = validate_meta(meta=meta, name=name)
+
+        self.parent: Optional["ExecutionGraph"] = parent
+
+        self.fs_root: Path = build_path()
+
+        self.add_backend("pickle", PickleBackend(self.fs_root))
+        self.add_backend("pandas", PandasBackend(self.fs_root))
+        self.add_backend("numpy", NumpyBackend(self.fs_root))
+        self.add_backend("json", JsonBackend(self.fs_root, cls=NumpyEncoder))
+        self.add_backend("sklearn", ScikitLearnBackend(self.fs_root))
+        self.add_backend("png", PNGBackend(self.fs_root))
+        self.add_backend("yaml", YamlBackend(self.fs_root))
+        self.set_default_backend(default_backend)
+
+        self.index = IndexGroup(graph=self)
+        self.outputs = OutputGroup(graph=self)
+
+        self.identifier.mkdir(exist_ok=True, parents=True)
+
+    def relative_node_name(self, key: Union[Key, str]) -> Path:
+        assert isinstance(key, (Key, str))
+        return self.identifier / str(key)
+
+    def absolute_node_name(self, key):
+        return build_path(self.relative_node_name(key))
+
+    # NODE CREATION/ACQUISITION
+
+    def instantiate_orphan_node(
+        self, func: Callable, backend: Optional[str] = None, kwargs: Optional[Dict[str, Any]] = None
+    ) -> NodeWrapper:
+        return self.make_node(name=None, func=func, backend=backend, kwargs=kwargs, cache=False)
+
+    def instantiate_node(
+        self,
+        key: Union[Key, str],
+        func: Callable,
+        backend: Optional[str] = None,
+        kwargs: Optional[Dict[str, Any]] = None,
+        force_add: bool = False,
+    ) -> NodeWrapper:
+        key = Key(key)
+        if is_index_key(key):
+            if backend != "pandas":
+                logger.warning(f"Backend for node {key} in {self.identifier} is not pandas, setting.")
+            backend = "pandas"
+        if not force_add:
+            assert key not in self.nodes
+        name = self.absolute_node_name(key)
+        return self.make_node(name=name, func=func, backend=backend, kwargs=kwargs, key=key)
+
+    def get_or_create(
+        self,
+        key: Union[Key, str],
+        func: Callable,
+        backend: Optional[str] = None,
+        kwargs: Optional[Dict[str, Any]] = None,
+    ) -> NodeWrapper:
+        key = Key(key)
+        if key in self.nodes:
+            return self.nodes[key]
+        return self.instantiate_node(key=key, func=func, backend=backend, kwargs=kwargs)
+
+    def acquire_one(self, key: Union[Key, str], node: NodeWrapper) -> None:
+        key = Key(key)
+        if key in self.nodes:
+            raise KeyError(f"{key} is already in {self.nodes.keys()} of {self}")
+        self.nodes[key] = node
+
+    def __getitem__(self, key: Union[Key, str]) -> NodeWrapper:
+        if is_index_key(key):
+            return self.index[key]
+        return self.outputs[key]
+
+    # BRANCHING
+
+    def make_child(
+        self, name: Union[Key, str], meta: Tuple[Path, str] = None, default_backend: Optional[str] = None
+    ) -> "ExecutionGraph":
+        return ExecutionGraph(
+            name=name, parent=self, meta=meta, default_backend=default_backend or self.default_backend
+        )
+
+    def make_sibling(self, default_backend: Optional[str] = None):
+        return ExecutionGraph(
+            name=self.name, parent=self.parent, meta=self.meta, default_backend=default_backend or self.default_backend
+        )
+
+    def __truediv__(self, name: Union[Key, str]) -> "ExecutionGraph":
+        return self.make_child(name=name)
+
+    # EVALUATION
+
+    @property
+    def identifier(self) -> Path:
+        if self.parent is None:
+            return Path(self.name)
+        return self.parent.identifier / self.name
+
+    def get_ancestral_metadata(self, key: Union[Key, str]) -> Any:
+        return _get_ancestral_meta(self, key)
+
+    def dump_graph(self) -> None:
+        dump_graph(graph=self, filename=self.absolute_node_name("graph.pdf"))
+
+    def evaluate(self, force: bool = False) -> Dict[str, Any]:
+        output = dict()
+        for key in randomised_order(self.nodes.keys()):
+            node = self.nodes[key]
+            try:
+                output[key] = node.evaluate()
+            except FileLockExistsException:
+                logger.warning(f"Skipping evaluation of {node.name} as it's already being computed.")
+        return output
+
+    # @staticmethod
+    # def build_root():
+    #     return ExecutionGraph(name="datasets")
+
+    # @staticmethod
+    # def zip_root():
+    #     return ExecutionGraph("zips")
+
+
 def dump_graph(graph, filename):
     nodes = dict()
     edges = []
 
     if isinstance(graph, NodeWrapper):
         consume_nodes(nodes, edges, graph)
-    elif isinstance(graph, BaseGraph):
+    elif isinstance(graph, ExecutionGraph):
         for _, node in graph.outputs.items():
             consume_nodes(nodes, edges, node)
     else:
@@ -314,7 +307,7 @@ def consume_nodes(nodes, edges, ptr):
         consume_nodes(nodes, edges, source_node)
 
 
-def _get_ancestral_meta(graph: BaseGraph, key: Key):
+def _get_ancestral_meta(graph: ExecutionGraph, key: Key):
     if graph.meta is None:
         logger.exception(TypeError(f'The key "{key}" cannot be found in "{graph}"'))
     if key in graph.meta:

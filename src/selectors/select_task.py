@@ -14,7 +14,7 @@ def select_task(parent, task_name):
 
     assert task_name in root.get_ancestral_metadata("tasks").keys()
 
-    root.index.create(
+    root.instantiate_node(
         key="target", func=select_task_labels, backend="pandas", kwargs=dict(data=parent.index[task_name]),
     )
 

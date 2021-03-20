@@ -1,7 +1,11 @@
 __all__ = ["Key"]
 
+from pathlib import Path
+
 
 def validate_key(key):
+    if isinstance(key, Path):
+        return key.name
     if isinstance(key, Key):
         return key.key
     if isinstance(key, str):
@@ -24,10 +28,16 @@ class Key(object):
 
     def __repr__(self):
         key = self.key
-        return f"<Key {key=}>"
+        return f"Key({key=})"
 
     def __eq__(self, other):
-        return self.key == other.key
+        if isinstance(other, Path):
+            return self.key == other.name
+        if isinstance(other, Key):
+            return self.key == other.key
+        if isinstance(other, str):
+            return self.key == other
+        raise NotImplementedError
 
     def __hash__(self):
         return hash(self.key)

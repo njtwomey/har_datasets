@@ -6,7 +6,7 @@ __all__ = [
     "select_split",
 ]
 
-from src import BaseGraph
+from src import ExecutionGraph
 
 
 def validate_split_names(split_name, split_df, split_cols):
@@ -38,7 +38,7 @@ def loso_split(split, columns):
     return splits
 
 
-def select_split(parent: BaseGraph, split_type):
+def select_split(parent: ExecutionGraph, split_type):
     root = parent.make_child(name=split_type, meta=Path("metadata", "split.yaml"))
 
     assert split_type in root.meta["supported"]
@@ -50,7 +50,7 @@ def select_split(parent: BaseGraph, split_type):
         split = parent.index["fold"]
 
     split_defs = root.get_ancestral_metadata("splits")
-    root.index.create(
+    root.instantiate_node(
         key="split",
         func=func_dict[split_type],
         backend="pandas",
