@@ -13,7 +13,7 @@ def ecdf(parent, n_components):
 
     for key, node in parent.outputs.items():
         root.instantiate_node(
-            key=f"{key}-ecdf", func=calc_ecdf, kwargs=dict(n_components=n_components, data=node),
+            key=f"{key}-ecdf", backend="numpy", func=calc_ecdf, kwargs=dict(n_components=n_components, data=node),
         )
 
     return root.instantiate_node(

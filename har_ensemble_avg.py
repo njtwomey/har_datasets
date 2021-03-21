@@ -13,6 +13,7 @@ from har_basic import get_features
 from har_basic import get_windowed_wearables
 from src.base import ExecutionGraph
 from src.evaluation.classification import evaluate_data_split
+from src.functional.common import node_itemgetter
 from src.functional.common import sorted_node_values
 from src.models.base import ClassifierWrapper
 from src.utils.loaders import dataset_importer
@@ -43,7 +44,7 @@ def ensemble_classifier(task_name, split_name, feat_names, clf_names, windowed_d
         fold = graph / fold_name
 
         mean_proba = fold.instantiate_node(
-            key="features", func=np.mean, args=[sorted_node_values(dict(pred_dict[fold_name]))]
+            key="features", func=np.mean, args=[sorted_node_values(dict(pred_dict[fold_name]))], kwargs=dict(axis=0)
         )
 
         if viz:
@@ -54,7 +55,7 @@ def ensemble_classifier(task_name, split_name, feat_names, clf_names, windowed_d
             func=evaluate_data_split,
             backend="json",
             kwargs=dict(
-                split=windowed_data[split_name],
+                split=fold.instantiate_orphan_node(func=node_itemgetter(fold_name), args=windowed_data[split_name]),
                 targets=windowed_data[task_name],
                 estimator=model_dict[fold_name][0][1],
                 prob_predictions=mean_proba,

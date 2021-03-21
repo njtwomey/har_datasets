@@ -113,7 +113,7 @@ class ClassifierWrapper(ExecutionGraph):
             key="results",
             func=evaluate_data_split,
             backend="json",
-            kwargs=dict(split=split, targets=task, estimator=model, prob_predictions=self.predict_proba(features),),
+            kwargs=dict(split=split, targets=task, estimator=model, prob_predictions=self.predict_proba(features)),
         )
 
     @property

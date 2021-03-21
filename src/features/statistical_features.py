@@ -57,12 +57,12 @@ def statistical_features(parent):
         f_kwargs = dict(data=node, fs=fs)
 
         if accel_key in key:
-            root.instantiate_node(key=key_td, func=t_feat, kwargs=t_kwargs)
+            root.instantiate_node(key=key_td, func=t_feat, kwargs=t_kwargs, backend="numpy")
             if "grav" not in key:
-                root.instantiate_node(key=key_fd, func=f_feat, kwargs=f_kwargs)
+                root.instantiate_node(key=key_fd, func=f_feat, kwargs=f_kwargs, backend="numpy")
         if gyro_key in key or mag_key in key:
-            root.instantiate_node(key=key_td, func=t_feat, kwargs=t_kwargs)
-            root.instantiate_node(key=key_fd, func=f_feat, kwargs=f_kwargs)
+            root.instantiate_node(key=key_td, func=t_feat, kwargs=t_kwargs, backend="numpy")
+            root.instantiate_node(key=key_fd, func=f_feat, kwargs=f_kwargs, backend="numpy")
 
     return root.instantiate_node(
         key="features", func=np.concatenate, args=[sorted_node_values(root.outputs)], kwargs=dict(axis=1)
