@@ -8,12 +8,13 @@ from src.functional.common import sorted_node_values
 def har_chain(
     test_dataset="anguita2013",
     fs_new=33,
-    win_len=2.56,
+    win_len=3,
     win_inc=1,
     task_name="har",
     split_name="predefined",
     feat_name="ecdf",
     clf_name="sgd",
+    evaluate=False,
 ):
     # Make metadata for the experiment
     kwargs = dict(
@@ -28,7 +29,7 @@ def har_chain(
 
     # Extract the representation for the test dataset
     test_dataset = dataset_alignment.pop(test_dataset)
-    feats, task, target, split, model = basic_har(split_name="predefined", **test_dataset, **kwargs)
+    feats, models = basic_har(split_name="predefined", **test_dataset, **kwargs)
 
     # Build a dictionary of the two source datasets
     models = {
@@ -38,16 +39,16 @@ def har_chain(
 
     graph = feats.graph / ("chained-from-" + "-".join(sorted(dataset_alignment.keys())))
     probs_as_feats = graph.instantiate_node(
-        key="features", func=np.concatenate, args=[sorted_node_values(probs)], kwargs=dict(axis=1)
+        key="features", func=np.concatenate, args=[[feats] + sorted_node_values(probs)], kwargs=dict(axis=1)
     )
 
     # Learn the classifier
-    task, target, splits, model_nodes = get_classifier(
-        clf_name=clf_name, features=probs_as_feats, task_name=task_name, split_name=split_name
+    model = get_classifier(
+        clf_name=clf_name, features=probs_as_feats, task_name=task_name, split_name=split_name, evaluate=evaluate
     )
 
-    return task, target, splits, model_nodes
+    return probs_as_feats, model
 
 
 if __name__ == "__main__":
-    har_chain()
+    har_chain(evaluate=True)

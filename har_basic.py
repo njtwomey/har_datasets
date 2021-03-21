@@ -53,7 +53,7 @@ def get_classifier(clf_name, features, task_name, split_name, evaluate=False):
     else:
         raise ValueError
 
-    task, target, splits, model_nodes = instantiate_classifiers(
+    models = instantiate_classifiers(
         features=features,
         task_name=task_name,
         split_name=split_name,
@@ -62,7 +62,7 @@ def get_classifier(clf_name, features, task_name, split_name, evaluate=False):
         evaluate=evaluate,
     )
 
-    return task, target, splits, model_nodes
+    return models
 
 
 def basic_har(
@@ -106,11 +106,11 @@ def basic_har(
         umap_embedding(features, task_name=task_name).evaluate()
 
     # Get classifier params
-    task, target, splits, model_nodes = get_classifier(
+    models = get_classifier(
         clf_name=clf_name, features=features, task_name=task_name, split_name=split_name, evaluate=evaluate
     )
 
-    return features, task_name, target, splits, model_nodes
+    return features, models
 
 
 if __name__ == "__main__":

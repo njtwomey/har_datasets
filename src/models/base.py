@@ -178,7 +178,6 @@ def instantiate_classifiers(
     fold_names = get_ancestral_metadata(features, "splits")[split_name]
 
     task = features.graph[task_name]
-    split = features.graph[split_name]
 
     models: Dict[str, ClassifierWrapper] = dict()
 
@@ -205,7 +204,9 @@ def instantiate_classifiers(
 
         models[fold_name] = model
 
-    if split_name == "deployable":
-        models = models[0]
+        if split_name == "deployable":
+            return model
 
-    return task, split, models
+    assert len(models)
+
+    return models
