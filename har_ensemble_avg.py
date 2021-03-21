@@ -1,64 +1,75 @@
 from collections import defaultdict
+from typing import DefaultDict
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
 
 import numpy as np
+from mldb import NodeWrapper
 
 from har_basic import get_classifier
 from har_basic import get_features
 from har_basic import get_windowed_wearables
 from src.base import ExecutionGraph
 from src.evaluation.classification import evaluate_data_split
+from src.functional.common import sorted_node_values
+from src.models.base import ClassifierWrapper
 from src.utils.loaders import dataset_importer
 from src.utils.misc import randomised_order
+from src.visualisations.umap_embedding import umap_embedding
 
 
-def sorted_vals(**kwargs):
-    return [kwargs[kk] for kk in sorted(kwargs.keys())]
+def ensemble_classifier(task_name, split_name, feat_names, clf_names, windowed_data, viz=False):
+    model_dict: DefaultDict[str, List[Tuple[str, ClassifierWrapper]]] = defaultdict(list)
+    pred_dict: DefaultDict[str, List[Tuple[str, NodeWrapper]]] = defaultdict(list)
 
+    graph: ExecutionGraph = windowed_data / f"{sorted(feat_names)}x{sorted(clf_names)}"
 
-def mean(axis=0, **kwargs):
-    return np.mean(sorted_vals(**kwargs), axis=axis)
-
-
-def ensemble_classifier(task_name, split_name, feat_names, clf_names, windowed_data):
-    models, preds = defaultdict(list), defaultdict(list)
-
+    # Iterate over all features and classifiers
     for feat_name in randomised_order(feat_names):
         features = get_features(feat_name=feat_name, windowed_data=windowed_data)
         for clf_name in randomised_order(clf_names):
-            task, target, splits, model_nodes = get_classifier(
+            model_nodes = get_classifier(
                 clf_name=clf_name, features=features, task_name=task_name, split_name=split_name
             )
             for fold, estimator in model_nodes.items():
-                models[fold].append((f"{feat_name=}-{clf_name=}", model_nodes[fold].estimator_node))
-                preds[fold].append((f"{feat_name=}-{clf_name=}", model_nodes[fold].predict_proba(features)))
+                key = f"{feat_name=}-{clf_name=}"
+                model_dict[fold].append((key, model_nodes[fold].model))
+                pred_dict[fold].append((key, model_nodes[fold].predict_proba(features)))
 
-    node: ExecutionGraph = windowed_data / f"{feat_names}x{clf_names}"
+    # For each train/val/test split,
+    for fold_name in model_dict.keys():
+        fold = graph / fold_name
 
-    for fold_name in models.keys():
-        fold = node / fold_name
+        mean_proba = fold.instantiate_node(
+            key="features", func=np.mean, args=[sorted_node_values(dict(pred_dict[fold_name]))]
+        )
 
-        probs = fold.instantiate_orphan_node(mean, kwargs=dict(axis=0, **dict(preds[fold_name])))
+        if viz:
+            umap_embedding(mean_proba, task_name=task_name).evaluate()
 
-        fold.instantiate_node(
+        results = fold.instantiate_node(
             key="results",
             func=evaluate_data_split,
             backend="json",
             kwargs=dict(
-                fold=windowed_data["fold"],
-                fold_name=fold_name,
-                targets=windowed_data["har"],
-                estimator=estimator.estimator_node.evaluate(),
-                prob_predictions=probs,
+                split=windowed_data[split_name],
+                targets=windowed_data[task_name],
+                estimator=model_dict[fold_name][0][1],
+                prob_predictions=mean_proba,
             ),
-        ).evaluate()
+        )
 
         fold.dump_graph()
 
-    return models
+        results.evaluate()
+
+    return model_dict
 
 
 def basic_ensemble(
-    dataset_name="pamap2",
+    dataset_name="anguita2013",
     modality="all",
     location="all",
     task_name="har",
@@ -69,7 +80,7 @@ def basic_ensemble(
 ):
     dataset = dataset_importer(dataset_name)
 
-    windowed = get_windowed_wearables(
+    windowed_data = get_windowed_wearables(
         dataset=dataset, modality=modality, location=location, fs_new=fs_new, win_len=win_len, win_inc=win_inc
     )
 
@@ -78,7 +89,7 @@ def basic_ensemble(
         split_name=split_name,
         feat_names=["ecdf", "statistical"],
         clf_names=["sgd", "lr", "rf"],
-        windowed_data=windowed,
+        windowed_data=windowed_data,
     )
 
     return ensemble

@@ -41,10 +41,10 @@ def get_features(feat_name, windowed_data):
 def get_classifier(clf_name, features, task_name, split_name, evaluate=False):
     if clf_name == "sgd":
         estimator = Pipeline([("scaling", Normalizer()), ("clf", SGDClassifier(loss="log"))])
-        param_grid = dict(clf__alpha=np.logspace(-5, 5, 11))
+        param_grid = dict(clf__alpha=np.logspace(-5, 5, 3))
     elif clf_name == "lr":
         estimator = Pipeline(
-            [["scaling", StandardScaler()], ("pca", PCA(0.9)), ("clf", LogisticRegressionCV(max_iter=100))]
+            [["scaling", StandardScaler()], ("pca", PCA(0.9)), ("clf", LogisticRegressionCV(Cs=3, max_iter=100))]
         )
         param_grid = None
     elif clf_name == "rf":

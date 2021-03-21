@@ -32,7 +32,6 @@ class Dataset(ExecutionGraph):
         load_meta.__name__ = name
 
         metadata = self.instantiate_node(key=f"{name}-metadata", backend="yaml", func=load_meta, kwargs=dict())
-        metadata.evaluate()
 
         zip_name = kwargs.get("unzip_path", lambda x: x)(splitext(basename(self.meta.meta["download_urls"][0]))[0])
         self.unzip_path = join(self.meta.zip_path, splitext(zip_name)[0])
@@ -42,13 +41,12 @@ class Dataset(ExecutionGraph):
         )
 
         # Build the indexes
-        predefined = self.instantiate_node(
+        self.instantiate_node(
             key="predefined",
             func=self.build_predefined,
             backend="pandas",
             kwargs=dict(path=self.unzip_path, metatdata=metadata),
         )
-        predefined.evaluate()
 
         split_defs = get_ancestral_metadata(self, "splits")
 
