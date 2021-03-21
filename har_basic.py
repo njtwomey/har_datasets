@@ -11,9 +11,9 @@ from sklearn.preprocessing import StandardScaler
 from src.features.ecdf_features import ecdf
 from src.features.statistical_features import statistical_features
 from src.models.base import instantiate_classifiers
-from src.selectors.source_selector import source_selector
 from src.transformers.body_grav_filter import body_grav_filter
 from src.transformers.resample import resample
+from src.transformers.source_selector import source_selector
 from src.transformers.window import window
 from src.utils.loaders import dataset_importer
 from src.visualisations.umap_embedding import umap_embedding

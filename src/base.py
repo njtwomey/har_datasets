@@ -172,11 +172,6 @@ class IndexGroup(NodeGroup):
     def parent_group(self) -> "IndexGroup":
         return self.graph.parent.index
 
-    def get_split_series(self, split, fold):
-        return self.graph.instantiate_node(
-            key=f"{split=}-{fold=}", func=node_itemgetter(fold), backend="pandas", args=self[split]
-        )
-
     @property
     def index(self):
         return self["index"]
@@ -259,6 +254,13 @@ class ExecutionGraph(ComputationGraph):
         if is_index_key(key):
             return self.index[key]
         return self.outputs[key]
+
+    # Some convenience functions
+
+    def get_split_series(self, split, fold):
+        return self.instantiate_node(
+            key=f"{split=}-{fold=}", func=node_itemgetter(fold), backend="pandas", args=self.index[split]
+        )
 
     # BRANCHING
 

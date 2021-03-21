@@ -37,7 +37,7 @@ def get_estimator_name(estimator):
     return name
 
 
-def instantiate_and_fit(index, fold, X, y, estimator, n_splits=5, param_grid=None):
+def instantiate_and_fit(index, fold, X, y, estimator, n_splits=5, sample_weight=None, param_grid=None):
     assert fold.shape[0] == index.shape[0]
     assert fold.shape[0] == X.shape[0]
     assert fold.shape[0] == y.shape[0]
@@ -65,9 +65,33 @@ def instantiate_and_fit(index, fold, X, y, estimator, n_splits=5, param_grid=Non
         grid_search = GridSearchCV(estimator=estimator_clone, param_grid=param_grid, verbose=10)
         k_fold = GroupKFold(n_splits=n_splits).split(X[train_inds], y[train_inds], index.trial.values[train_inds])
         grid_search.cv = list(k_fold)
-        return grid_search.fit(X[train_inds], y[train_inds])
+        return grid_search.fit(X[train_inds], y[train_inds], sample_weight=sample_weight)
 
-    return estimator_clone.fit(X[train_inds], y[train_inds])
+    return estimator_clone.fit(X[train_inds], y[train_inds], sample_weight=sample_weight)
+
+
+# noinspection PyPep8Naming
+class BasicScorer(object):
+    def fit(self, estimator, X, y, sample_weight=None):
+        return estimator.fit(X, y, sample_weight)
+
+    def score(self, estimator, X, y):
+        return estimator.score(X, y)
+
+    def transform(self, estimator, X):
+        return estimator.transform(X)
+
+    def decision_function(self, estimator, X):
+        return estimator.predict_proba(X)
+
+    def predict(self, estimator, X):
+        return estimator.predict(X)
+
+    def predict_proba(self, estimator, X):
+        return estimator.predict_proba(X)
+
+    def predict_log_proba(self, estimator, X):
+        return estimator.predict_proba(X)
 
 
 # noinspection PyPep8Naming
@@ -80,6 +104,7 @@ class ClassifierWrapper(ExecutionGraph):
         task: NodeWrapper,
         estimator: Any,
         param_grid: Any,
+        scorer: BasicScorer,
     ):
         assert isinstance(parent, ExecutionGraph)
         assert isinstance(features, NodeWrapper)
@@ -94,6 +119,8 @@ class ClassifierWrapper(ExecutionGraph):
         self.features = features
         self.split = split
         self.task = task
+
+        self.scorer = scorer
 
         model = self.instantiate_node(
             key="model",
@@ -124,46 +151,42 @@ class ClassifierWrapper(ExecutionGraph):
     def results(self):
         return self["results"]
 
-    def score(self, X, y):
-        def score(estimator, X, y):
-            return estimator.score(X, y)
+    def fit(self, X, y, sample_weight=None):
+        return self.instantiate_node(
+            backend="sklearn",
+            key="model",
+            func=self.scorer.fit,
+            kwargs=dict(estimator=self["model"], X=X, y=y, sample_weight=sample_weight),
+        )
 
-        return self.instantiate_orphan_node(backend="none", func=score, kwargs=dict(estimator=self["model"], X=X, y=y))
+    def score(self, X, y):
+        return self.instantiate_orphan_node(
+            backend="none", func=self.scorer.score, kwargs=dict(estimator=self["model"], X=X, y=y)
+        )
 
     def transform(self, X):
-        def transform(estimator, X):
-            return estimator.transform(X)
-
-        return self.instantiate_orphan_node(backend="none", func=transform, kwargs=dict(estimator=self["model"], X=X))
+        return self.instantiate_orphan_node(
+            backend="none", func=self.scorer.transform, kwargs=dict(estimator=self["model"], X=X)
+        )
 
     def predict(self, X):
-        def predict(estimator, X):
-            return estimator.predict(X)
-
-        return self.instantiate_orphan_node(backend="none", func=predict, kwargs=dict(estimator=self["model"], X=X))
+        return self.instantiate_orphan_node(
+            backend="none", func=self.scorer.predict, kwargs=dict(estimator=self["model"], X=X)
+        )
 
     def decision_function(self, X):
-        def decision_function(estimator, X):
-            return estimator.predict_proba(X)
-
         return self.instantiate_orphan_node(
-            backend="none", func=decision_function, kwargs=dict(estimator=self["model"], X=X),
+            backend="none", func=self.scorer.decision_function, kwargs=dict(estimator=self["model"], X=X)
         )
 
     def predict_proba(self, X):
-        def predict_proba(estimator, X):
-            return estimator.predict_proba(X)
-
         return self.instantiate_orphan_node(
-            backend="none", func=predict_proba, kwargs=dict(estimator=self["model"], X=X)
+            backend="none", func=self.scorer.predict_proba, kwargs=dict(estimator=self["model"], X=X)
         )
 
     def predict_log_proba(self, X):
-        def predict_log_proba(estimator, X):
-            return estimator.predict_proba(X)
-
         return self.instantiate_orphan_node(
-            backend="none", func=predict_log_proba, kwargs=dict(estimator=self["model"], X=X),
+            backend="none", func=self.scorer.predict_log_proba, kwargs=dict(estimator=self["model"], X=X)
         )
 
 
@@ -193,7 +216,8 @@ def instantiate_classifiers(
             param_grid=param_grid,
             features=features,
             task=task,
-            split=split_node.index.get_split_series(split=split_name, fold=fold_name),
+            split=split_node.get_split_series(split=split_name, fold=fold_name),
+            scorer=BasicScorer(),
         )
 
         # Dump the graph
