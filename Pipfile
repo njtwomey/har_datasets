@@ -1,0 +1,29 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+requests = "*"
+numpy = "*"
+pandas = "*"
+matplotlib = "*"
+seaborn = "*"
+python-dotenv = "*"
+scikit-learn = "*"
+joblib = "*"
+ipython = "*"
+jupyter = "*"
+loguru = "*"
+tqdm = "*"
+mldb = {git = "https://github.com/njtwomey/mldb.git"}
+spectrum = "*"
+click = "*"
+umap-learn = "*"
+PyYAML = "*"
+pygraphviz = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.8"

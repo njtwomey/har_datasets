@@ -1,5 +1,9 @@
+import numpy as np
+
+from src.base import get_ancestral_metadata
 from src.features.statistical_features_impl import f_feat
 from src.features.statistical_features_impl import t_feat
+from src.functional.common import sorted_node_values
 
 __all__ = ["statistical_features"]
 
@@ -39,7 +43,7 @@ def statistical_features(parent):
 
     root = parent / "statistical_features"
 
-    fs = root.get_ancestral_metadata("fs")
+    fs = get_ancestral_metadata(root, "fs")
 
     accel_key = "mod='accel'"
     gyro_key = "mod='gyro'"
@@ -60,4 +64,6 @@ def statistical_features(parent):
             root.instantiate_node(key=key_td, func=t_feat, kwargs=t_kwargs)
             root.instantiate_node(key=key_fd, func=f_feat, kwargs=f_kwargs)
 
-    return root
+    return root.instantiate_node(
+        key="features", func=np.concatenate, args=[sorted_node_values(root.outputs)], kwargs=dict(axis=1)
+    )

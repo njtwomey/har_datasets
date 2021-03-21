@@ -1,6 +1,8 @@
+import numpy as np
+
 from har_basic import basic_har
 from har_basic import get_classifier
-from src.transformers.source_selector import concatenate_nodes
+from src.functional.common import sorted_node_values
 
 
 def har_chain(
@@ -35,7 +37,9 @@ def har_chain(
     probs = {key: model.predict_proba(feats) for key, model in models.items()}
 
     graph = feats.graph / ("chained-from-" + "-".join(sorted(dataset_alignment.keys())))
-    probs_as_feats = concatenate_nodes(graph, **probs)
+    probs_as_feats = graph.instantiate_node(
+        key="features", func=np.concatenate, args=[sorted_node_values(probs)], kwargs=dict(axis=1)
+    )
 
     # Learn the classifier
     task, target, splits, model_nodes = get_classifier(

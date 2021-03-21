@@ -26,7 +26,7 @@ class pamap2(Dataset):
         return self.meta.inv_lookup[task], df
 
     @fold_decorator
-    def build_fold(self, *args, **kwargs):
+    def build_predefined(self, *args, **kwargs):
         def folder(sid, data):
             return np.zeros(data.shape[0]) + sid
 
@@ -34,15 +34,19 @@ class pamap2(Dataset):
             path=self.unzip_path, cols=[1], desc=f"{self.identifier} Folds", callback=folder, columns=["fold"],
         ).astype(int)
 
-        data = []
-        cols = []
-        for cat in df.fold.unique():
-            lookup = defaultdict(lambda: "train")
-            lookup[cat] = "test"
-            data.append(df.fold.apply(lambda l: lookup[l]).values)
-            cols.append(f"loo_{cat}")
-        df = pd.DataFrame(np.asarray(data).T, columns=cols).astype("category")
-        return df
+        lookup = {
+            1: "train",
+            2: "train",
+            3: "test",
+            4: "train",
+            5: "train",
+            6: "test",
+            7: "train",
+            8: "train",
+            9: "test",
+        }
+
+        return df.assign(fold_0=df["fold"].apply(lookup.__getitem__))[["fold_0"]].astype("category")
 
     @index_decorator
     def build_index(self, *args, **kwargs):

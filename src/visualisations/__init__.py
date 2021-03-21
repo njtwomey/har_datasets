@@ -1,1 +1,0 @@
-from src.visualisations.umap_embedding import umap_embedding

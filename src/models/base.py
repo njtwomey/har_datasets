@@ -1,31 +1,48 @@
+from typing import Any
 from typing import Dict
 
 import numpy as np
 from loguru import logger
 from mldb import NodeWrapper
-from sklearn.base import BaseEstimator
 from sklearn.base import clone
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import GroupKFold
 from sklearn.pipeline import FeatureUnion
 from sklearn.pipeline import Pipeline
 
-from src.base import dump_graph
 from src.base import ExecutionGraph
-from src.evaluation.classification import evaluate_fold
-from src.selectors import select_split
-from src.selectors import select_task
+from src.base import get_ancestral_metadata
+from src.evaluation.classification import evaluate_data_split
 from src.utils.misc import randomised_order
 
 __all__ = ["instantiate_and_fit", "ClassifierWrapper", "instantiate_classifiers"]
 
 
-def instantiate_and_fit(index, fold, fold_name, X, y, estimator, n_splits=5, param_grid=None):
+def get_estimator_name(estimator):
+    if isinstance(estimator, Pipeline):
+        parts = []
+        for key, sub_estimator in estimator.steps:
+            sub_estimator_name = get_estimator_name(sub_estimator)
+            parts.append(sub_estimator_name)
+        internal = ", ".join(parts)
+        return f"Pipeline({internal})"
+
+    elif isinstance(estimator, FeatureUnion):
+        raise NotImplementedError
+
+    name = str(estimator)
+
+    # TODO: Remove newlines, and extra spaces
+
+    return name
+
+
+def instantiate_and_fit(index, fold, X, y, estimator, n_splits=5, param_grid=None):
     assert fold.shape[0] == index.shape[0]
     assert fold.shape[0] == X.shape[0]
     assert fold.shape[0] == y.shape[0]
 
-    fold_vals = fold[fold_name].ravel()
+    fold_vals = fold.ravel()
 
     train_inds = fold_vals == "train"
     val_inds = fold_vals == "val"
@@ -54,150 +71,141 @@ def instantiate_and_fit(index, fold, fold_name, X, y, estimator, n_splits=5, par
 
 
 # noinspection PyPep8Naming
-class ClassifierWrapper(BaseEstimator):
-    def __init__(self, root, estimator, param_grid, fold_name):
-        self.root = root
+class ClassifierWrapper(ExecutionGraph):
+    def __init__(
+        self,
+        parent: ExecutionGraph,
+        features: NodeWrapper,
+        split: NodeWrapper,
+        task: NodeWrapper,
+        estimator: Any,
+        param_grid: Any,
+    ):
+        assert isinstance(parent, ExecutionGraph)
+        assert isinstance(features, NodeWrapper)
+        assert isinstance(split, NodeWrapper)
+        assert isinstance(task, NodeWrapper)
+
+        super(ClassifierWrapper, self).__init__(parent=parent, name=get_estimator_name(estimator))
+
         self.estimator = estimator
-        self.estimator_node = None
-        self.fold_name = fold_name
         self.param_grid = param_grid
 
-    def fit(self, X, y, fold):
-        assert isinstance(X, NodeWrapper)
-        assert isinstance(y, NodeWrapper)
+        self.features = features
+        self.split = split
+        self.task = task
 
-        self.estimator_node = self.root.get_or_create(
+        model = self.instantiate_node(
             key="model",
             func=instantiate_and_fit,
             backend="sklearn",
             kwargs=dict(
-                X=X,
-                y=y,
-                index=self.root.index["index"],
-                fold=fold,
-                fold_name=self.fold_name,
+                X=features,
+                y=task,
+                index=self["index"],
+                fold=self.split,
                 estimator=self.estimator,
                 param_grid=self.param_grid,
             ),
         )
 
-        prob_predictions = self.predict_proba(X)
-        results = self.root.get_or_create(
+        self.get_or_create(
             key="results",
-            func=evaluate_fold,
+            func=evaluate_data_split,
             backend="json",
-            kwargs=dict(
-                fold=fold,
-                fold_name=self.fold_name,
-                targets=y,
-                estimator=self.estimator_node,
-                prob_predictions=prob_predictions,
-            ),
+            kwargs=dict(split=split, targets=task, estimator=model, prob_predictions=self.predict_proba(features),),
         )
 
-        return self.estimator_node, results
+    @property
+    def model(self):
+        return self["model"]
+
+    @property
+    def results(self):
+        return self["results"]
 
     def score(self, X, y):
         def score(estimator, X, y):
             return estimator.score(X, y)
 
-        return self.root.instantiate_orphan_node(
-            backend="none", func=score, kwargs=dict(estimator=self.estimator_node, X=X, y=y)
-        )
+        return self.instantiate_orphan_node(backend="none", func=score, kwargs=dict(estimator=self["model"], X=X, y=y))
 
     def transform(self, X):
         def transform(estimator, X):
             return estimator.transform(X)
 
-        return self.root.instantiate_orphan_node(
-            backend="none", func=transform, kwargs=dict(estimator=self.estimator_node, X=X)
-        )
+        return self.instantiate_orphan_node(backend="none", func=transform, kwargs=dict(estimator=self["model"], X=X))
 
     def predict(self, X):
         def predict(estimator, X):
             return estimator.predict(X)
 
-        return self.root.instantiate_orphan_node(
-            backend="none", func=predict, kwargs=dict(estimator=self.estimator_node, X=X)
-        )
+        return self.instantiate_orphan_node(backend="none", func=predict, kwargs=dict(estimator=self["model"], X=X))
 
     def decision_function(self, X):
         def decision_function(estimator, X):
             return estimator.predict_proba(X)
 
-        return self.root.instantiate_orphan_node(
-            backend="none", func=decision_function, kwargs=dict(estimator=self.estimator_node, X=X),
+        return self.instantiate_orphan_node(
+            backend="none", func=decision_function, kwargs=dict(estimator=self["model"], X=X),
         )
 
     def predict_proba(self, X):
         def predict_proba(estimator, X):
             return estimator.predict_proba(X)
 
-        return self.root.instantiate_orphan_node(
-            backend="none", func=predict_proba, kwargs=dict(estimator=self.estimator_node, X=X)
+        return self.instantiate_orphan_node(
+            backend="none", func=predict_proba, kwargs=dict(estimator=self["model"], X=X)
         )
 
     def predict_log_proba(self, X):
         def predict_log_proba(estimator, X):
             return estimator.predict_proba(X)
 
-        return self.root.instantiate_orphan_node(
-            backend="none", func=predict_log_proba, kwargs=dict(estimator=self.estimator_node, X=X),
+        return self.instantiate_orphan_node(
+            backend="none", func=predict_log_proba, kwargs=dict(estimator=self["model"], X=X),
         )
 
 
-def get_estimator_name(estimator):
-    if isinstance(estimator, Pipeline):
-        parts = []
-        for key, sub_estimator in estimator.steps:
-            sub_estimator_name = get_estimator_name(sub_estimator)
-            parts.append(sub_estimator_name)
-        internal = ", ".join(parts)
-        return f"Pipeline({internal})"
-
-    elif isinstance(estimator, FeatureUnion):
-        raise NotImplementedError
-
-    name = str(estimator)
-
-    # TODO: Remove newlines, and extra spaces
-
-    return name
-
-
-def instantiate_classifiers(features, task_name, split_name, index, estimator, param_grid, evaluate=False):
+def instantiate_classifiers(
+    features: NodeWrapper, task_name: str, split_name: str, estimator, param_grid, evaluate=False
+):
     assert isinstance(features, NodeWrapper)
-    assert isinstance(index, NodeWrapper)
 
-    task = select_task(parent=features.graph, task_name=task_name)
-    target = task["target"]
-    splits = select_split(parent=task, split_type=split_name)
+    assert task_name in get_ancestral_metadata(features, "tasks")
+    assert split_name in get_ancestral_metadata(features, "splits")
 
-    model_nodes: Dict[str, ClassifierWrapper] = dict()
+    fold_names = get_ancestral_metadata(features, "splits")[split_name]
 
-    split_names = features.graph.get_ancestral_metadata("splits")[split_name]
-    for fold_name in randomised_order(split_names):
-        clf_name = get_estimator_name(estimator=estimator)
+    task = features.graph[task_name]
+    split = features.graph[split_name]
 
-        fold_graph: ExecutionGraph = splits / clf_name / fold_name
+    models: Dict[str, ClassifierWrapper] = dict()
+
+    root = features.graph / task_name / split_name
+
+    for fold_name in randomised_order(fold_names):
+        split_node = root / fold_name
 
         # Instantiate the classifier
-        model_node = ClassifierWrapper(
-            root=fold_graph, estimator=estimator, param_grid=param_grid, fold_name=fold_name,
+        model = ClassifierWrapper(
+            parent=split_node,
+            estimator=estimator,
+            param_grid=param_grid,
+            features=features,
+            task=task,
+            split=split_node.index.get_split_series(split=split_name, fold=fold_name),
         )
 
-        # Populate the nodes
-        node, res = model_node.fit(features, task["target"], splits.index["split"])
-
         # Dump the graph
-        fold_graph.dump_graph()
+        model.dump_graph()
         if evaluate:
-            node.evaluate()
-            res.evaluate()
+            model.model.evaluate()
+            model.results.evaluate()
 
-        model_nodes[fold_name] = model_node
+        models[fold_name] = model
 
     if split_name == "deployable":
-        model_nodes = model_node
+        models = models[0]
 
-    return task, target, splits, model_nodes
+    return task, split, models

@@ -1,5 +1,7 @@
 import numpy as np
 
+from src.functional.common import sorted_node_values
+
 
 __all__ = [
     "ecdf",
@@ -14,7 +16,9 @@ def ecdf(parent, n_components):
             key=f"{key}-ecdf", func=calc_ecdf, kwargs=dict(n_components=n_components, data=node),
         )
 
-    return root
+    return root.instantiate_node(
+        key="features", func=np.concatenate, args=[sorted_node_values(root.outputs)], kwargs=dict(axis=1)
+    )
 
 
 def calc_ecdf(data, n_components):

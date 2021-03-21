@@ -28,7 +28,7 @@ class uschad(Dataset):
         )
 
     @fold_decorator
-    def build_fold(self, *args, **kwargs):
+    def build_predefined(self, *args, **kwargs):
         def callback(ii, sub_id, act_id, trial_id, data):
             return np.tile(["train", "test"][sub_id > 10], (data.shape[0], 1))
 

@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from loguru import logger
 
+from src.base import get_ancestral_metadata
 from src.utils.decorators import PartitionByTrial
 
 
@@ -40,7 +41,7 @@ def window_index(index, data, fs, win_len, win_inc, slice_at="middle"):
 def window(parent, win_len, win_inc):
     root = parent / f"{win_len=:03.2f}-{win_inc=:03.2f}"
 
-    fs = root.get_ancestral_metadata("fs")
+    fs = get_ancestral_metadata(root, "fs")
 
     kwargs = dict(index=parent.index["index"], win_len=win_len, win_inc=win_inc, fs=fs)
 

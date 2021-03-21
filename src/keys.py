@@ -48,3 +48,6 @@ class Key(object):
     def __contains__(self, key):
         validate_key(key)
         return key in self.key
+
+    def __lt__(self, other):
+        return self.key < other.key

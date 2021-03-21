@@ -5,10 +5,10 @@ import numpy as np
 from har_basic import get_classifier
 from har_basic import get_features
 from har_basic import get_windowed_wearables
-from src import evaluate_fold
-from src import ExecutionGraph
-from src import randomised_order
+from src.base import ExecutionGraph
+from src.evaluation.classification import evaluate_data_split
 from src.utils.loaders import dataset_importer
+from src.utils.misc import randomised_order
 
 
 def sorted_vals(**kwargs):
@@ -41,7 +41,7 @@ def ensemble_classifier(task_name, split_name, feat_names, clf_names, windowed_d
 
         fold.instantiate_node(
             key="results",
-            func=evaluate_fold,
+            func=evaluate_data_split,
             backend="json",
             kwargs=dict(
                 fold=windowed_data["fold"],

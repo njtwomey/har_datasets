@@ -20,7 +20,6 @@ __all__ = [
     # Metadata loaders
     "load_task_metadata",
     "load_modality_metadata",
-    "load_split_metadata",
     # Module importers
     "dataset_importer",
     "transformer_importer",
@@ -98,10 +97,6 @@ def load_task_metadata(task_name):
 
 
 # Dataset metadata
-def load_split_metadata():
-    return load_metadata("split.yaml")
-
-
 def load_modality_metadata():
     return load_metadata("modality.yaml")
 

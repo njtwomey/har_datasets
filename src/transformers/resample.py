@@ -1,6 +1,7 @@
 import numpy as np
 from scipy import signal
 
+from src.base import get_ancestral_metadata
 from src.utils.decorators import PartitionByTrial
 
 __all__ = [
@@ -58,7 +59,7 @@ def resample_metadata(index, data, fs_old, fs_new, is_index):
 
 
 def resample(parent, fs_new):
-    fs_old = parent.get_ancestral_metadata("fs")
+    fs_old = get_ancestral_metadata(parent, "fs")
 
     root = parent / f"{fs_new}Hz"
     root.meta.insert("fs", fs_new)

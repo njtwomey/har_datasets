@@ -6,15 +6,14 @@ from scipy.special import logsumexp
 from sklearn import metrics
 
 
-__all__ = ["evaluate_fold"]
+__all__ = ["evaluate_data_split"]
 
 
-def evaluate_fold(fold, fold_name, targets, estimator, prob_predictions):
-    fold = fold[fold_name]
+def evaluate_data_split(split, targets, estimator, prob_predictions):
     res = dict()
     predictions = estimator.classes_[prob_predictions.argmax(axis=1)]
-    for tr_val_te in fold.unique():
-        inds = fold == tr_val_te
+    for tr_val_te in split.unique():
+        inds = split == tr_val_te
         yy, pp, ss = targets[inds], predictions[inds], prob_predictions[inds]
         res[tr_val_te] = dict()
         res[tr_val_te] = _classification_perf_metrics(
