@@ -41,7 +41,7 @@ tasks:
       sleep: 10
       elevator_up: 11
       elevator_down: 12
-splits:
+data_partitions:
   predefined:
       - fold_0
   loso:

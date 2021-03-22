@@ -1,21 +1,20 @@
 from typing import Any
 from typing import Dict
+from typing import Optional
 
 import numpy as np
 from loguru import logger
 from mldb import NodeWrapper
-from sklearn.base import clone
+from sklearn import clone
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import GroupKFold
 from sklearn.pipeline import FeatureUnion
 from sklearn.pipeline import Pipeline
 
 from src.base import ExecutionGraph
-from src.base import get_ancestral_metadata
 from src.evaluation.classification import evaluate_data_split
-from src.utils.misc import randomised_order
 
-__all__ = ["instantiate_and_fit", "ClassifierWrapper", "instantiate_classifiers"]
+__all__ = ["instantiate_and_fit", "ClassifierWrapper"]
 
 
 def get_estimator_name(estimator):
@@ -37,7 +36,7 @@ def get_estimator_name(estimator):
     return name
 
 
-def instantiate_and_fit(index, fold, X, y, estimator, n_splits=5, sample_weight=None, param_grid=None):
+def instantiate_and_fit(index, fold, X, y, estimator, n_splits=5, param_grid=None):
     assert fold.shape[0] == index.shape[0]
     assert fold.shape[0] == X.shape[0]
     assert fold.shape[0] == y.shape[0]
@@ -57,23 +56,23 @@ def instantiate_and_fit(index, fold, X, y, estimator, n_splits=5, sample_weight=
         logger.warning(f"Setting {len(nan_row)} NaN elements to zero before fitting {estimator}.")
         X[nan_row, nan_col] = 0
 
-    estimator_clone = clone(estimator)
-
-    logger.info(f"Fitting {estimator_clone} on data (shape: {X.shape})")
+    logger.info(f"Fitting {estimator} on data (shape: {X.shape})")
 
     if param_grid is not None:
-        grid_search = GridSearchCV(estimator=estimator_clone, param_grid=param_grid, verbose=10)
-        k_fold = GroupKFold(n_splits=n_splits).split(X[train_inds], y[train_inds], index.trial.values[train_inds])
-        grid_search.cv = list(k_fold)
-        return grid_search.fit(X[train_inds], y[train_inds], sample_weight=sample_weight)
+        group_k_fold = GroupKFold(n_splits=n_splits).split(X[train_inds], y[train_inds], index.trial.values[train_inds])
 
-    return estimator_clone.fit(X[train_inds], y[train_inds], sample_weight=sample_weight)
+        grid_search = GridSearchCV(estimator=estimator, param_grid=param_grid, verbose=10, cv=list(group_k_fold))
+        grid_search.fit(X[train_inds], y[train_inds])
+
+        return grid_search.best_estimator_
+
+    return estimator.fit(X[train_inds], y[train_inds])
 
 
 # noinspection PyPep8Naming
 class BasicScorer(object):
-    def fit(self, estimator, X, y, sample_weight=None):
-        return estimator.fit(X, y, sample_weight)
+    def fit(self, estimator, X, y):
+        return estimator.fit(X, y)
 
     def score(self, estimator, X, y):
         return estimator.score(X, y)
@@ -102,46 +101,45 @@ class ClassifierWrapper(ExecutionGraph):
         features: NodeWrapper,
         split: NodeWrapper,
         task: NodeWrapper,
-        estimator: Any,
-        param_grid: Any,
-        scorer: BasicScorer,
+        estimator: NodeWrapper,
+        param_grid: Optional[Dict[str, Any]] = None,
+        scorer: Optional[BasicScorer] = None,
+        evaluate: bool = False,
     ):
         assert isinstance(parent, ExecutionGraph)
         assert isinstance(features, NodeWrapper)
         assert isinstance(split, NodeWrapper)
         assert isinstance(task, NodeWrapper)
+        assert isinstance(estimator, NodeWrapper)
 
-        super(ClassifierWrapper, self).__init__(parent=parent, name=get_estimator_name(estimator))
-
-        self.estimator = estimator
-        self.param_grid = param_grid
+        super(ClassifierWrapper, self).__init__(parent=parent, name=f"estimator={str(estimator.name.name)}")
 
         self.features = features
         self.split = split
         self.task = task
 
-        self.scorer = scorer
+        self.scorer = BasicScorer() if scorer is None else scorer
 
         model = self.instantiate_node(
             key="model",
             func=instantiate_and_fit,
             backend="sklearn",
             kwargs=dict(
-                X=features,
-                y=task,
-                index=self["index"],
-                fold=self.split,
-                estimator=self.estimator,
-                param_grid=self.param_grid,
+                X=features, y=task, index=self["index"], fold=self.split, estimator=estimator, param_grid=param_grid,
             ),
         )
 
-        self.get_or_create(
+        results = self.get_or_create(
             key="results",
             func=evaluate_data_split,
             backend="json",
             kwargs=dict(split=split, targets=task, estimator=model, prob_predictions=self.predict_proba(features)),
         )
+
+        if evaluate:
+            self.dump_graph()
+            model.evaluate()
+            results.evaluate()
 
     @property
     def model(self):
@@ -151,12 +149,9 @@ class ClassifierWrapper(ExecutionGraph):
     def results(self):
         return self["results"]
 
-    def fit(self, X, y, sample_weight=None):
+    def fit(self, X, y):
         return self.instantiate_node(
-            backend="sklearn",
-            key="model",
-            func=self.scorer.fit,
-            kwargs=dict(estimator=self["model"], X=X, y=y, sample_weight=sample_weight),
+            backend="sklearn", key="model", func=self.scorer.fit, kwargs=dict(estimator=self["model"], X=X, y=y),
         )
 
     def score(self, X, y):
@@ -188,49 +183,3 @@ class ClassifierWrapper(ExecutionGraph):
         return self.instantiate_orphan_node(
             backend="none", func=self.scorer.predict_log_proba, kwargs=dict(estimator=self["model"], X=X)
         )
-
-
-def instantiate_classifiers(
-    features: NodeWrapper, task_name: str, split_name: str, estimator, param_grid, evaluate=False
-):
-    assert isinstance(features, NodeWrapper)
-
-    assert task_name in get_ancestral_metadata(features, "tasks")
-    assert split_name in get_ancestral_metadata(features, "splits")
-
-    fold_names = get_ancestral_metadata(features, "splits")[split_name]
-
-    task = features.graph[task_name]
-
-    models: Dict[str, ClassifierWrapper] = dict()
-
-    root = features.graph / task_name / split_name
-
-    for fold_name in randomised_order(fold_names):
-        split_node = root / fold_name
-
-        # Instantiate the classifier
-        model = ClassifierWrapper(
-            parent=split_node,
-            estimator=estimator,
-            param_grid=param_grid,
-            features=features,
-            task=task,
-            split=split_node.get_split_series(split=split_name, fold=fold_name),
-            scorer=BasicScorer(),
-        )
-
-        # Dump the graph
-        model.dump_graph()
-        if evaluate:
-            model.model.evaluate()
-            model.results.evaluate()
-
-        models[fold_name] = model
-
-        if split_name == "deployable":
-            return model
-
-    assert len(models)
-
-    return models

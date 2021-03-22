@@ -8,14 +8,6 @@ __all__ = ["randomised_order", "NumpyEncoder"]
 
 
 def randomised_order(iterable):
-    """
-
-    Args:
-        iterable:
-
-    Returns:
-
-    """
     iterable = list(iterable)
     random.shuffle(iterable)
     yield from iterable

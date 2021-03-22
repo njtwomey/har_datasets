@@ -48,17 +48,20 @@ class Dataset(ExecutionGraph):
             kwargs=dict(path=self.unzip_path, metatdata=metadata),
         )
 
-        split_defs = get_ancestral_metadata(self, "splits")
+        data_partitions = get_ancestral_metadata(self, "data_partitions")
 
         self.instantiate_node(
-            key="loso", func=self.build_loso, backend="pandas", kwargs=dict(index=index, columns=split_defs["loso"]),
+            key="loso",
+            func=self.build_loso,
+            backend="pandas",
+            kwargs=dict(index=index, columns=data_partitions["loso"]),
         )
 
         self.instantiate_node(
             key="deployable",
             func=self.build_deployable,
             backend="pandas",
-            kwargs=dict(index=index, columns=split_defs["deployable"]),
+            kwargs=dict(index=index, columns=data_partitions["deployable"]),
         )
 
         tasks = get_ancestral_metadata(self, "tasks")

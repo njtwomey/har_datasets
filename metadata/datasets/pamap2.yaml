@@ -68,7 +68,7 @@ tasks:
       soccer: 20
       rope_jump: 24
       other: 0
-splits:
+data_partitions:
   predefined:
       - fold_0
   loso:

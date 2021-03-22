@@ -41,7 +41,7 @@ __all__ = ["ExecutionGraph", "get_ancestral_metadata"]
 INDEX_FILES_SET = set(
     get_yaml_file_list("indices", stem=True)
     + get_yaml_file_list("tasks", stem=True)
-    + get_yaml_file_list("splits", stem=True)
+    + get_yaml_file_list("data_partitions", stem=True)
 )
 
 DATA_ROOT: Path = build_path()
@@ -257,9 +257,12 @@ class ExecutionGraph(ComputationGraph):
 
     # Some convenience functions
 
-    def get_split_series(self, split, fold):
+    def get_split_series(self, data_partition, train_test_split):
         return self.instantiate_node(
-            key=f"{split=}-{fold=}", func=node_itemgetter(fold), backend="pandas", args=self.index[split]
+            key=f"{data_partition=}-{train_test_split=}",
+            func=node_itemgetter(train_test_split),
+            backend="pandas",
+            args=self.index[data_partition],
         )
 
     # BRANCHING

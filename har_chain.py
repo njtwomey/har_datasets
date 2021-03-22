@@ -2,7 +2,9 @@ import numpy as np
 
 from har_basic import basic_har
 from har_basic import get_classifier
+from src.base import get_ancestral_metadata
 from src.functional.common import sorted_node_values
+from src.utils.misc import randomised_order
 
 
 def har_chain(
@@ -11,7 +13,7 @@ def har_chain(
     win_len=3,
     win_inc=1,
     task_name="har",
-    split_name="predefined",
+    data_partition="predefined",
     feat_name="ecdf",
     clf_name="sgd",
     evaluate=False,
@@ -29,25 +31,36 @@ def har_chain(
 
     # Extract the representation for the test dataset
     test_dataset = dataset_alignment.pop(test_dataset)
-    feats, models = basic_har(split_name="predefined", **test_dataset, **kwargs)
+    features, test_models = basic_har(data_partition="predefined", **test_dataset, **kwargs)
 
-    # Build a dictionary of the two source datasets
-    models = {
-        name: basic_har(split_name="deployable", **dataset, **kwargs)[-1] for name, dataset in dataset_alignment.items()
-    }
-    probs = {key: model.predict_proba(feats) for key, model in models.items()}
+    # Instantiate the root directory
+    root = features.graph / f"chained-from-{sorted(dataset_alignment.keys())}"
 
-    graph = feats.graph / ("chained-from-" + "-".join(sorted(dataset_alignment.keys())))
-    probs_as_feats = graph.instantiate_node(
-        key="features", func=np.concatenate, args=[[feats] + sorted_node_values(probs)], kwargs=dict(axis=1)
-    )
+    # Build up the list of models from aux datasets
+    auxiliary_models = {train_test_split: [model] for train_test_split, model in test_models.items()}
+    for model_name, model_kwargs in dataset_alignment.items():
+        aux_features, aux_models = basic_har(data_partition="deployable", **model_kwargs, **kwargs)
+        for fi, mi in aux_models.items():
+            auxiliary_models[fi].append(mi)
 
-    # Learn the classifier
-    model = get_classifier(
-        clf_name=clf_name, features=probs_as_feats, task_name=task_name, split_name=split_name, evaluate=evaluate
-    )
+    models = dict()
 
-    return probs_as_feats, model
+    # Perform the chaining
+    train_test_splits = get_ancestral_metadata(features, "data_partitions")[data_partition]
+    for train_test_split in randomised_order(train_test_splits):
+        aux_probs = [features] + [model.predict_proba(features) for model in auxiliary_models[train_test_split]]
+        prob_features = root.instantiate_orphan_node(func=np.concatenate, args=[aux_probs], kwargs=dict(axis=1))
+
+        models[train_test_split] = get_classifier(
+            clf_name=clf_name,
+            feature_node=prob_features,
+            task_name=task_name,
+            data_partition=data_partition,
+            train_test_split=train_test_split,
+            evaluate=evaluate,
+        )
+
+    return features, models
 
 
 if __name__ == "__main__":

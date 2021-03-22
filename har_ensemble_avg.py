@@ -1,70 +1,99 @@
-from collections import defaultdict
-from typing import DefaultDict
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Tuple
-
 import numpy as np
 from mldb import NodeWrapper
+from sklearn.base import BaseEstimator
+from sklearn.ensemble import VotingClassifier
+from sklearn.preprocessing import LabelEncoder
+from sklearn.utils import Bunch
 
 from har_basic import get_classifier
 from har_basic import get_features
 from har_basic import get_windowed_wearables
 from src.base import ExecutionGraph
-from src.evaluation.classification import evaluate_data_split
-from src.functional.common import sorted_node_values
+from src.base import get_ancestral_metadata
+from src.models.base import BasicScorer
 from src.models.base import ClassifierWrapper
 from src.utils.loaders import dataset_importer
 from src.utils.misc import randomised_order
-from src.visualisations.umap_embedding import umap_embedding
 
 
-def ensemble_classifier(task_name, split_name, feat_names, clf_names, windowed_data, viz=False):
-    model_dict: DefaultDict[str, List[Tuple[str, ClassifierWrapper]]] = defaultdict(list)
-    pred_dict: DefaultDict[str, List[Tuple[str, NodeWrapper]]] = defaultdict(list)
+class PrefittedVotingClassifier(BaseEstimator):
+    def __init__(self, estimators, voting="soft", weights=None, verbose=False):
+        assert weights is None or len(weights) == len(estimators)
+        self.estimators = estimators
+        self.voting = voting
+        self.weights = weights
+        self.verbose = verbose
+        self.le_ = None
 
-    graph: ExecutionGraph = windowed_data / f"{sorted(feat_names)}x{sorted(clf_names)}"
+    def predict_proba(self, X):
+        weights = self.weights
+        if weights is None:
+            weights = np.ones(len(weights))
+        probs = [est.predict_proba(X) * ww for ww, (_, est) in zip(weights, self.estimators)]
+        return sum(probs)
 
-    # Iterate over all features and classifiers
-    for feat_name in randomised_order(feat_names):
-        features = get_features(feat_name=feat_name, windowed_data=windowed_data)
-        for clf_name in randomised_order(clf_names):
-            model_nodes = get_classifier(
-                clf_name=clf_name, features=features, task_name=task_name, split_name=split_name
-            )
-            for fold, estimator in model_nodes.items():
-                key = f"{feat_name=}-{clf_name=}"
-                model_dict[fold].append((key, model_nodes[fold].model))
-                pred_dict[fold].append((key, model_nodes[fold].predict_proba(features)))
+    def predict(self, X):
+        probs = self.predict_proba(X)
+        inds = np.argmax(probs, axis=1)
+        return self.le_.classes_[inds]
 
-    # For each train/val/test split,
-    for fold_name in model_dict.keys():
-        fold = graph / fold_name
+    def fit(self, X, y, sample_weight=None):
+        self.le = LabelEncoder().fit(y)
+        return self
 
-        mean_proba = fold.instantiate_node(
-            key="features", func=np.mean, args=[sorted_node_values(dict(pred_dict[fold_name]))], kwargs=dict(axis=0)
+    def score(self, X, y):
+        return np.mean(self.predict(X) == y)
+
+
+def ensemble_classifier(
+    task_name: str,
+    feat_name: str,
+    data_partition: str,
+    train_test_split: str,
+    windowed_data: NodeWrapper,
+    clf_names,
+    evaluate=False,
+):
+    features = get_features(feat_name=feat_name, windowed_data=windowed_data)
+
+    graph: ExecutionGraph = features.graph / f"ensemble-over={sorted(clf_names)}" / task_name / train_test_split
+
+    estimators = list()
+    for clf_name in randomised_order(clf_names):
+        estimators.append(
+            [
+                f"{clf_name=}",
+                get_classifier(
+                    feature_node=features,
+                    clf_name=clf_name,
+                    task_name=task_name,
+                    data_partition=data_partition,
+                    train_test_split=train_test_split,
+                ).model,
+            ]
         )
 
-        if viz:
-            umap_embedding(mean_proba, task_name=task_name).evaluate()
+    estimator = graph.instantiate_node(
+        key=f"PrefittedVotingClassifier-{feat_name}".lower(),
+        func=PrefittedVotingClassifier,
+        kwargs=dict(estimators=estimators, voting="soft", verbose=10,),
+    )
 
-        results = fold.instantiate_node(
-            key="results",
-            func=evaluate_data_split,
-            backend="json",
-            kwargs=dict(
-                split=fold.get_split_series(split=split_name, fold=fold_name),
-                targets=windowed_data[task_name],
-                estimator=model_dict[fold_name][0][1],
-                prob_predictions=mean_proba,
-            ),
-        )
+    param_grid = None
+    # param_grid = dict(weights=list(map(tuple, np.random.dirichlet(np.ones(len(estimators)), size=20))))
 
-        fold.dump_graph()
-        results.evaluate()
+    model = ClassifierWrapper(
+        parent=graph,
+        estimator=estimator,
+        param_grid=param_grid,
+        features=features,
+        task=features.graph[task_name],
+        split=graph.get_split_series(data_partition=data_partition, train_test_split=train_test_split),
+        scorer=BasicScorer(),
+        evaluate=evaluate,
+    )
 
-    return model_dict
+    return model
 
 
 def basic_ensemble(
@@ -72,7 +101,8 @@ def basic_ensemble(
     modality="all",
     location="all",
     task_name="har",
-    split_name="predefined",
+    feat_name="ecdf",
+    data_partition="predefined",
     fs_new=33,
     win_len=3,
     win_inc=1,
@@ -83,15 +113,21 @@ def basic_ensemble(
         dataset=dataset, modality=modality, location=location, fs_new=fs_new, win_len=win_len, win_inc=win_inc
     )
 
-    ensemble = ensemble_classifier(
-        task_name=task_name,
-        split_name=split_name,
-        feat_names=["ecdf", "statistical"],
-        clf_names=["sgd", "lr", "rf"],
-        windowed_data=windowed_data,
-    )
+    models = dict()
 
-    return ensemble
+    train_test_splits = get_ancestral_metadata(windowed_data, "data_partitions")[data_partition]
+    for train_test_split in randomised_order(train_test_splits):
+        models[train_test_split] = ensemble_classifier(
+            feat_name=feat_name,
+            task_name=task_name,
+            data_partition=data_partition,
+            windowed_data=windowed_data,
+            train_test_split=train_test_split,
+            clf_names=["sgd", "lr", "rf"],
+            evaluate=True,
+        )
+
+    return models
 
 
 if __name__ == "__main__":

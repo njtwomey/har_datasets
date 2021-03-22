@@ -37,7 +37,7 @@ tasks:
       sit: 4
       stand: 5
       lie: 6
-splits:
+data_partitions:
   predefined:
       - fold_0
   loso:
