@@ -1,74 +1,67 @@
-from src.features import ecdf
-from src.features import statistical_features
-from src.models import random_forest
-from src.models import sgd_classifier
-from src.selectors import select_split
-from src.selectors import select_task
-from src.transformers import body_grav_filter
-from src.transformers import resample
-from src.transformers import window
-from src.transformers.modality_selector import concatenate_features
-from src.transformers.modality_selector import modality_selector
+from src.base import get_ancestral_metadata
+from src.motifs.features import get_features
+from src.motifs.features import get_windowed_wearables
+from src.motifs.models import get_classifier
 from src.utils.loaders import dataset_importer
-from src.visualisations import umap_embedding
+from src.utils.misc import randomised_order
+from src.visualisations.umap_embedding import umap_embedding
 
 
-def har_basic(
+def basic_har(
+    #
+    # Dataset
     dataset_name="pamap2",
+    #
+    # Representation sources
+    modality="all",
+    location="all",
+    #
+    # Task/split
+    task_name="har",
+    data_partition="predefined",
+    #
+    # Windowification
     fs_new=33,
     win_len=3,
     win_inc=1,
-    task="har",
-    split_type="predefined",
-    features="ecdf",
-    modality="accel",
-    placement="all",
-    classifier="sgd",
+    #
+    # Features
+    feat_name="ecdf",
+    clf_name="rf",
+    #
+    # Embedding visualisation
     viz=False,
+    evaluate=False,
 ):
-    # Window/align the raw data
     dataset = dataset_importer(dataset_name)
 
-    # Select the features that we're interested in, and get the features
-    selected_feats = modality_selector(parent=dataset, modality=modality, location=placement)
+    # Resample, filter and window the raw sensor data
+    wear_windowed = get_windowed_wearables(
+        dataset=dataset, modality=modality, location=location, fs_new=fs_new, win_len=win_len, win_inc=win_inc
+    )
 
-    # Process the wearable data
-    wear_resampled = resample(parent=selected_feats, fs_new=fs_new)
-    wear_filtered = body_grav_filter(parent=wear_resampled)
-    wear_windowed = window(parent=wear_filtered, win_len=win_len, win_inc=win_inc)
+    # Extract features
+    features = get_features(feat_name=feat_name, windowed_data=wear_windowed)
 
-    # Calculate the features that we want
-    if features == "statistical":
-        wear_feats = statistical_features(parent=wear_windowed)
-    elif features == "ecdf":
-        wear_feats = ecdf(parent=wear_windowed, n_components=21)
-    else:
-        raise ValueError
-
-    # Aggregate the features together
-    feature_node = concatenate_features(wear_feats)
-
-    # Get the task (and its labels), and the train/val/test splits
-    task = select_task(parent=wear_feats, task_name=task)
-    split = select_split(parent=task, split_type=split_type)
-
-    # Learn the classifier
-    if classifier == "sgd":
-        clf = sgd_classifier(parent=split, data=feature_node)
-    elif classifier == "rf":
-        clf = random_forest(parent=split, data=feature_node)
-    else:
-        raise ValueError
-
-    clf.dump_graph()
-    clf.evaluate_outputs()
-
-    # Visualise the embeddings
+    # Visualise the feature embeddings
     if viz:
-        umap_embedding(feature_node, task=task).evaluate_outputs()
+        umap_embedding(features, task_name=task_name).evaluate()
 
-    return feature_node, task, split, clf
+    # Get classifier params
+    models = dict()
+    train_test_splits = get_ancestral_metadata(features, "data_partitions")[data_partition]
+    for train_test_split in randomised_order(train_test_splits):
+        models[train_test_split] = get_classifier(
+            clf_name=clf_name,
+            feature_node=features,
+            task_name=task_name,
+            data_partition=data_partition,
+            evaluate=evaluate,
+            train_test_split=train_test_split,
+        )
+
+    return features, models
 
 
 if __name__ == "__main__":
-    har_basic()
+    basic_har(viz=True, evaluate=True)

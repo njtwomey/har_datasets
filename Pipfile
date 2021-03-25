@@ -1,9 +1,7 @@
 [[source]]
-name = "pypi"
 url = "https://pypi.org/simple"
 verify_ssl = true
-
-[dev-packages]
+name = "pypi"
 
 [packages]
 requests = "*"
@@ -19,10 +17,13 @@ jupyter = "*"
 loguru = "*"
 tqdm = "*"
 mldb = {git = "https://github.com/njtwomey/mldb.git"}
-PyYAML = "*"
 spectrum = "*"
+click = "*"
 umap-learn = "*"
-networkx = "*"
+PyYAML = "*"
+pygraphviz = "*"
+
+[dev-packages]
 
 [requires]
 python_version = "3.8"

@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 import os
 
-from src import DatasetMeta
-from src import load_datasets_metadata
+from src.meta import DatasetMeta
 from src.utils.loaders import build_path
+from src.utils.loaders import get_yaml_file_list
 from src.utils.loaders import load_metadata
+from src.utils.loaders import load_yaml
 
 
 def make_links(links, desc="Link"):
@@ -39,6 +40,10 @@ def make_dataset_row(dataset):
         "| {} |".format(" | ".join(["-----"] * len(data))),
         "| {} |".format(" | ".join(map(str, data))),
     )
+
+
+def load_datasets_metadata():
+    return [load_yaml(path) for path in get_yaml_file_list("datasets", stem=False)]
 
 
 def main():

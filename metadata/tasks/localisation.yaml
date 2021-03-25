@@ -1,12 +1,56 @@
-living_1:               0
-living_2:               1
-study:                  2
-kitchen:                3
-bath:                   4
-bed_1:                  5
-bed_2:                  6
-toilet:                 7
-dining:                 8
-hall_down:              9
-stairs:                 10
-hall_up:                11
+ - floor_5
+ - floor_4
+ - floor_3
+ - floor_2
+ - floor_1
+ - floor_0
+ - basement_1
+ - basement_2
+ - basement_3
+ - basement_4
+ - basement_5
+
+ - hallway_1
+ - hallway_2
+ - hallway_3
+ - hallway_4
+ - hallway_5
+
+ - bathroom_1
+ - bathroom_2
+ - bathroom_3
+ - bathroom_4
+ - bathroom_5
+
+ - toilet_1
+ - toilet_2
+ - toilet_3
+ - toilet_4
+ - toilet_5
+
+ - living_1
+ - living_2
+ - living_3
+ - living_4
+ - living_5
+
+ - bedroom_1
+ - bedroom_2
+ - bedroom_3
+ - bedroom_4
+ - bedroom_5
+
+ - dining_room_1
+ - dining_room_2
+ - dining_room_3
+ - dining_room_4
+ - dining_room_5
+
+ - stairs_1
+ - stairs_2
+ - stairs_3
+ - stairs_4
+ - stairs_5
+
+ - kitchen
+ - study

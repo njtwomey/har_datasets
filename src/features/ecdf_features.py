@@ -1,5 +1,7 @@
 import numpy as np
 
+from src.functional.common import sorted_node_values
+
 
 __all__ = [
     "ecdf",
@@ -7,33 +9,19 @@ __all__ = [
 
 
 def ecdf(parent, n_components):
-    root = parent / f"ecdf_{n_components}"
+    root = parent / f"feat='ecdf'-k={n_components}"
 
     for key, node in parent.outputs.items():
-        root.outputs.add_output(
-            key=key + ("ecdf",),
-            func=calc_ecdf,
-            kwargs=dict(n_components=n_components, index=parent.index["index"], data=node),
+        root.instantiate_node(
+            key=f"{key}-ecdf", backend="numpy", func=calc_ecdf, kwargs=dict(n_components=n_components, data=node),
         )
 
-    return root
+    return root.instantiate_node(
+        key="features", func=np.concatenate, args=[sorted_node_values(root.outputs)], kwargs=dict(axis=1)
+    )
 
 
-def calc_ecdf(index, data, n_components):
-    """
-
-    Parameters
-    ----------
-    key
-    index
-    data
-    n_components
-
-    Returns
-    -------
-
-    """
-
+def calc_ecdf(data, n_components):
     return np.asarray([ecdf_rep(datum, n_components) for datum in data])
 
 

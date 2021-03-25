@@ -1,25 +1,37 @@
-walk:                   0
-walk_up:                1
-walk_down:              2
-sit:                    3
-stand:                  4
-lie:                    5
-run:                    6
-cycle:                  7
-walk_nordic:            8
-watch_tv:               9
-work_computer:          10
-drive_car:              11
-vacuum:                 12
-iron:                   13
-laundry:                14
-clean:                  15
-soccer:                 16
-rope_jump:              17
-other:                  18
-walk_left:              19
-walk_right:             20
-jump:                   21
-sleep:                  22
-elevator_up:            23
-elevator_down:          24
+# Sedentary activities
+ - sit
+ - stand
+ - lie
+ - watch_tv
+ - elevator_up
+ - elevator_down
+ - sleep
+
+# Walking activities
+ - walk
+ - walk_up
+ - walk_down
+ - walk_left
+ - walk_right
+ - walk_nordic
+
+# Household
+ - iron
+ - laundry
+ - clean
+ - vacuum
+
+# Sport/exercise
+ - run
+ - cycle
+ - soccer
+ - rope_jump
+ - jump
+
+# Other
+ - work_computer
+ - drive_car
+
+# Catchall
+ - other
+ - none

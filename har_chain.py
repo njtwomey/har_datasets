@@ -1,84 +1,66 @@
 import numpy as np
-from sklearn.linear_model import SGDClassifier
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
 
-from har_basic import har_basic
-from src.models.sklearn.base import sklearn_model_factory
-from src.selectors import select_split
-from src.selectors import select_task
-
-
-CLASSIFIERS = dict()
-
-
-def chain(data):
-    probs = {kk: vv.predict_proba(data) for kk, vv in CLASSIFIERS.items()}
-    return np.concatenate([probs[kk] for kk in sorted(probs.keys())], axis=1)
-
-
-class ClassifierChain(SGDClassifier):
-    def fit(self, x, y):
-        return super(ClassifierChain, self).fit(chain(x), y)
-
-    def predict_proba(self, x):
-        return super(ClassifierChain, self).predict_proba(chain(x))
-
-    def predict(self, x):
-        return super(ClassifierChain, self).predict(chain(x))
-
-
-def classifier_chain(parent, data_node, model_nodes):
-    for kk, vv in model_nodes.items():
-        CLASSIFIERS[kk] = vv.evaluate()
-    return sklearn_model_factory(
-        name=f"classifier_chain={sorted(model_nodes.keys())}",
-        parent=parent,
-        data=data_node,
-        model=Pipeline([("scale", StandardScaler()), ("clf", ClassifierChain())]),
-        xval=dict(clf__loss=["log"], clf__penalty=["l2"], clf__alpha=np.power(10.0, np.arange(-5, 5 + 1)),),
-        **model_nodes,
-    )
+from har_basic import basic_har
+from src.base import get_ancestral_metadata
+from src.motifs.models import get_classifier
+from src.utils.misc import randomised_order
 
 
 def har_chain(
     test_dataset="anguita2013",
     fs_new=33,
-    win_len=2.56,
+    win_len=3,
     win_inc=1,
-    task="har",
-    split_type="predefined",
-    features="ecdf",
+    task_name="har",
+    data_partition="predefined",
+    feat_name="ecdf",
+    clf_name="sgd",
+    evaluate=False,
 ):
     # Make metadata for the experiment
-    kwargs = dict(fs_new=fs_new, win_len=win_len, win_inc=win_inc, task=task, features=features)
-    dataset_alignment = dict(
-        anguita2013=dict(dataset_name="anguita2013", placement="waist", modality="accel"),
-        pamap2=dict(dataset_name="pamap2", placement="chest", modality="accel"),
-        uschad=dict(dataset_name="uschad", placement="waist", modality="accel"),
+    kwargs = dict(
+        fs_new=fs_new, win_len=win_len, win_inc=win_inc, task_name=task_name, feat_name=feat_name, clf_name=clf_name
     )
 
-    # Extract the representation for the test datasett
+    dataset_alignment = dict(
+        anguita2013=dict(dataset_name="anguita2013", location="waist", modality="accel"),
+        pamap2=dict(dataset_name="pamap2", location="chest", modality="accel"),
+        uschad=dict(dataset_name="uschad", location="waist", modality="accel"),
+    )
+
+    # Extract the representation for the test dataset
     test_dataset = dataset_alignment.pop(test_dataset)
-    test_feats, test_task, test_split, test_clf = har_basic(split_type="predefined", **test_dataset, **kwargs)
+    features, test_models = basic_har(data_partition="predefined", **test_dataset, **kwargs)
 
-    # Build a dictionary of the two source datasets
-    models = {
-        name: har_basic(split_type="deployable", **dataset, **kwargs)[-1].model
-        for name, dataset in dataset_alignment.items()
-    }
+    # Instantiate the root directory
+    root = features.graph / f"chained-from-{sorted(dataset_alignment.keys())}"
 
-    # Get the task (and its labels), and the train/val/test splits
-    task = select_task(parent=test_feats.parent, task_name=task)
-    split = select_split(parent=task, split_type=split_type)
+    # Build up the list of models from aux datasets
+    auxiliary_models = {train_test_split: [model] for train_test_split, model in test_models.items()}
+    for model_name, model_kwargs in dataset_alignment.items():
+        aux_features, aux_models = basic_har(data_partition="deployable", **model_kwargs, **kwargs)
+        for fi, mi in aux_models.items():
+            auxiliary_models[fi].append(mi)
 
-    # Learn the classifier
-    clf = classifier_chain(parent=split, data_node=test_feats, model_nodes=models)
-    clf.dump_graph()
-    clf.evaluate_outputs()
+    models = dict()
 
-    return clf
+    # Perform the chaining
+    train_test_splits = get_ancestral_metadata(features, "data_partitions")[data_partition]
+    for train_test_split in randomised_order(train_test_splits):
+        aux_probs = [features] + [model.predict_proba(features) for model in auxiliary_models[train_test_split]]
+        prob_features = root.instantiate_orphan_node(func=np.concatenate, args=[aux_probs], kwargs=dict(axis=1))
+
+        models[train_test_split] = get_classifier(
+            clf_name=clf_name,
+            feature_node=prob_features,
+            task_name=task_name,
+            data_partition=data_partition,
+            train_test_split=train_test_split,
+            evaluate=evaluate,
+        )
+
+    return features, models
 
 
 if __name__ == "__main__":
-    har_chain()
+    har_chain(evaluate=True)

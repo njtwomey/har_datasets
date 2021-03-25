@@ -10,8 +10,8 @@ import requests
 from loguru import logger
 from tqdm import tqdm
 
-from src import DatasetMeta
-from src import iter_dataset_paths
+from src.meta import DatasetMeta
+from src.utils.loaders import iter_dataset_paths
 
 
 def unzip_data(zip_path, in_name, out_name):

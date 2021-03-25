@@ -22,29 +22,29 @@ modalities:
   - accel
   - gyro
   - mag
-placements:
+locations:
   - ankle
   - chest
   - wrist
 sources:
-  - placement: ankle
-    modality: accel
-  - placement: ankle
-    modality: gyro
-  - placement: ankle
-    modality: mag
-  - placement: chest
-    modality: accel
-  - placement: chest
-    modality: gyro
-  - placement: chest
-    modality: mag
-  - placement: wrist
-    modality: accel
-  - placement: wrist
-    modality: gyro
-  - placement: wrist
-    modality: mag
+  - loc: ankle
+    mod: accel
+  - loc: ankle
+    mod: gyro
+  - loc: ankle
+    mod: mag
+  - loc: chest
+    mod: accel
+  - loc: chest
+    mod: gyro
+  - loc: chest
+    mod: mag
+  - loc: wrist
+    mod: accel
+  - loc: wrist
+    mod: gyro
+  - loc: wrist
+    mod: mag
 tasks:
   har:
     evaluation: classification
@@ -68,3 +68,18 @@ tasks:
       soccer: 20
       rope_jump: 24
       other: 0
+data_partitions:
+  predefined:
+      - fold_0
+  loso:
+      - fold_0
+      - fold_1
+      - fold_2
+      - fold_3
+      - fold_4
+      - fold_5
+      - fold_6
+      - fold_7
+      - fold_8
+  deployable:
+      - fold_0

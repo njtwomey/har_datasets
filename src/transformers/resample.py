@@ -1,6 +1,7 @@
 import numpy as np
 from scipy import signal
 
+from src.base import get_ancestral_metadata
 from src.utils.decorators import PartitionByTrial
 
 __all__ = [
@@ -58,7 +59,7 @@ def resample_metadata(index, data, fs_old, fs_new, is_index):
 
 
 def resample(parent, fs_new):
-    fs_old = parent.get_ancestral_metadata("fs")
+    fs_old = get_ancestral_metadata(parent, "fs")
 
     root = parent / f"{fs_new}Hz"
     root.meta.insert("fs", fs_new)
@@ -68,16 +69,15 @@ def resample(parent, fs_new):
     if fs_old != fs_new:
         # Only compute indexes and outputs if the sample rate has changed
         for key, node in parent.index.items():
-            root.index.add_output(
+            root.instantiate_node(
                 key=key,
+                backend="pandas",
                 func=PartitionByTrial(resample_metadata),
-                kwargs=dict(
-                    index=parent.index["index"], data=node, is_index="index" in str(key), **kwargs
-                ),
+                kwargs=dict(index=parent.index["index"], data=node, is_index="index" in str(key), **kwargs),
             )
 
         for key, node in parent.outputs.items():
-            root.outputs.add_output(
+            root.instantiate_node(
                 key=key,
                 func=PartitionByTrial(resample_data),
                 kwargs=dict(index=parent.index["index"], data=node, **kwargs),

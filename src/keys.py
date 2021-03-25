@@ -1,49 +1,48 @@
 __all__ = ["Key"]
 
-
-def validate_key(key):
-    if isinstance(key, Key):
-        return key.key
-    if key is None:
-        key = tuple()
-    if isinstance(key, str):
-        key = (key,)
-    assert isinstance(key, tuple)
-    return key
+from pathlib import Path
+from typing import Union
 
 
 class Key(object):
-    def __init__(self, args):
-        if isinstance(args, Key):
-            self.key = args.key
-        self.key = validate_key(args)
+    def __init__(self, key):
+        self.key = validate_key(key)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.key)
 
-    def __str__(self):
-        return "-".join(self.key)
+    def __str__(self) -> str:
+        return self.key
 
-    def __getitem__(self, item):
-        return self.key[item]
+    def __repr__(self) -> str:
+        key = self.key
+        return f"Key({key=})"
 
-    def __repr__(self):
-        return f"<Key key={self.key}>"
+    def __eq__(self, other: Union["Key", Path, str]) -> bool:
+        if isinstance(other, Path):
+            return self.key == other.name
+        if isinstance(other, Key):
+            return self.key == other.key
+        if isinstance(other, str):
+            return self.key == other
+        raise NotImplementedError
 
-    def __eq__(self, other):
-        return self.key == other.key
-
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.key)
 
-    def __add__(self, other):
-        if isinstance(other, str):
-            return Key(self.key + (other,))
-        elif isinstance(other, tuple):
-            return Key(self.key + other)
-        elif isinstance(other, Key):
-            return Key(self.key + other.key)
-        raise TypeError
+    def __contains__(self, key) -> bool:
+        validate_key(key)
+        return key in self.key
 
-    def __contains__(self, item):
-        return item in self.key
+    def __lt__(self, other) -> bool:
+        return self.key < other.key
+
+
+def validate_key(key: Union[Path, Key, str]):
+    if isinstance(key, Path):
+        return key.name
+    if isinstance(key, Key):
+        return key.key
+    if isinstance(key, str):
+        return key
+    raise ValueError(f"Unsupported key type: expected str or Key, got {type(key)} (value: {key})")

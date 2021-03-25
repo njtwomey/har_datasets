@@ -1,9 +1,0 @@
-supported:
-  # Provided by the original loader
-  - predefined
-
-  # Leaving one subject out
-  - loso
-
-  # Cross validated on all available data
-  - deployable

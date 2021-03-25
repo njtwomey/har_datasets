@@ -20,8 +20,6 @@ __all__ = [
     # Metadata loaders
     "load_task_metadata",
     "load_modality_metadata",
-    "load_placement_metadata",
-    "load_split_metadata",
     # Module importers
     "dataset_importer",
     "transformer_importer",
@@ -33,23 +31,23 @@ __all__ = [
 ]
 
 
-def get_env(key):
+def get_env(key) -> Path:
     load_dotenv(find_dotenv())
     return Path(environ[key])
 
 
 # Root directory of the project
-def get_project_root():
+def get_project_root() -> Path:
     return get_env("PROJECT_ROOT")
 
 
 # For building file structure
-def build_path(*args):
-    path = get_env("BUILD_ROOT").joinpath(*args)
+def build_path(*args) -> Path:
+    path = get_env("DATA_ROOT").joinpath(*args)
     return path
 
 
-def metadata_path(*args):
+def metadata_path(*args) -> Path:
     path = get_project_root() / "metadata"
     return path.joinpath(*args)
 
@@ -99,14 +97,6 @@ def load_task_metadata(task_name):
 
 
 # Dataset metadata
-def load_split_metadata():
-    return load_metadata("split.yaml")
-
-
-def load_placement_metadata():
-    return load_metadata("placement.yaml")
-
-
 def load_modality_metadata():
     return load_metadata("modality.yaml")
 
@@ -125,7 +115,7 @@ def get_yaml_file_list(*args, stem=False):
 
 def module_importer(module_path, class_name, *args, **kwargs):
     """
-    
+
     Args:
         module_path:
         class_name:
@@ -142,7 +132,7 @@ def module_importer(module_path, class_name, *args, **kwargs):
 
 def dataset_importer(class_name, *args, **kwargs):
     """
-    
+
     Args:
         class_name:
         *args:
@@ -156,7 +146,7 @@ def dataset_importer(class_name, *args, **kwargs):
 
 def feature_importer(class_name, *args, **kwargs):
     """
-    
+
     Args:
         class_name:
         *args:
@@ -170,7 +160,7 @@ def feature_importer(class_name, *args, **kwargs):
 
 def transformer_importer(class_name, *args, **kwargs):
     """
-    
+
     Args:
         class_name:
         *args:
@@ -184,7 +174,7 @@ def transformer_importer(class_name, *args, **kwargs):
 
 def pipeline_importer(class_name, *args, **kwargs):
     """
-    
+
     Args:
         class_name:
         *args:
@@ -198,7 +188,7 @@ def pipeline_importer(class_name, *args, **kwargs):
 
 def model_importer(class_name, *args, **kwargs):
     """
-    
+
     Args:
         class_name:
         *args:
@@ -212,7 +202,7 @@ def model_importer(class_name, *args, **kwargs):
 
 def visualisation_importer(class_name, *args, **kwargs):
     """
-    
+
     Args:
         class_name:
         *args:

@@ -1,121 +1,119 @@
-import numpy as np
-import pandas as pd
-from sklearn.base import BaseEstimator
-from sklearn.base import ClassifierMixin
+from operator import itemgetter
+from typing import Dict
+from typing import List
+from typing import Tuple
 
-from har_basic import har_basic
-from src.models.sklearn.base import sklearn_model_factory
-from src.selectors import select_split
-from src.selectors import select_task
+from mldb import NodeWrapper
 
-
-CLASSIFIERS = dict()
-
-
-class ZeroShotModel(BaseEstimator, ClassifierMixin):
-    def __init__(self, alpha, **kwargs):
-        self.alpha = alpha
-        self.classifiers = kwargs
-        self.classes_ = None
-        self.label_map = dict(
-            # cycle="walk",
-            elevator_down="stand",
-            elevator_up="stand",
-            iron="stand",
-            # jump="walk",
-            # other="walk",
-            # rope_jump="walk",
-            run="walk",
-            sit="sit",
-            sleep="lie",
-            stand="stand",
-            # vacuum="walk",
-            walk="walk",
-            walk_down="walk_down",
-            walk_left="walk",
-            walk_nordic="walk",
-            walk_right="walk",
-            walk_up="walk_up",
-            lie="lie",
-        )
-
-    def fit(self, x, y):
-        self.classes_ = np.unique(y)
-        return self
-
-    def predict_proba(self, data):
-        weights = dict(zip(sorted(CLASSIFIERS.keys()), [self.alpha, 1 - self.alpha]))
-
-        probs = {kk: pd.DataFrame(mm.predict_proba(data), columns=mm.classes_) for kk, mm in CLASSIFIERS.items()}
-
-        label_idx = dict(zip(self.classes_, np.arange(len(self.classes_))))
-        output = np.zeros((len(data), len(self.classes_)))
-        for kk, prob in probs.items():
-            cols = np.intersect1d(prob.columns, list(self.label_map.keys()))
-            prob = prob[cols]
-            prob = weights[kk] * prob / prob.values.sum(axis=1, keepdims=True)
-            for col in prob.columns:
-                if col in self.label_map:
-                    output[:, label_idx[self.label_map[col]]] += prob[col].values
-
-        return output
-
-    def score(self, x, y):
-        return np.mean(self.predict(x) == y)
-
-    def predict(self, data):
-        return self.classes_[self.predict_proba(data).argmax(axis=1)]
+from har_basic import basic_har
+from src.base import ExecutionGraph
+from src.base import get_ancestral_metadata
+from src.models.base import BasicScorer
+from src.models.base import ClassifierWrapper
+from src.models.ensembles import ZeroShotVotingClassifier
+from src.utils.misc import randomised_order
 
 
-def make_zero_shot_model(parent, data, models):
-    for kk, vv in models.items():
-        CLASSIFIERS[kk] = vv.evaluate()
-    return sklearn_model_factory(
-        name=f"zero_shot_model_from={sorted(models.keys())}",
-        parent=parent,
-        data=data,
-        model=ZeroShotModel(alpha=0.5, **CLASSIFIERS),
-        xval=dict(alpha=np.linspace(0, 1, 21)),
-        **models,
+def make_zero_shot_classifier(
+    feat_name,
+    features,
+    estimators: List[Tuple[str, NodeWrapper]],
+    task_name,
+    data_partition,
+    train_test_split,
+    label_alignment: Dict[str, str],
+    evaluate: bool = True,
+):
+    clf_names = sorted(map(itemgetter(0), estimators))
+
+    graph: ExecutionGraph = features.graph / f"zero-shot-from={sorted(clf_names)}" / task_name / data_partition / train_test_split
+
+    estimator = graph.instantiate_node(
+        key=f"ZeroShotVotingClassifier-{feat_name}".lower(),
+        func=ZeroShotVotingClassifier,
+        kwargs=dict(estimators=estimators, voting="soft", verbose=10, label_alignment=label_alignment),
     )
+
+    model = ClassifierWrapper(
+        parent=graph,
+        estimator=estimator,
+        features=features,
+        task=features.graph[task_name],
+        split=graph.get_split_series(data_partition=data_partition, train_test_split=train_test_split),
+        scorer=BasicScorer(),
+        evaluate=evaluate,
+    )
+
+    return model
 
 
 def har_zero(
-    test_dataset="anguita2013",
-    fs_new=33,
-    win_len=2.56,
-    win_inc=1,
-    task="har",
-    split_type="predefined",
-    features="statistical",
+    fs_new: float = 33,
+    win_len: float = 3,
+    win_inc: float = 1,
+    clf_name: str = "sgd",
+    task_name: str = "har",
+    dataset_partition: str = "predefined",
+    feat_name: str = "statistical",
+    evaluate: bool = False,
 ):
-    kwargs = dict(fs_new=fs_new, win_len=win_len, win_inc=win_inc, task=task, features=features, viz=False)
-
-    dataset_alignment = dict(
-        anguita2013=dict(dataset_name="anguita2013", placement="waist", modality="accel"),
-        pamap2=dict(dataset_name="pamap2", placement="chest", modality="accel"),
-        uschad=dict(dataset_name="uschad", placement="waist", modality="accel"),
+    kwargs = dict(
+        fs_new=fs_new, win_len=win_len, win_inc=win_inc, task_name=task_name, feat_name=feat_name, clf_name=clf_name
     )
 
-    test_dataset = dataset_alignment.pop(test_dataset)
+    external_datasets = dict(
+        pamap2=dict(dataset_name="pamap2", location="chest", modality="accel"),
+        uschad=dict(dataset_name="uschad", location="waist", modality="accel"),
+    )
 
-    test_feats, test_task, test_split, test_clf = har_basic(split_type="predefined", **test_dataset, **kwargs)
+    test_dataset = dict(dataset_name="anguita2013", location="waist", modality="accel")
+
+    label_alignment = dict(
+        cycle="walk",
+        elevator_down="stand",
+        elevator_up="stand",
+        iron="stand",
+        jump="walk",
+        other="walk",
+        rope_jump="walk",
+        run="walk",
+        sit="sit",
+        sleep="lie",
+        stand="stand",
+        vacuum="walk",
+        walk="walk",
+        walk_down="walk_down",
+        walk_left="walk",
+        walk_nordic="walk",
+        walk_right="walk",
+        walk_up="walk_up",
+        lie="lie",
+    )
+
+    features, test_models = basic_har(data_partition="predefined", **test_dataset, **kwargs)
+
+    auxiliary_models = dict()
+    for model_name, model_kwargs in external_datasets.items():
+        aux_features, aux_models = basic_har(data_partition="deployable", **model_kwargs, **kwargs)
+        auxiliary_models[model_name] = aux_models
 
     models = dict()
-    for name, dataset in dataset_alignment.items():
-        _, _, _, classifier = har_basic(split_type="deployable", **dataset, **kwargs)
-        models[name] = classifier.model
 
-    task = select_task(parent=test_feats.parent, task_name=task)
-    split = select_split(parent=task, split_type=split_type)
+    train_test_splits = get_ancestral_metadata(features, "data_partitions")[dataset_partition]
+    for train_test_split in randomised_order(train_test_splits):
+        models[train_test_split] = make_zero_shot_classifier(
+            estimators=[(mn, mm[train_test_split].model) for mn, mm in auxiliary_models.items()],
+            feat_name=feat_name,
+            features=features,
+            task_name=task_name,
+            train_test_split=train_test_split,
+            data_partition=dataset_partition,
+            evaluate=evaluate,
+            label_alignment=label_alignment,
+        )
 
-    # Learn the classifier
-    clf = make_zero_shot_model(parent=split, data=test_feats, models=models)
-    clf.dump_graph()
-    clf.evaluate_outputs()
-
-    return clf
+    return models
 
 
 if __name__ == "__main__":
-    har_zero()
+    har_zero(evaluate=True)
