@@ -5,6 +5,8 @@ __pycache__/
 # C extensions
 *.so
 
+*.lock
+
 devel.py
 
 # Distribution / packaging
@@ -24,6 +26,7 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
+*.lock
 
 niall_*.py
 

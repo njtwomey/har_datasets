@@ -3,40 +3,28 @@ from typing import Dict
 from typing import Optional
 
 import numpy as np
+import pandas as pd
 from loguru import logger
 from mldb import NodeWrapper
-from sklearn import clone
+from sklearn.base import BaseEstimator
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import GroupKFold
-from sklearn.pipeline import FeatureUnion
-from sklearn.pipeline import Pipeline
 
 from src.base import ExecutionGraph
 from src.evaluation.classification import evaluate_data_split
 
-__all__ = ["instantiate_and_fit", "ClassifierWrapper"]
+__all__ = ["instantiate_and_fit", "ClassifierWrapper", "BasicScorer"]
 
 
-def get_estimator_name(estimator):
-    if isinstance(estimator, Pipeline):
-        parts = []
-        for key, sub_estimator in estimator.steps:
-            sub_estimator_name = get_estimator_name(sub_estimator)
-            parts.append(sub_estimator_name)
-        internal = ", ".join(parts)
-        return f"Pipeline({internal})"
-
-    elif isinstance(estimator, FeatureUnion):
-        raise NotImplementedError
-
-    name = str(estimator)
-
-    # TODO: Remove newlines, and extra spaces
-
-    return name
-
-
-def instantiate_and_fit(index, fold, X, y, estimator, n_splits=5, param_grid=None):
+def instantiate_and_fit(
+    index: pd.DataFrame,
+    fold: pd.DataFrame,
+    X: np.ndarray,
+    y: pd.DataFrame,
+    estimator: BaseEstimator,
+    n_splits: int = 5,
+    param_grid: Optional[Dict[str, Any]] = None,
+) -> BaseEstimator:
     assert fold.shape[0] == index.shape[0]
     assert fold.shape[0] == X.shape[0]
     assert fold.shape[0] == y.shape[0]
@@ -66,30 +54,31 @@ def instantiate_and_fit(index, fold, X, y, estimator, n_splits=5, param_grid=Non
 
         return grid_search.best_estimator_
 
-    return estimator.fit(X[train_inds], y[train_inds])
+    estimator.fit(X[train_inds], y[train_inds])
+    return estimator
 
 
 # noinspection PyPep8Naming
 class BasicScorer(object):
-    def fit(self, estimator, X, y):
+    def fit(self, estimator: Any, X: np.ndarray, y: np.ndarray):
         return estimator.fit(X, y)
 
-    def score(self, estimator, X, y):
+    def score(self, estimator: Any, X: np.ndarray, y: np.ndarray):
         return estimator.score(X, y)
 
-    def transform(self, estimator, X):
+    def transform(self, estimator: Any, X: np.ndarray):
         return estimator.transform(X)
 
-    def decision_function(self, estimator, X):
+    def decision_function(self, estimator: Any, X: np.ndarray):
         return estimator.predict_proba(X)
 
-    def predict(self, estimator, X):
+    def predict(self, estimator: Any, X: np.ndarray):
         return estimator.predict(X)
 
-    def predict_proba(self, estimator, X):
+    def predict_proba(self, estimator: Any, X: np.ndarray):
         return estimator.predict_proba(X)
 
-    def predict_log_proba(self, estimator, X):
+    def predict_log_proba(self, estimator: Any, X: np.ndarray):
         return estimator.predict_proba(X)
 
 
@@ -149,37 +138,28 @@ class ClassifierWrapper(ExecutionGraph):
     def results(self):
         return self["results"]
 
-    def fit(self, X, y):
-        return self.instantiate_node(
-            backend="sklearn", key="model", func=self.scorer.fit, kwargs=dict(estimator=self["model"], X=X, y=y),
+    def fit(self, X, y) -> NodeWrapper:
+        logger.warning(f"it looks like you're attempting to re-fit a model on new data - is this the intent?")
+        return self.instantiate_orphan_node(func=self.scorer.fit, kwargs=dict(estimator=self["model"], X=X, y=y),)
+
+    def score(self, X, y) -> NodeWrapper:
+        return self.instantiate_orphan_node(func=self.scorer.score, kwargs=dict(estimator=self["model"], X=X, y=y))
+
+    def transform(self, X) -> NodeWrapper:
+        return self.instantiate_orphan_node(func=self.scorer.transform, kwargs=dict(estimator=self["model"], X=X))
+
+    def predict(self, X) -> NodeWrapper:
+        return self.instantiate_orphan_node(func=self.scorer.predict, kwargs=dict(estimator=self["model"], X=X))
+
+    def decision_function(self, X) -> NodeWrapper:
+        return self.instantiate_orphan_node(
+            func=self.scorer.decision_function, kwargs=dict(estimator=self["model"], X=X)
         )
 
-    def score(self, X, y):
-        return self.instantiate_orphan_node(
-            backend="none", func=self.scorer.score, kwargs=dict(estimator=self["model"], X=X, y=y)
-        )
+    def predict_proba(self, X) -> NodeWrapper:
+        return self.instantiate_orphan_node(func=self.scorer.predict_proba, kwargs=dict(estimator=self["model"], X=X))
 
-    def transform(self, X):
+    def predict_log_proba(self, X) -> NodeWrapper:
         return self.instantiate_orphan_node(
-            backend="none", func=self.scorer.transform, kwargs=dict(estimator=self["model"], X=X)
-        )
-
-    def predict(self, X):
-        return self.instantiate_orphan_node(
-            backend="none", func=self.scorer.predict, kwargs=dict(estimator=self["model"], X=X)
-        )
-
-    def decision_function(self, X):
-        return self.instantiate_orphan_node(
-            backend="none", func=self.scorer.decision_function, kwargs=dict(estimator=self["model"], X=X)
-        )
-
-    def predict_proba(self, X):
-        return self.instantiate_orphan_node(
-            backend="none", func=self.scorer.predict_proba, kwargs=dict(estimator=self["model"], X=X)
-        )
-
-    def predict_log_proba(self, X):
-        return self.instantiate_orphan_node(
-            backend="none", func=self.scorer.predict_log_proba, kwargs=dict(estimator=self["model"], X=X)
+            func=self.scorer.predict_log_proba, kwargs=dict(estimator=self["model"], X=X)
         )

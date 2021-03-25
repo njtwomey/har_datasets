@@ -46,7 +46,7 @@ def embed_umap(label, data, model):
 
 def umap_embedding(features: NodeWrapper, task_name):
     parent: ExecutionGraph = features.graph
-    umap_model = parent.instantiate_orphan_node(func=learn_umap, backend="none", kwargs=dict(data=features),)
+    umap_model = parent.instantiate_orphan_node(func=learn_umap, kwargs=dict(data=features),)
     viz = parent.instantiate_node(
         key=f"umap-visualisation",
         func=embed_umap,

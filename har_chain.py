@@ -1,9 +1,8 @@
 import numpy as np
 
 from har_basic import basic_har
-from har_basic import get_classifier
 from src.base import get_ancestral_metadata
-from src.functional.common import sorted_node_values
+from src.motifs.models import get_classifier
 from src.utils.misc import randomised_order
 
 

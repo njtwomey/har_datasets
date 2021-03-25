@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 from typing import Callable
 from typing import Dict
+from typing import Iterable
 from typing import List
 from typing import Optional
 from typing import Tuple
@@ -68,7 +69,7 @@ def is_index_key(key: Optional[Union[Key, str]]) -> bool:
     return key in INDEX_FILES_SET
 
 
-def validate_meta(meta, name) -> BaseMeta:
+def validate_meta(meta: Union[BaseMeta, Path, str], name: Union[Path, str]) -> BaseMeta:
     if isinstance(meta, BaseMeta):
         return meta
     elif isinstance(meta, (str, Path)):
@@ -131,13 +132,13 @@ class NodeGroup(object):
 
         raise KeyError
 
-    def keys(self):
+    def keys(self) -> Iterable[Union[Key, str]]:
         yield from map(itemgetter(0), self.items())
 
-    def values(self):
+    def values(self) -> Iterable[NodeWrapper]:
         yield from map(itemgetter(1), self.items())
 
-    def items(self):
+    def items(self) -> Iterable[Tuple[Union[Key, str], NodeWrapper]]:
         keys = [key for key in self.graph.nodes.keys() if self.validate_key(key)]
 
         if len(keys) == 0:
@@ -181,6 +182,10 @@ class IndexGroup(NodeGroup):
         return self["har"]
 
     @property
+    def localisation(self):
+        return self["localisation"]
+
+    @property
     def predefined(self):
         return self["predefined"]
 
@@ -206,20 +211,18 @@ class ExecutionGraph(ComputationGraph):
     def instantiate_orphan_node(
         self,
         func: Callable,
-        backend: Optional[str] = None,
         args: Optional[Union[Any, List[Any], Tuple[Any]]] = None,
         kwargs: Optional[Dict[str, Any]] = None,
     ) -> NodeWrapper:
-        backend = validate_backend(backend)
-        return self.make_node(name=None, func=func, backend=backend, args=args, kwargs=kwargs, cache=False)
+        return self.make_node(name=None, func=func, backend=None, args=args, kwargs=kwargs, cache=False)
 
     def instantiate_node(
         self,
         key: Union[Key, str],
         func: Callable,
-        backend: Optional[str] = None,
         args: Optional[Union[Any, List[Any], Tuple[Any]]] = None,
         kwargs: Optional[Dict[str, Any]] = None,
+        backend: Optional[str] = None,
         force_add: bool = False,
     ) -> NodeWrapper:
         key = Key(key)
@@ -233,9 +236,9 @@ class ExecutionGraph(ComputationGraph):
         self,
         key: Union[Key, str],
         func: Callable,
-        backend: Optional[str] = None,
         args: Optional[Union[Any, Tuple[Any]]] = None,
         kwargs: Optional[Dict[str, Any]] = None,
+        backend: Optional[str] = None,
     ) -> NodeWrapper:
         key = Key(key)
         if key in self.nodes:
@@ -257,7 +260,7 @@ class ExecutionGraph(ComputationGraph):
 
     # Some convenience functions
 
-    def get_split_series(self, data_partition, train_test_split):
+    def get_split_series(self, data_partition: str, train_test_split: str) -> NodeWrapper:
         return self.instantiate_node(
             key=f"{data_partition=}-{train_test_split=}",
             func=node_itemgetter(train_test_split),
@@ -270,11 +273,8 @@ class ExecutionGraph(ComputationGraph):
     def make_child(self, name: Union[Key, str], meta: Tuple[Path, str] = None) -> "ExecutionGraph":
         return ExecutionGraph(name=name, parent=self, meta=meta)
 
-    def make_sibling(self):
-        # TODO: should this inherit index?
-
-        logger.warning("Making siblings not tested - be wary!")
-
+    def make_sibling(self) -> "ExecutionGraph":
+        logger.warning("Making siblings not tested - may be buggy!")
         return ExecutionGraph(name=self.name, parent=self.parent, meta=self.meta)
 
     def __truediv__(self, name: Union[Key, str]) -> "ExecutionGraph":
@@ -289,7 +289,7 @@ class ExecutionGraph(ComputationGraph):
         return self.parent.identifier / self.name
 
     def dump_graph(self) -> None:
-        dump_graph(graph=self, filename=absolute_node_name(identifier=self.identifier, key="graph.pdf"))
+        dump_graph(graph=self, filepath=absolute_node_name(identifier=self.identifier, key="graph.pdf"))
 
     def evaluate(self, force: bool = False) -> Dict[str, Any]:
         output = dict()
@@ -310,7 +310,7 @@ class ExecutionGraph(ComputationGraph):
     #     return ExecutionGraph("zips")
 
 
-def dump_graph(graph, filename):
+def dump_graph(graph: Union[NodeWrapper, ExecutionGraph, ComputationGraph], filepath: Path):
     nodes = dict()
     edges = []
 
@@ -331,11 +331,11 @@ def dump_graph(graph, filename):
     G.add_edges_from(edges)
     try:
         G.layout("dot")
-        filename.parent.mkdir(exist_ok=True, parents=True)
-        G.draw(filename)
+        filepath.parent.mkdir(exist_ok=True, parents=True)
+        G.draw(filepath)
         G.close()
     except ValueError as ex:
-        logger.exception(f"Unable to save dot file {filename}: {ex}")
+        logger.exception(f"Unable to save dot file {filepath}: {ex}")
 
     return nodes, edges
 
@@ -359,7 +359,7 @@ def get_all_sources(node: NodeWrapper):
     return sources
 
 
-def consume_nodes(nodes, edges, ptr):
+def consume_nodes(nodes: Dict[str, str], edges: List[Tuple[str, str]], ptr: NodeWrapper):
     def add_node(node):
         node_name = node.name
         func = node.func
